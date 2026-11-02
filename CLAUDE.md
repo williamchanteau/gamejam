@@ -34,4 +34,4 @@ Hi-bit, contour 1 px joueur/boss. Cyan lune = joueur/sorts. Rouge/magenta = DANG
 Boss grands (⅓–½ écran), pièces séparées animées par tweens, yeux lumineux. Juice : hit-stop, shake léger, particules, flash blanc.
 
 ## Étapes
-0 setup ✔ · 1 salle de test + joueur + HUD · 2 Boss + Mordrec + salle 1 + mort/retry · 3 Corvina + salle 2 + escalier/fondu + victoire · plus tard : titre, tuto, son d'ambiance, polish, build final.
+0 setup ✔ · 1 salle de test + joueur + HUD ✔ · 2 Boss + Mordrec + salle 1 + mort/retry · 3 Corvina + salle 2 + escalier/fondu + victoire · plus tard : titre, tuto, son d'ambiance, polish, build final.

@@ -54,7 +54,7 @@ export const PLAYER = {
 
   invuln: 1.2,
   hurtStun: 0.22,
-  knockbackX: 130,
+  knockbackX: 110,
   knockbackY: 150,
   hitstop: 0.07,
   deathRetryDelay: 0.8, // s avant le retry

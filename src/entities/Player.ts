@@ -25,7 +25,7 @@ export class Player {
     this.zone = scene.add.zone(x, y - BH / 2, BW, BH);
     scene.physics.add.existing(this.zone);
     this.body = this.zone.body as Phaser.Physics.Arcade.Body;
-    this.body.setCollideWorldBounds(true).setMaxVelocity(400, PHYS.maxFall);
+    this.body.setCollideWorldBounds(true).setMaxVelocity(1000, 1000);
     this.scarf = scene.add.graphics().setDepth(9);
     this.spr = scene.add.image(x, y, 'p_idle0').setOrigin(0.5, 1).setDepth(10);
     for (let i = 0; i < 6; i++) this.pts.push({ x, y: y - 14 });
@@ -36,6 +36,7 @@ export class Player {
   get grounded() { return this.body.blocked.down || this.body.touching.down; }
   /** Vrai pendant le dash, l'invulnérabilité ou en mode invincible. */
   get invulnerable() { return this.state === 'dash' || this.invuln > 0 || this.god || this.state === 'dead'; }
+  get canDash() { return this.dashCd <= 0 && (this.grounded || this.airDashes > 0); }
   get canDrop() { return this.scene.time.now < this.dropUntil; }
 
   update(dt: number) {
@@ -57,7 +58,10 @@ export class Player {
         b.velocity.x *= 0.85;
         if (this.stateT >= C.spell.castTime) this.state = 'normal';
         break;
-      case 'hurt': if (this.stateT >= C.hurtStun) this.state = 'normal'; break;
+      case 'hurt':
+        if (this.grounded) b.velocity.x *= Math.exp(-dt * 10);
+        if (this.stateT >= C.hurtStun) this.state = 'normal';
+        break;
       case 'dead': b.velocity.x *= 0.9; break;
     }
     // Saut à hauteur variable + gravité de chute renforcée.
@@ -66,6 +70,7 @@ export class Player {
       this.jumpHeld = false;
     }
     b.setGravityY(b.velocity.y > 0 ? PHYS.gravity * (PHYS.fallGravityMult - 1) : 0);
+    if (b.velocity.y > PHYS.maxFall) b.velocity.y = PHYS.maxFall;
     this.lastVy = b.velocity.y;
     this.render(dt);
   }
@@ -79,15 +84,18 @@ export class Player {
   }
 
   private actions(dir: number) {
-    if (input.take('dash') && this.tryDash(dir)) return;
-    if (input.take('spell') && this.mana >= C.manaMax) return this.cast();
+    if (this.canDash && input.take('dash')) return this.dash(dir);
+    if (this.mana >= C.manaMax && input.take('spell')) return this.cast();
     if (input.take('attack', C.attackBuffer)) return this.swing(this.comboT < C.comboReset ? (this.combo + 1) % 3 : 0);
     this.tryJump();
   }
 
   private tryJump() {
+    // Ne consommer l'appui que si un saut est possible (sinon il reste en buffer).
+    const drop = input.isDown('down') && this.grounded && this.y + BH / 2 < this.scene.floorY - 2;
+    if (!drop && this.coyote <= 0 && this.airJumps <= 0) return;
     if (!input.take('jump', C.jumpBuffer)) return;
-    if (input.isDown('down') && this.grounded && this.y + BH / 2 < this.scene.floorY - 2) {
+    if (drop) {
       this.dropUntil = this.scene.time.now + C.dropThrough * 1000;
       return;
     }
@@ -95,8 +103,7 @@ export class Player {
     else if (this.airJumps > 0) { this.airJumps--; this.jump(C.doubleJumpVel); }
   }
 
-  private tryDash(dir: number) {
-    if (this.dashCd > 0 || (!this.grounded && this.airDashes <= 0)) return false;
+  private dash(dir: number) {
     if (!this.grounded) this.airDashes--;
     this.dashDir = dir || this.facing; this.facing = this.dashDir;
     this.state = 'dash'; this.stateT = 0; this.afterT = 0;
@@ -104,7 +111,6 @@ export class Player {
     this.jumpHeld = false;
     this.squash(1.35, 0.75, C.dashTime * 1000);
     sfx.dash();
-    return true;
   }
 
   private updateDash(dt: number) {
@@ -143,10 +149,10 @@ export class Player {
 
   private updateAttack(dir: number, dt: number) {
     const s = C.combo[this.combo], t = this.stateT;
-    this.move(dir, C.attackMoveMult, dt);
-    this.body.velocity.x *= this.grounded ? 0.9 : 1;
+    if (dir) this.move(dir, C.attackMoveMult, dt);
+    else if (this.grounded) this.body.velocity.x *= Math.exp(-dt * 12); // l'élan du coup s'amortit
     if (t >= s.windup && t < s.windup + s.active) this.checkHits(s.reach, s.damage);
-    if (input.take('dash') && this.tryDash(dir)) return;
+    if (this.canDash && input.take('dash')) return this.dash(dir);
     const end = s.windup + s.active;
     if (t >= end + C.chainAfter) {
       if (this.combo < 2 && input.take('attack', C.attackBuffer)) return this.swing(this.combo + 1);
