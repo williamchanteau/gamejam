@@ -16,6 +16,7 @@ const classicScript = (): Plugin => ({
 
 export default defineConfig({
   base: './',
+  esbuild: { legalComments: 'none' },
   plugins: [classicScript()],
   build: {
     sourcemap: false,
