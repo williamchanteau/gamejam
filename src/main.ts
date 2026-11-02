@@ -1,5 +1,25 @@
 import Phaser from 'phaser';
-class Hello extends Phaser.Scene {
-  create() { this.add.rectangle(160, 90, 40, 40, 0x7ff6ff); }
-}
-new Phaser.Game({ type: Phaser.AUTO, parent: 'game', width: 320, height: 180, banner: false, scene: [Hello] });
+import { W, H, PHYS } from './config';
+import { BootScene } from './scenes/BootScene';
+import { TestScene } from './scenes/TestScene';
+import { PauseScene } from './scenes/PauseScene';
+
+const zoom = () => Math.max(1, Math.floor(Math.min(innerWidth / W, innerHeight / H)));
+
+const game = new Phaser.Game({
+  type: Phaser.AUTO,
+  parent: 'game',
+  width: W,
+  height: H,
+  zoom: zoom(),
+  pixelArt: true,
+  roundPixels: true,
+  backgroundColor: '#0b0a14',
+  banner: false,
+  disableContextMenu: true,
+  audio: { noAudio: true },
+  input: { keyboard: false },
+  physics: { default: 'arcade', arcade: { gravity: { x: 0, y: PHYS.gravity } } },
+  scene: [BootScene, TestScene, PauseScene],
+});
+addEventListener('resize', () => game.scale.setZoom(zoom()));
