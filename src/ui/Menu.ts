@@ -9,14 +9,15 @@ export type Item = { label: string; act: () => void };
 /** Liste verticale : ↑↓ ou Z/S, valider Entrée/Espace/J, ou souris. */
 export class Menu {
   i = 0;
+  enabled = true;
   private texts: Phaser.GameObjects.BitmapText[];
   private cursor: Phaser.GameObjects.Image;
 
   constructor(private scene: Phaser.Scene, x: number, y: number, private items: Item[], private scale = 2, gap = 20) {
     this.texts = items.map((it, k) => {
       const t = txt(scene, x, y + k * gap, it.label).setOrigin(0.5, 0).setScale(scale).setDepth(50).setInteractive({ useHandCursor: true });
-      t.on('pointerover', () => this.select(k));
-      t.on('pointerdown', () => { this.select(k); this.confirm(); });
+      t.on('pointerover', () => this.enabled && this.select(k));
+      t.on('pointerdown', () => { if (!this.enabled) return; this.select(k); this.confirm(); });
       return t;
     });
     this.cursor = scene.add.image(0, 0, 'cursor').setDepth(50);
@@ -40,6 +41,7 @@ export class Menu {
   }
 
   update() {
+    if (!this.enabled) return;
     if (input.take('up')) this.select(this.i - 1);
     if (input.take('down')) this.select(this.i + 1);
     if (input.take('ok')) this.confirm();

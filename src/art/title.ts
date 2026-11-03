@@ -89,7 +89,7 @@ export function makeTitleArt(scene: Phaser.Scene) {
       for (let x = -11; x <= 11; x++) {
         const d = Math.hypot(x, y), a = Math.atan2(y, x);
         if (d > 11) continue;
-        px(c, d > 10 || Math.abs(Math.sin(a * 4)) < 0.2 || d < 2 ? sil : d < 5 ? '#ffd36a' : '#ff8a2a', 240 + x, 150 + y);
+        px(c, d > 10 || Math.abs(Math.sin(a * 4)) < 0.2 || d < 2 ? sil : d < 5 ? '#ffd36a' : '#ff8a2a', 240 + x, 205 + y);
       }
     // Colline, tombes et citrouilles au premier plan.
     for (let x = 0; x < W; x++) {

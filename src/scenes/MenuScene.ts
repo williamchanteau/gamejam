@@ -36,6 +36,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private go(key: string) {
+    this.menu.enabled = false;
     this.cameras.main.fadeOut(200, 6, 5, 12);
     this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start(key));
   }
@@ -46,6 +47,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private popup(text: string) {
+    if (this.sub) return;
     const w = 220, h = 70;
     const box = this.add.graphics();
     box.fillStyle(0x06050c, 0.85).fillRect(0, 0, W, H);
@@ -53,11 +55,20 @@ export class MenuScene extends Phaser.Scene {
     box.lineStyle(1, 0x3d4463).strokeRect(W / 2 - w / 2 + 0.5, H / 2 - h / 2 + 0.5, w - 1, h - 1);
     const t = txt(this, W / 2, H / 2 - 26, text, COL.moonLight).setOrigin(0.5, 0).setCenterAlign();
     const back = txt(this, W / 2, H / 2 + 20, 'ÉCHAP : RETOUR', COL.uiDim).setOrigin(0.5, 0);
-    this.sub = this.add.container(0, 0, [box, t, back]).setDepth(100);
+    const hit = this.add.zone(0, 0, W, H).setOrigin(0).setInteractive();
+    hit.on('pointerdown', () => this.closeSub());
+    this.sub = this.add.container(0, 0, [box, t, back, hit]).setDepth(100);
+    this.menu.enabled = false;
+  }
+
+  private closeSub() {
+    this.sub?.destroy(); this.sub = null;
+    this.menu.enabled = true;
+    input.reset();
   }
 
   update() {
     if (!this.sub) return this.menu.update();
-    if (input.take('pause') || input.take('ok')) { this.sub.destroy(); this.sub = null; input.reset(); }
+    if (input.take('pause') || input.take('ok')) this.closeSub();
   }
 }
