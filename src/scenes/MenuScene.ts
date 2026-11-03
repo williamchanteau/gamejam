@@ -25,7 +25,7 @@ export class MenuScene extends Phaser.Scene {
     }).setDepth(30);
 
     this.menu = new Menu(this, W / 2, 100, [
-      { label: 'JOUER', act: () => this.go('Boss1') },
+      { label: 'JOUER', act: () => this.go('Outside') },
       { label: 'TUTO', act: () => this.go('Test') },
       { label: 'OPTIONS', act: () => this.popup('OPTIONS\n\nBIENTÔT !') },
       { label: 'QUITTER', act: () => this.quit() },

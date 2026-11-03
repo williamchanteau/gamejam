@@ -6,6 +6,7 @@ import { makeRoomArt } from '../art/room';
 import { makeTitleArt } from '../art/title';
 import { makeMordrecArt } from '../bosses/mordrec';
 import { makeNaveArt } from '../art/nave';
+import { makeOutsideArt } from '../art/outside';
 
 // Génère toutes les textures par code, puis lance le jeu.
 export class BootScene extends Phaser.Scene {
@@ -17,6 +18,7 @@ export class BootScene extends Phaser.Scene {
     makeRoomArt(this);
     makeTitleArt(this);
     makeMordrecArt(this);
+    makeOutsideArt(this);
     makeNaveArt(this);
     // DEV : #Boss1, #Test... pour démarrer directement sur une scène.
     this.scene.start(import.meta.env.DEV && location.hash ? location.hash.slice(1) : 'Menu');

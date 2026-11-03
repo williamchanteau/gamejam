@@ -18,6 +18,7 @@ export class ArenaScene extends Phaser.Scene {
   worldW = W;
   plats: { x: number; y: number; w: number }[] = ARENA.platforms;
   spawnX = 48;
+  floorKey = 'floor';
   /** Jeu figé (cinématique) : joueur et salle à l'arrêt. */
   frozen = false;
   private spells!: Spell[];
@@ -39,7 +40,7 @@ export class ArenaScene extends Phaser.Scene {
     this.cameras.main.setBounds(0, 0, this.worldW, H).setScroll(0, 0);
     this.buildBackground();
 
-    this.add.tileSprite(0, this.floorY, this.worldW, H - this.floorY, 'floor').setOrigin(0).setDepth(5);
+    this.add.tileSprite(0, this.floorY, this.worldW, H - this.floorY, this.floorKey).setOrigin(0).setDepth(5);
     const floor = this.add.zone(this.worldW / 2, (this.floorY + H) / 2, this.worldW, H - this.floorY);
     this.physics.add.existing(floor, true);
     const plats = this.plats.map((p) => {

@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { W, H, ARENA } from '../config';
 import { canvasTex, mapTex } from './pixel';
 import { hash, stoneBlocks, stainedWindow, column, inArch } from './room';
+import { paintStairs, pool } from './outside';
 
 const FY = ARENA.floorY, WW = ARENA.bossW;
 /** Facteurs de parallaxe des couches (0 = fond, 3 = premier plan) ; les accessoires au sol sont à 1. */
@@ -90,6 +91,8 @@ export function makeNaveArt(scene: Phaser.Scene) {
       }
     }
     for (const cx of cols) column(c, cx, 0, FY, 12);
+    // Flaques de lumière chaude autour des torches.
+    for (const x of NAVE.torches) pool(c, x, 116, 64, '255,138,42', 0.2);
     for (const cx of cols.filter((_, i) => i % 2 === 0)) { // bannières en lambeaux
       for (let y = 30; y < 92; y++)
         for (let x = cx - 9; x < cx + 9; x++) {
@@ -110,6 +113,9 @@ export function makeNaveArt(scene: Phaser.Scene) {
   });
   // Accessoires posés au sol (facteur 1, largeur du monde).
   canvasTex(scene, 'nave_props', WW, H, (c) => {
+    paintStairs(c);
+    for (const [x, y] of NAVE.candles) pool(c, x, y - 20, 34, '255,160,70', 0.2);
+    for (const [x, y] of NAVE.pumpkins) pool(c, x, y - 6, 26, '255,138,42', 0.18);
     for (const [x, y] of NAVE.candles) { // chandelier de fer + 3 bougies
       px(c, '#1a1828', x - 1, y - 16, 2, 16); px(c, '#1a1828', x - 5, y - 1, 10, 1); px(c, '#2a2838', x - 8, y - 17, 17, 2); px(c, '#45425e', x - 8, y - 17, 17, 1);
       candle(c, x - 6, y - 17, 7); candle(c, x - 1, y - 17, 10); candle(c, x + 4, y - 17, 5);

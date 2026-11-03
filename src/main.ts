@@ -5,6 +5,8 @@ import { TestScene } from './scenes/TestScene';
 import { PauseScene } from './scenes/PauseScene';
 import { MenuScene } from './scenes/MenuScene';
 import { BossScene } from './scenes/BossScene';
+import { OutsideScene } from './scenes/OutsideScene';
+import { TransitScene } from './scenes/TransitScene';
 
 const game = new Phaser.Game({
   type: Phaser.AUTO,
@@ -19,6 +21,6 @@ const game = new Phaser.Game({
   audio: { noAudio: true },
   input: { keyboard: false },
   physics: { default: 'arcade', arcade: { gravity: { x: 0, y: PHYS.gravity } } },
-  scene: [BootScene, MenuScene, TestScene, BossScene, PauseScene],
+  scene: [BootScene, MenuScene, TestScene, OutsideScene, BossScene, TransitScene, PauseScene],
 });
 if (import.meta.env.DEV) (window as unknown as { game: Phaser.Game }).game = game;

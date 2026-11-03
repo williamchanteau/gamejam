@@ -9,15 +9,20 @@ import { sfx } from '../audio/sfx';
 import { MORDREC } from '../bosses/mordrec';
 import { buildNave, type Room } from './rooms';
 import { announce } from '../ui/Announcer';
+import { FLOORS } from '../floors';
+import { STAIRS } from '../art/outside';
 
-/** Salle de boss : intro 2 s (sautée au retry), barre nommée, victoire. */
+/** Salle de boss : annonceur (sauté au retry), barre nommée, victoire → grille levée → escalier. */
 export class BossScene extends ArenaScene {
   boss!: Boss;
   private bar!: BossBar;
   private won = false;
   private def: BossDef = MORDREC;
   private room!: Room;
-  private label = 'REZ-DE-CHAUSSÉE · LA NEF';
+  private floor = 0;
+  private gate!: Phaser.GameObjects.Image;
+  private gateOpen = false;
+  private climbing = false;
   private camX = 0;
   worldW = ARENA.bossW;
   plats = ARENA.bossPlatforms;
@@ -29,7 +34,8 @@ export class BossScene extends ArenaScene {
 
   create(data?: { retry?: boolean }) {
     super.create(data);
-    this.won = false;
+    this.won = false; this.gateOpen = false; this.climbing = false;
+    this.gate = this.add.image(STAIRS.x, this.floorY, 'gate').setOrigin(0.5, 1).setDepth(4.5);
     this.boss = new Boss(this, this.def, 440, this.floorY);
     this.targets.push(this.boss);
     this.bar = new BossBar(this, this.boss);
@@ -42,7 +48,8 @@ export class BossScene extends ArenaScene {
       this.frozen = true;
       this.bar.fillUp(1.6);
       this.time.delayedCall(450, () => { this.boss.eyes('tele'); sfx.warn(); });
-      announce(this, this.def, this.label, () => { this.frozen = false; this.boss.start(BOSS.pauseMin); });
+      const f = FLOORS[this.floor];
+      announce(this, this.def, `${f.name} · ${f.place}`, () => { this.frozen = false; this.boss.start(BOSS.pauseMin); });
     }
   }
 
@@ -61,6 +68,7 @@ export class BossScene extends ArenaScene {
       if (life <= 0 || o.x < -40 || o.x > this.worldW + 40) o.destroy();
     }
     if (!this.won && this.boss.state === 'dead') this.victory();
+    if (this.gateOpen && !this.climbing && this.player.x > STAIRS.x - 6) this.climb();
   }
 
   private camTarget() {
@@ -77,12 +85,34 @@ export class BossScene extends ArenaScene {
       sfx.victory();
       const band = this.add.rectangle(0, 84, W, 40, 0x06050c, 0.75).setOrigin(0).setDepth(95).setScrollFactor(0);
       const tx = txt(this, W / 2, 88, `${this.def.name} EST TOMBÉ`, COL.moonLight).setOrigin(0.5, 0).setScale(2).setDepth(96).setScrollFactor(0);
-      const sub = txt(this, W / 2, 110, 'LA SUITE ARRIVE BIENTÔT...', COL.ui).setOrigin(0.5, 0).setDepth(96).setScrollFactor(0);
-      for (const o of [band, tx, sub]) { o.setAlpha(0); this.tweens.add({ targets: o, alpha: 1, duration: 400 }); }
+      const sub = txt(this, W / 2, 110, "L'ESCALIER S'OUVRE →", COL.ui).setOrigin(0.5, 0).setDepth(96).setScrollFactor(0);
+      for (const o of [band, tx, sub]) {
+        o.setAlpha(0);
+        this.tweens.add({ targets: o, alpha: 1, duration: 400 });
+        this.tweens.add({ targets: o, alpha: 0, delay: 2600, duration: 500 });
+      }
     });
-    this.time.delayedCall(BOSS.victoryTime * 1000, () => {
-      this.cameras.main.fadeOut(500, 6, 5, 12);
-      this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Menu'));
+    // La grille de l'escalier se lève.
+    this.time.delayedCall(2200, () => {
+      sfx.rumble();
+      this.cameras.main.shake(700, 0.003);
+      this.puffs(STAIRS.x, this.floorY, 6);
+      this.tweens.add({ targets: this.gate, y: this.floorY - 64, duration: 1100, ease: 'Quad.inOut', onComplete: () => { this.gateOpen = true; } });
+      const hint = txt(this, STAIRS.x, STAIRS.base - 60, 'MONTER →', COL.moonLight).setOrigin(0.5, 0).setDepth(20);
+      this.tweens.add({ targets: hint, x: STAIRS.x + 4, duration: 450, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+    });
+  }
+
+  /** Montée : le joueur s'engouffre dans l'escalier, fondu, écran d'étage. */
+  private climb() {
+    this.climbing = true;
+    this.frozen = true;
+    const p = this.player.spr;
+    this.tweens.add({ targets: p, x: STAIRS.x + 18, y: p.y - 24, alpha: 0, duration: 500, ease: 'Quad.in' });
+    this.tweens.add({ targets: this.player.scarf, alpha: 0, duration: 300 });
+    this.time.delayedCall(350, () => {
+      this.cameras.main.fadeOut(350, 6, 5, 12);
+      this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Transit', { floor: this.floor + 1 }));
     });
   }
 
