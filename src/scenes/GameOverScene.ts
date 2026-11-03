@@ -20,8 +20,8 @@ export class GameOverScene extends Phaser.Scene {
     const dim = this.add.rectangle(0, 0, W, H, 0x06050c, 0).setOrigin(0);
     this.tweens.add({ targets: dim, fillAlpha: 0.82, duration: 350 });
     // GAME OVER rouge : claque depuis plus grand, ombre portée, léger tremblement.
-    const sh = txt(this, W / 2 + 3, 54 + 3, 'GAME OVER', 0x000000).setOrigin(0.5, 0).setScale(5).setAlpha(0);
-    const title = txt(this, W / 2, 54, 'GAME OVER', COL.danger).setOrigin(0.5, 0).setScale(9).setAlpha(0);
+    const sh = txt(this, W / 2 + 3, 32 + 3, 'GAME OVER', 0x000000).setOrigin(0.5, 0).setScale(5).setAlpha(0);
+    const title = txt(this, W / 2, 32, 'GAME OVER', COL.danger).setOrigin(0.5, 0).setScale(9).setAlpha(0);
     const sub = txt(this, W / 2, 100, `DERNIÈRE SAUVEGARDE : ${place}`, COL.uiDim).setOrigin(0.5, 0).setAlpha(0);
     this.tweens.add({ targets: title, scale: 5, alpha: 1, duration: 260, delay: 150, ease: 'Back.out', onComplete: () => this.cameras.main.shake(160, 0.008) });
     this.tweens.add({ targets: sh, alpha: 0.7, duration: 200, delay: 300 });
