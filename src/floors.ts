@@ -6,3 +6,10 @@ export const FLOORS: Floor[] = [
 ];
 /** Nom affiché d'un étage d'indice i (0 = RDC). */
 export const floorName = (i: number) => FLOORS[i]?.name ?? `ÉTAGE ${i}`;
+/** Partie en cours : DIFFICILE = aucune sauvegarde (une mort en boss renvoie devant le château). */
+export const run = { hard: false };
+/** Scène de reprise après une mort : boss 1 (ou tout boss en DIFFICILE) → dehors ; sinon la salle elle-même. */
+export function saveOf(from: string) {
+  const i = FLOORS.findIndex((f) => f.scene === from);
+  return i === 0 || (i > 0 && run.hard) ? 'Outside' : from;
+}

@@ -4,7 +4,7 @@ import { txt } from '../art/font';
 import { input } from '../input';
 import { Menu } from '../ui/Menu';
 import { OptionsPanel } from '../ui/Options';
-import { FLOORS } from '../floors';
+import { FLOORS, run } from '../floors';
 import { MORDREC } from '../bosses/mordrec';
 import { NOCTIS } from '../bosses/noctis';
 import { TITLE_MOON } from '../art/title';
@@ -16,6 +16,8 @@ const hillY = (x: number) => 228 + Math.round(Math.sin(x / 40) * 6 + Math.sin(x 
 export class MenuScene extends Phaser.Scene {
   private menu!: Menu;
   private bossMenu: Menu | null = null;
+  private diff: Menu | null = null;
+  private diffNote: Phaser.GameObjects.BitmapText | null = null;
   private sub: Phaser.GameObjects.Container | null = null;
   private opts: OptionsPanel | null = null;
 
@@ -23,7 +25,7 @@ export class MenuScene extends Phaser.Scene {
 
   create() {
     input.reset();
-    this.sub = null; this.opts = null; this.bossMenu = null;
+    this.sub = null; this.opts = null; this.bossMenu = null; this.diff = null; this.diffNote = null;
     this.add.image(0, 0, 'bg_title').setOrigin(0);
     const [mx, my] = TITLE_MOON;
     const halo = this.add.image(mx, my, 'glowC').setBlendMode(Phaser.BlendModes.ADD).setScale(3.2).setAlpha(0.3);
@@ -57,7 +59,7 @@ export class MenuScene extends Phaser.Scene {
     const logo = this.add.image(MX, 44, 'logo').setDepth(40);
     this.tweens.add({ targets: logo, y: 47, duration: 1800, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
     this.menu = new Menu(this, MX, 96, [
-      { label: 'JOUER', act: () => this.go('Outside') },
+      { label: 'JOUER', act: () => this.difficulty() },
       { label: 'OPTIONS', act: () => this.options() },
       { label: 'QUITTER', act: () => this.quit() },
       { label: 'TESTER BOSS', x: W - 94, y: H - 32, act: () => this.bosses() },
@@ -77,8 +79,28 @@ export class MenuScene extends Phaser.Scene {
   private go(key: string) {
     this.menu.enabled = false;
     if (this.bossMenu) this.bossMenu.enabled = false;
+    if (this.diff) this.diff.enabled = false;
     this.cameras.main.fadeOut(200, 6, 5, 12);
     this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start(key));
+  }
+
+  /** JOUER → choix de la difficulté (même colonne) ; NORMAL = sauvegarde au début de chaque boss. */
+  private difficulty() {
+    input.reset();
+    this.menu.enabled = false; this.menu.setVisible(false);
+    this.diffNote = txt(this, MX, 98, 'SAUVEGARDE AU DÉBUT DE CHAQUE BOSS', COL.moonLight).setOrigin(0.5, 0).setDepth(40);
+    this.diff = new Menu(this, MX, 108, [
+      { label: 'NORMAL', act: () => { run.hard = false; this.go('Outside'); } },
+      { label: 'DIFFICILE', act: () => { run.hard = true; this.go('Outside'); } },
+      { label: 'RETOUR', act: () => this.closeDiff() },
+    ], { framed: 140, gap: 34 });
+  }
+
+  private closeDiff() {
+    this.diff?.destroy(); this.diff = null;
+    this.diffNote?.destroy(); this.diffNote = null;
+    this.menu.setVisible(true); this.menu.enabled = true;
+    input.reset();
   }
 
   private bosses() {
@@ -90,7 +112,7 @@ export class MenuScene extends Phaser.Scene {
     this.sub = this.add.container(0, 0, [backdrop, title]).setDepth(100);
     const defs = [MORDREC, NOCTIS];
     this.bossMenu = new Menu(this, W / 2, 100, [
-      ...FLOORS.map((f, i) => ({ label: defs[i]?.name ?? f.place, act: () => this.go(f.scene) })),
+      ...FLOORS.map((f, i) => ({ label: defs[i]?.name ?? f.place, act: () => { run.hard = false; this.go(f.scene); } })),
       { label: 'RETOUR', act: () => this.closeSub() },
     ], { framed: 220, gap: 38, depth: 110 });
   }
@@ -131,6 +153,7 @@ export class MenuScene extends Phaser.Scene {
 
   update() {
     if (this.opts) return this.opts.update();
+    if (this.diff) return input.take('pause') ? this.closeDiff() : this.diff.update();
     if (!this.sub) return this.menu.update();
     if (this.bossMenu) {
       if (input.take('pause')) this.closeSub();
