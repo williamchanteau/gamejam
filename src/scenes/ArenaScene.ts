@@ -32,7 +32,7 @@ export class ArenaScene extends Phaser.Scene {
     const floor = this.add.zone(W / 2, (this.floorY + H) / 2, W, H - this.floorY);
     this.physics.add.existing(floor, true);
     const plats = ARENA.platforms.map((p) => {
-      const img = this.physics.add.staticImage(p.x, p.y + 3, 'plat' + p.w).setDepth(5);
+      const img = this.physics.add.staticImage(p.x, p.y + 4, 'plat' + p.w).setDepth(5);
       const c = (img.body as Phaser.Physics.Arcade.StaticBody).checkCollision;
       c.down = c.left = c.right = false;
       return img;
@@ -49,10 +49,10 @@ export class ArenaScene extends Phaser.Scene {
     });
 
     this.sparkFx = this.add.particles(0, 0, 'px', {
-      speed: { min: 40, max: 150 }, lifespan: { min: 150, max: 350 }, scale: { start: 1, end: 0 }, emitting: false,
+      speed: { min: 60, max: 225 }, lifespan: { min: 150, max: 350 }, scale: { start: 1, end: 0 }, emitting: false,
     }).setDepth(20);
     this.dustFx = this.add.particles(0, 0, 'px', {
-      speedX: { min: -40, max: 40 }, speedY: { min: -20, max: -5 }, lifespan: 300, scale: { start: 1, end: 0 },
+      speedX: { min: -60, max: 60 }, speedY: { min: -30, max: -8 }, lifespan: 300, scale: { start: 1, end: 0 },
       tint: 0x8088a8, alpha: { start: 0.7, end: 0 }, emitting: false,
     }).setDepth(9);
 
@@ -66,6 +66,7 @@ export class ArenaScene extends Phaser.Scene {
 
   update(_t: number, deltaMs: number) {
     if (input.take('pause')) {
+      input.reset();
       this.scene.launch('Pause', { from: this.scene.key });
       this.scene.pause();
       return;
@@ -100,17 +101,17 @@ export class ArenaScene extends Phaser.Scene {
       s.life -= dt;
       s.img.x += s.dir * PLAYER.spell.speed * dt;
       s.glow.setPosition(s.img.x, s.img.y).setAlpha(0.6 + Math.random() * 0.3);
-      if (Math.random() < 0.5) this.sparks(s.img.x - s.dir * 6, s.img.y + Phaser.Math.Between(-10, 10), COL.moon, 1);
-      const r = new Phaser.Geom.Rectangle(s.img.x - 8, s.img.y - 13, 16, 26);
+      if (Math.random() < 0.5) this.sparks(s.img.x - s.dir * 9, s.img.y + Phaser.Math.Between(-15, 15), COL.moon, 1);
+      const r = new Phaser.Geom.Rectangle(s.img.x - 12, s.img.y - 20, 24, 40);
       for (const t of this.targets) {
         if (!t.alive() || s.hits.has(t) || !Phaser.Geom.Rectangle.Overlaps(r, t.hurtRect())) continue;
         s.hits.add(t);
-        t.hit(PLAYER.spell.damage, s.img.x - s.dir * 10);
+        t.hit(PLAYER.spell.damage, s.img.x - s.dir * 15);
         this.sparks(s.img.x, s.img.y, COL.moonLight, 14);
         this.hitstop(0.06);
         this.cameras.main.shake(120, 0.008);
       }
-      if (s.life <= 0 || s.img.x < -20 || s.img.x > W + 20) { s.img.destroy(); s.glow.destroy(); }
+      if (s.life <= 0 || s.img.x < -30 || s.img.x > W + 30) { s.img.destroy(); s.glow.destroy(); }
     }
     this.spells = this.spells.filter((s) => s.img.active);
   }

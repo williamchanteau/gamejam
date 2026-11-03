@@ -11,20 +11,20 @@ export class Hud {
   private god: Phaser.GameObjects.BitmapText;
 
   constructor(private scene: Phaser.Scene, private player: Player) {
-    for (let i = 0; i < PLAYER.hp; i++) this.hearts.push(scene.add.image(4 + i * 9, 4, 'hp_full').setOrigin(0).setDepth(100));
-    scene.add.rectangle(4, 13, 46, 6, 0x06050c).setOrigin(0).setDepth(100);
-    scene.add.rectangle(5, 14, 44, 4, 0x1b1f33).setOrigin(0).setDepth(100);
-    this.fill = scene.add.rectangle(5, 14, 0, 4, COL.moon).setOrigin(0).setDepth(101);
-    this.hint = txt(scene, 53, 11, 'L/C : ÉCLAT LUNAIRE', COL.moonLight).setDepth(101);
-    this.god = txt(scene, 4, 19, 'INVINCIBLE (F2)', COL.uiDim).setDepth(101);
-    txt(scene, W - 3, 0, 'Q/D ou ←/→ : BOUGER · Z/↑/ESPACE : SAUTER\nS/↓ : DESCENDRE · J/W : ATTAQUER\nK/X : DASH (ESQUIVE) · L/C : SORT · ÉCHAP : PAUSE', COL.uiDim)
+    for (let i = 0; i < PLAYER.hp; i++) this.hearts.push(scene.add.image(5 + i * 11, 5, 'hp_full').setOrigin(0).setDepth(100));
+    scene.add.rectangle(6, 17, 66, 8, 0x06050c).setOrigin(0).setDepth(100);
+    scene.add.rectangle(7, 18, 64, 6, 0x1b1f33).setOrigin(0).setDepth(100);
+    this.fill = scene.add.rectangle(7, 18, 0, 6, COL.moon).setOrigin(0).setDepth(101);
+    this.hint = txt(scene, 76, 15, 'L/C : ÉCLAT LUNAIRE', COL.moonLight).setDepth(101);
+    this.god = txt(scene, 6, 25, 'INVINCIBLE (F2)', COL.uiDim).setDepth(101);
+    txt(scene, W - 4, 1, 'Q/D ou ←/→ : BOUGER · Z/↑/ESPACE : SAUTER\nS/↓ : DESCENDRE · J/W : ATTAQUER\nK/X : DASH (ESQUIVE) · L/C : SORT · ÉCHAP : PAUSE', COL.uiDim)
       .setOrigin(1, 0).setRightAlign().setDepth(100);
   }
 
   update() {
     const p = this.player, full = p.mana >= PLAYER.manaMax, t = this.scene.time.now;
     this.hearts.forEach((h, i) => h.setTexture(i < p.hp ? 'hp_full' : 'hp_empty'));
-    this.fill.width = Math.round((44 * p.mana) / PLAYER.manaMax);
+    this.fill.width = Math.round((64 * p.mana) / PLAYER.manaMax);
     this.fill.fillColor = full && Math.floor(t / 120) % 2 ? COL.moonLight : COL.moon;
     this.hint.setVisible(full);
     this.god.setVisible(p.god);

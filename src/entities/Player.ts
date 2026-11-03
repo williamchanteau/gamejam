@@ -6,7 +6,7 @@ import type { Target } from './types';
 import type { ArenaScene } from '../scenes/ArenaScene';
 
 type State = 'normal' | 'dash' | 'attack' | 'cast' | 'hurt' | 'dead';
-const BW = 8, BH = 18;
+const BW = 12, BH = 27;
 
 export class Player {
   zone: Phaser.GameObjects.Zone;
@@ -28,7 +28,7 @@ export class Player {
     this.body.setCollideWorldBounds(true).setMaxVelocity(1000, 1000);
     this.scarf = scene.add.graphics().setDepth(9);
     this.spr = scene.add.image(x, y, 'p_idle0').setOrigin(0.5, 1).setDepth(10);
-    for (let i = 0; i < 6; i++) this.pts.push({ x, y: y - 14 });
+    for (let i = 0; i < 7; i++) this.pts.push({ x, y: y - 23 });
   }
 
   get x() { return this.body.x + BW / 2; }
@@ -44,7 +44,7 @@ export class Player {
     this.stateT += dt; this.dashCd -= dt; this.invuln -= dt; this.comboT += dt;
     if (ground) {
       this.coyote = C.coyote; this.airDashes = C.airDashes; this.airJumps = C.doubleJump ? 1 : 0;
-      if (!this.wasGrounded && this.lastVy > 120) this.land();
+      if (!this.wasGrounded && this.lastVy > 180) this.land();
     } else this.coyote -= dt;
     this.wasGrounded = ground;
     const dir = (input.isDown('right') ? 1 : 0) - (input.isDown('left') ? 1 : 0);
@@ -141,7 +141,7 @@ export class Player {
     const dir = (input.isDown('right') ? 1 : 0) - (input.isDown('left') ? 1 : 0);
     if (dir) this.facing = dir;
     if (this.grounded) this.body.velocity.x = this.facing * s.lunge;
-    const fx = this.scene.add.image(this.x + this.facing * 8, this.y - 2, 'slash').setDepth(11)
+    const fx = this.scene.add.image(this.x + this.facing * 12, this.y - 3, 'slash').setDepth(11)
       .setFlipX(this.facing < 0).setFlipY(i === 1).setScale(i === 2 ? 1.3 : 1).setAlpha(0);
     this.scene.tweens.add({ targets: fx, alpha: { from: 1, to: 0 }, delay: s.windup * 1000, duration: 140, onComplete: () => fx.destroy() });
     this.scene.time.delayedCall(s.windup * 1000, () => sfx.swing(i));
@@ -167,14 +167,14 @@ export class Player {
   }
 
   private checkHits(reach: number, dmg: number) {
-    const r = new Phaser.Geom.Rectangle(this.facing > 0 ? this.x : this.x - reach, this.y - 14, reach, 22);
+    const r = new Phaser.Geom.Rectangle(this.facing > 0 ? this.x : this.x - reach, this.y - 21, reach, 33);
     for (const t of this.scene.targets) {
       if (!t.alive() || this.swingHits.has(t) || !Phaser.Geom.Rectangle.Overlaps(r, t.hurtRect())) continue;
       this.swingHits.add(t);
       t.hit(dmg, this.x);
       this.gainMana(C.manaPerHit);
       const hr = t.hurtRect();
-      this.scene.sparks(Phaser.Math.Clamp(this.x + this.facing * reach * 0.6, hr.left, hr.right), this.y - 4, COL.moonLight, 6);
+      this.scene.sparks(Phaser.Math.Clamp(this.x + this.facing * reach * 0.6, hr.left, hr.right), this.y - 6, COL.moonLight, 6);
       this.scene.hitstop(C.hitstopOnHit);
       sfx.hit();
     }
@@ -189,7 +189,7 @@ export class Player {
   private cast() {
     this.mana = 0; this.state = 'cast'; this.stateT = 0;
     this.body.velocity.x = -this.facing * C.spell.recoil;
-    this.scene.spawnSpell(this.x + this.facing * 10, this.y - 3, this.facing);
+    this.scene.spawnSpell(this.x + this.facing * 15, this.y - 4, this.facing);
     this.squash(1.2, 0.85, 160);
     sfx.spell();
   }
@@ -213,7 +213,7 @@ export class Player {
 
   private die() {
     this.state = 'dead'; this.invuln = 0;
-    this.scene.sparks(this.x, this.y - 4, COL.moon, 16);
+    this.scene.sparks(this.x, this.y - 6, COL.moon, 16);
     this.scene.tweens.add({ targets: this.spr, alpha: 0, angle: -90 * this.facing, duration: 400 });
     this.scene.tweens.add({ targets: this.scarf, alpha: 0, duration: 300 });
     sfx.death();
@@ -240,8 +240,8 @@ export class Player {
       if (this.state === 'dash') k = 'dash';
       else if (this.state === 'attack' || this.state === 'cast') k = 'atk';
       else if (this.state === 'hurt') k = 'hurt';
-      else if (!this.grounded) k = b.velocity.y < -20 ? 'jump' : 'fall';
-      else if (Math.abs(b.velocity.x) > 15) { this.animT += dt * 10 * Math.abs(b.velocity.x) / C.runSpeed; k = 'run' + (Math.floor(this.animT) % 4); }
+      else if (!this.grounded) k = b.velocity.y < -30 ? 'jump' : 'fall';
+      else if (Math.abs(b.velocity.x) > 22) { this.animT += dt * 10 * Math.abs(b.velocity.x) / C.runSpeed; k = 'run' + (Math.floor(this.animT) % 4); }
       else { this.animT += dt * 1.6; k = 'idle' + (Math.floor(this.animT) % 2); }
       s.setTexture('p_' + k);
       s.setAlpha(this.invuln > 0 && Math.floor(this.invuln * 16) % 2 ? 0.35 : 1);
@@ -252,22 +252,22 @@ export class Player {
   // Écharpe : chaîne de points qui traîne derrière et ondule.
   private drawScarf(dt: number) {
     const s = this.spr, f = this.facing, b = this.body, pts = this.pts, t = this.scene.time.now / 1000;
-    pts[0].x = s.x - f * 2; pts[0].y = s.y - 14;
+    pts[0].x = s.x - f * 3; pts[0].y = s.y - 23;
     for (let i = 1; i < pts.length; i++) {
       const p = pts[i], q = pts[i - 1];
-      let dx = -f * 0.9 - b.velocity.x * 0.004, dy = 0.35 + Math.sin(t * 9 - i) * 0.35 - b.velocity.y * 0.003;
+      let dx = -f * 0.9 - b.velocity.x * 0.0027, dy = 0.35 + Math.sin(t * 9 - i) * 0.35 - b.velocity.y * 0.002;
       const l = Math.hypot(dx, dy) || 1;
-      const tx = q.x + (dx / l) * 2.5, ty = q.y + (dy / l) * 2.5;
+      const tx = q.x + (dx / l) * 3.75, ty = q.y + (dy / l) * 3.75;
       const k = Math.min(1, dt * 30);
       p.x += (tx - p.x) * k; p.y += (ty - p.y) * k;
       const ex = p.x - q.x, ey = p.y - q.y, el = Math.hypot(ex, ey) || 1;
-      if (el > 3) { p.x = q.x + (ex / el) * 3; p.y = q.y + (ey / el) * 3; }
+      if (el > 4.5) { p.x = q.x + (ex / el) * 4.5; p.y = q.y + (ey / el) * 4.5; }
     }
     const g = this.scarf.clear();
     g.setAlpha(s.alpha);
     for (const pass of [0, 1])
       pts.forEach((p, i) => {
-        const w = i < 4 ? 2 : 1, x = Math.round(p.x), y = Math.round(p.y);
+        const w = i < 3 ? 3 : i < 5 ? 2 : 1, x = Math.round(p.x), y = Math.round(p.y);
         if (pass === 0) g.fillStyle(0x06050c).fillRect(x - 1, y - 1, w + 2, w + 2);
         else g.fillStyle(i % 2 ? 0x5fd8f0 : 0x9ff2ff).fillRect(x, y, w, w);
       });
