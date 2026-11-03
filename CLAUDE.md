@@ -4,16 +4,16 @@ Dépôt avant jeudi 5 nov. 7h. Consigne : BOSS obligatoires, focus combats de bo
 ## Règles de travail
 - Seul dev = Claude ; l'utilisateur playteste. Une ÉTAPE à la fois, STOP après chaque étape, commit git après chaque étape.
 - Budget tokens serré : réponses courtes, petits fichiers, pas de refactor, pas de tests/linters/docs, ne pas relire tout le repo.
-- Avant de rendre une étape : `npm run build` + `npx tsc --noEmit`.
+- Avant de rendre une étape : `bun run build` + `bun run check` (Bun = gestionnaire de paquets + runtime des scripts, Vite = bundler ; `bun run dev` pour jouer en local).
 
 ## Rendu (non négociable)
-- `npm run build` → dist/index.html, chemins relatifs, script classique (pas de module, defer) → marche en file://. `npm run zip` → jeu-web.zip.
+- `bun run build` → dist/index.html, chemins relatifs, script classique (pas de module, defer) → marche en file://. `bun run zip` → jeu-web.zip.
 - Aucun appel réseau. Anonymat total : aucun nom/crédit/lien/auteur, pas de sourcemaps, pas de chemin utilisateur. `banner: false`.
 - Jurés : titre → combat < 15 s, contrôles affichés à l'écran, retry après mort ≤ 1 s (le retry SAUTE l'intro de 2 s), partie ≈ 5 min, difficulté clémente.
 - Textes en français (police bitmap maison, MAJUSCULES). Ne citer aucun autre jeu. 60 fps PC modeste.
 
 ## Stack
-Phaser 3.90 + TS + Vite 6, Arcade. 480×270 (distances ×1,5 vs 320×180 d'origine), zoom entier, pixelArt, roundPixels. Sol floorY 234, plateformes 84 px à y 177 (x 108/372). Joueur sprite 24×36, hitbox 12×27. Aucun fichier image/son : textures générées par code, SFX WebAudio.
+Bun + Phaser 3.90 + TS + Vite 6, Arcade. 480×270 (distances ×1,5 vs 320×180 d'origine), zoom entier, pixelArt, roundPixels. Sol floorY 234, plateformes 84 px à y 177 (x 108/372). Joueur sprite 24×36, hitbox 12×27. Aucun fichier image/son : textures générées par code, SFX WebAudio.
 src/: config.ts (TOUTES les valeurs réglables), input.ts, scenes/, entities/Player.ts, entities/Boss.ts, patterns/, bosses/ (1 fichier de données par boss), art/, audio/sfx.ts, ui/.
 `scene.restart()` ne relance pas les initialiseurs de champs : tout réinitialiser dans create().
 

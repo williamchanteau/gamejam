@@ -4,9 +4,10 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "zip": "vite build && node scripts/zip.mjs"
+    "dev": "bunx --bun vite",
+    "build": "bunx --bun vite build",
+    "check": "bunx tsc --noEmit",
+    "zip": "bunx --bun vite build && bun scripts/zip.mjs"
   },
   "dependencies": {
     "phaser": "3.90.0"
