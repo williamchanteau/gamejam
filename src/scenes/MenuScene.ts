@@ -88,8 +88,8 @@ export class MenuScene extends Phaser.Scene {
   private difficulty() {
     input.reset();
     this.menu.enabled = false; this.menu.setVisible(false);
-    this.diffNote = txt(this, MX, 98, 'SAUVEGARDE AU DÉBUT DE CHAQUE BOSS', COL.moonLight).setOrigin(0.5, 0).setDepth(40);
-    this.diff = new Menu(this, MX, 108, [
+    this.diffNote = txt(this, MX, 90, 'SAUVEGARDE AU DÉBUT DE CHAQUE BOSS', COL.moonLight).setOrigin(0.5, 0).setDepth(40);
+    this.diff = new Menu(this, MX, 118, [
       { label: 'NORMAL', act: () => { run.hard = false; this.go('Outside'); } },
       { label: 'DIFFICILE', act: () => { run.hard = true; this.go('Outside'); } },
       { label: 'RETOUR', act: () => this.closeDiff() },

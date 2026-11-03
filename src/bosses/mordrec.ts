@@ -15,8 +15,8 @@ const M = {
   warp: { mark: 0.5, behind: 72 },
   combo: { teles: [0.5, 0.45, 0.7], recover: 0.7 },
 };
-// Pose de repos : épée plantée en avant.
-const REST = { sword: 128, headY: -64 };
+// Pose de repos : en garde basse, lame pointée vers l'avant et le haut.
+const REST = { sword: 62, headY: -64 };
 
 type Ctx = CanvasRenderingContext2D;
 const px = (c: Ctx, col: string, x: number, y: number, w = 1, h = 1) => { c.fillStyle = col; c.fillRect(x, y, w, h); };
@@ -219,6 +219,12 @@ export function makeMordrecArt(scene: Phaser.Scene) {
   canvasTex(scene, 'mord_sword', 16, 84, (c) => drawSword(c), OUTLINE);
   canvasTex(scene, 'mord_sword_r', 16, 84, (c) => drawSword(c, true), OUTLINE);
   canvasTex(scene, 'mord_splash', 100, 124, drawSplash, OUTLINE);
+  // Poing ganté qui enserre la fusée (dessiné par-dessus la lame, tourne avec elle).
+  canvasTex(scene, 'mord_fist', 10, 10, (c) => {
+    px(c, H.i1, 1, 1, 8, 8);
+    for (let i = 0; i < 4; i++) { px(c, H.i3, 2, 1 + i * 2, 6, 1); px(c, A.k, 2, 2 + i * 2, 6, 1); }
+    px(c, H.i4, 7, 1, 1, 7); px(c, H.b1, 1, 1, 1, 8); px(c, H.b2, 1, 1, 1, 2);
+  }, OUTLINE);
   canvasTex(scene, 'mord_eyes', 9, 3, (c) => { px(c, '#fff', 1, 1, 2, 1); px(c, '#fff', 6, 1, 2, 1); });
   // Danger (rouge/magenta, cœur blanc) : traînées, pics de roche, épée fantôme, repère au sol.
   canvasTex(scene, 'smear0', 146, 146, (c) => smear(c, -75, 125, 26, 72));
@@ -611,7 +617,9 @@ export const MORDREC: BossDef = {
   build(b) {
     const sc = b.scene;
     const body = sc.add.image(0, 0, 'mord_body').setOrigin(0.5, 1);
-    const sword = sc.add.image(18, -44, 'mord_sword').setOrigin(0.5, 70 / 84);
+    const blade = sc.add.image(0, 0, 'mord_sword').setOrigin(0.5, 70 / 84);
+    const fist = sc.add.image(0, 0, 'mord_fist');
+    const sword = sc.add.container(18, -44, [blade, fist]);
     const headImg = sc.add.image(0, 0, 'mord_head').setOrigin(0.5, 1);
     const eyes = sc.add.image(4, -12, 'mord_eyes');
     const glow = sc.add.image(4, -12, 'glowW').setBlendMode(ADD).setScale(0.6);
@@ -619,8 +627,8 @@ export const MORDREC: BossDef = {
     // rig : inclinaison / écrasement autour des pieds ; root : position + orientation.
     const rig = sc.add.container(0, 0, [body, head, sword]);
     b.root.add(rig);
-    b.parts = { rig, body, sword, head, headImg, eyes, glow };
-    b.flashParts = [body, headImg, sword];
+    b.parts = { rig, body, sword, blade, head, headImg, eyes, glow };
+    b.flashParts = [body, headImg, blade, fist];
     this.rest(b, 0);
     sc.tweens.add({ targets: headImg, y: 1, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
   },
@@ -645,7 +653,7 @@ export const MORDREC: BossDef = {
     sc.tweens.add({ targets: p.head, y: REST.headY - 4, duration: 200 });
     sc.tweens.add({ targets: p.sword, angle: -30, duration: 250, ease: 'Back.out' });
     // L'épée s'embrase de rouge sombre : ses coups deviennent plus lourds.
-    (p.sword as Img).setTexture('mord_sword_r');
+    (p.blade as Img).setTexture('mord_sword_r');
     sc.sparks(b.x + b.dir * 18, b.y - 90, COL.danger, 20);
     for (let i = 0; i < 3; i++) sc.time.delayedCall(i * 220, () => ring(b, b.x, b.y - 60, 3 + i));
     sc.puffs(b.x - 20, b.floorY, 5); sc.puffs(b.x + 20, b.floorY, 5); sc.debris(b.x, b.floorY, 8);
