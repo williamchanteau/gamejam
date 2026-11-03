@@ -10,8 +10,8 @@ import { NOCTIS } from '../bosses/noctis';
 import { TITLE_MOON } from '../art/title';
 
 const LX = 26; // bord gauche du logo et des boutons
-const BW = 104, MX = LX + BW / 2; // boutons du menu principal (centre)
-const DW = 120; // boutons de difficulté
+const BW = 104, DW = 120; // largeur des boutons : menu principal, difficulté
+let AX = 0; // axe du losange sous le logo : les boutons y sont centrés
 const hillY = (x: number) => 228 + Math.round(Math.sin(x / 40) * 6 + Math.sin(x / 13) * 2);
 
 /** Écran titre : logo + boutons encadrés à gauche, scène vivante à droite (cathédrale, lune, nuages, veilleur). */
@@ -60,6 +60,7 @@ export class MenuScene extends Phaser.Scene {
 
     const glow = this.add.image(LX - 6, 14, 'logo_glow').setOrigin(0, 0).setDepth(39).setBlendMode(Phaser.BlendModes.ADD).setAlpha(0.5);
     const logo = this.add.image(LX - 6, 14, 'logo').setOrigin(0).setDepth(40);
+    AX = LX - 6 + Math.round(logo.width / 2);
     this.tweens.add({ targets: [logo, glow], y: 16, duration: 1800, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
     this.tweens.add({ targets: glow, alpha: 0.75, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
     // Braises qui s'échappent du pied des lettres.
@@ -67,13 +68,13 @@ export class MenuScene extends Phaser.Scene {
       x: { min: LX, max: LX + 190 }, y: { min: 46, max: 50 }, lifespan: 1800, speedY: { min: -26, max: -10 }, speedX: { min: -5, max: 5 },
       scale: { start: 1, end: 0.4 }, alpha: { start: 0.9, end: 0 }, tint: [0xff8a2a, 0xffd36a, 0xc0441a], frequency: 160,
     }).setDepth(41);
-    this.menu = new Menu(this, MX, 82, [
+    this.menu = new Menu(this, AX, 82, [
       { label: 'JOUER', act: () => this.difficulty() },
       { label: 'OPTIONS', act: () => this.options() },
       { label: 'QUITTER', act: () => this.quit() },
       { label: 'TESTER BOSS', x: W - 94, y: H - 32, w: 140, act: () => this.bosses() },
     ], { framed: BW, gap: 25 });
-    txt(this, LX - 14, H - 13, '↑↓ : CHOISIR · ENTRÉE/ESPACE : VALIDER', COL.uiDim).setDepth(40);
+    txt(this, AX, H - 13, '↑↓ : CHOISIR · ENTRÉE/ESPACE : VALIDER', COL.uiDim).setOrigin(0.5, 0).setDepth(40);
     this.cameras.main.fadeIn(250);
   }
 
@@ -97,8 +98,8 @@ export class MenuScene extends Phaser.Scene {
   private difficulty() {
     input.reset();
     this.menu.enabled = false; this.menu.setVisible(false);
-    this.diffNote = txt(this, LX, 78, 'SAUVEGARDE AU DÉBUT DE CHAQUE BOSS', COL.moonLight).setDepth(40);
-    this.diff = new Menu(this, LX + DW / 2, 100, [
+    this.diffNote = txt(this, AX, 78, 'SAUVEGARDE AU DÉBUT DE CHAQUE BOSS', COL.moonLight).setOrigin(0.5, 0).setDepth(40);
+    this.diff = new Menu(this, AX, 100, [
       { label: 'NORMAL', act: () => { run.hard = false; this.go('Outside'); } },
       { label: 'DIFFICILE', act: () => { run.hard = true; this.go('Outside'); } },
       { label: 'RETOUR', act: () => this.closeDiff() },
