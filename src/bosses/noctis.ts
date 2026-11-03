@@ -142,11 +142,13 @@ function* moulinet(b: Boss) {
   ring.destroy(); sfx.blade();
   const p = r.p, a1 = p.a1, b1 = p.b1;
   b.tw(p, { a1: a1 - 720, b1: b1 - 720 }, b.t(M.time), 'Sine.inOut');
-  let which = false;
+  // Ce qui touche, c'est une lanterne, mais seulement dans l'anneau dessiné : le centre reste réellement sûr.
+  const box = (id: LampId) => { const q = r.world(id); return new Phaser.Geom.Rectangle(q.x - M.hit / 2, q.y - M.hit / 2, M.hit, M.hit); };
+  const x0 = b.x;
   b.hitbox = () => {
-    which = !which;
-    const q = r.world(which ? 'main' : 'off');
-    return new Phaser.Geom.Rectangle(q.x - M.hit / 2, q.y - M.hit / 2, M.hit, M.hit);
+    const q = b.player.rect(), d = Math.hypot(q.centerX - x0, q.centerY - cy), A = box('main');
+    if (d <= M.safe || d >= M.radius) return new Phaser.Geom.Rectangle(-9999, -9999, 1, 1);
+    return Phaser.Geom.Rectangle.Overlaps(A, q) ? A : box('off');
   };
   const n = 16;
   for (let i = 0; i < n; i++) {
@@ -227,6 +229,8 @@ function* epreuve(b: Boss) {
     sfx.ting(); sc.cameras.main.shake(70, 0.003);
     yield E.show;
   }
+  // Il a jeté son feu : plus de lanterne sur lui, le frapper ne remplace pas l'épreuve.
+  douse(b);
   // Le cercle se referme sur lui : c'est le temps restant.
   const ring = b.temp(sc.add.graphics().setDepth(80));
   let t = E.window;
