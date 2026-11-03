@@ -143,9 +143,12 @@ export class Player {
     const dir = (input.isDown('right') ? 1 : 0) - (input.isDown('left') ? 1 : 0);
     if (dir) this.facing = dir;
     if (this.grounded) this.body.velocity.x = this.facing * s.lunge;
-    const fx = this.scene.add.image(this.x + this.facing * 12, this.y - 3, 'slash').setDepth(11)
-      .setFlipX(this.facing < 0).setFlipY(i === 1).setScale(i === 2 ? 1.3 : 1).setAlpha(0);
+    // Visuel seul (la zone touchée reste checkHits/reach) : entailles aux coups 1-2, estoc au 3e.
+    const fx = i === 2
+      ? this.scene.add.image(this.x + this.facing * 27, this.y - 5, 'thrust').setDepth(11).setFlipX(this.facing < 0).setAlpha(0)
+      : this.scene.add.image(this.x + this.facing * 12, this.y - 3, 'slash').setDepth(11).setFlipX(this.facing < 0).setFlipY(i === 1).setAlpha(0);
     this.scene.tweens.add({ targets: fx, alpha: { from: 1, to: 0 }, delay: s.windup * 1000, duration: 140, onComplete: () => fx.destroy() });
+    if (i === 2) this.scene.tweens.add({ targets: fx, x: fx.x + this.facing * 6, delay: s.windup * 1000, duration: 140, ease: 'Quad.out' });
     this.scene.time.delayedCall(s.windup * 1000, () => sfx.swing(i));
   }
 
@@ -240,7 +243,10 @@ export class Player {
     if (this.state !== 'dead') {
       let k: string;
       if (this.state === 'dash') k = 'dash';
-      else if (this.state === 'attack' || this.state === 'cast') k = 'atk';
+      else if (this.state === 'attack') { // armé → frappe (actif + 50 ms) → suite du geste
+        const a = C.combo[this.combo], t = this.stateT;
+        k = `atk${this.combo}_${t < a.windup ? 0 : t < a.windup + a.active + 0.05 ? 1 : 2}`;
+      } else if (this.state === 'cast') k = 'cast';
       else if (this.state === 'hurt') k = 'hurt';
       else if (!this.grounded) k = b.velocity.y < -30 ? 'jump' : 'fall';
       else if (Math.abs(b.velocity.x) > 22) { this.animT += dt * 10 * Math.abs(b.velocity.x) / C.runSpeed; k = 'run' + (Math.floor(this.animT) % 4); }

@@ -23,7 +23,12 @@ const HOOD = [
   '.......ddd.....',
 ];
 
-type Pose = { bob: number; lean: number; legs: number[][]; flare: number; hem: number; arm?: boolean };
+/** Bras : épaule s → main h ; dague tenue selon l'angle deg (0 = devant, 90 = bas), longueur len ; back = bras du fond. */
+type Arm = { s: number[]; h: number[]; deg?: number; len?: number; back?: boolean; open?: boolean };
+type Pose = { bob: number; lean: number; legs: number[][]; flare: number; hem: number; arms?: Arm[] };
+// Combo aux dagues (3 frames par coup : armé, frappe, suite) — visuel seul, la hitbox est dans config.combo.
+const A0 = { bob: 0, lean: 1, legs: [[5, 29, 6], [15, 29, 6]], flare: 1, hem: 0 };
+const A2 = { bob: 1, lean: 2, legs: [[3, 29, 6], [16, 29, 6]], flare: 2, hem: 1 };
 const POSES: Record<string, Pose> = {
   idle0: { bob: 0, lean: 0, legs: [[8, 29, 6], [13, 29, 6]], flare: 0, hem: 0 },
   idle1: { bob: 1, lean: 0, legs: [[8, 29, 6], [13, 29, 6]], flare: 0, hem: 1 },
@@ -34,13 +39,54 @@ const POSES: Record<string, Pose> = {
   jump: { bob: 0, lean: 0, legs: [[8, 29, 5], [14, 28, 5]], flare: -1, hem: 1 },
   fall: { bob: 0, lean: 0, legs: [[6, 29, 6], [15, 29, 6]], flare: 3, hem: 2 },
   dash: { bob: 1, lean: 2, legs: [[3, 28, 5], [8, 29, 5]], flare: 2, hem: 0 },
-  atk: { bob: 0, lean: 1, legs: [[5, 29, 6], [15, 29, 6]], flare: 1, hem: 0, arm: true },
+  // 1er coup : taille de la main avant, de haut en bas.
+  atk0_0: { ...A0, arms: [{ s: [16, 15], h: [17, 10], deg: -125, len: 6 }] },
+  atk0_1: { ...A0, arms: [{ s: [16, 15], h: [21, 16], deg: 0, len: 7 }] },
+  atk0_2: { ...A0, arms: [{ s: [16, 15], h: [19, 20], deg: 55, len: 6 }] },
+  // 2e coup : revers montant de la main du fond, la dague avant reste en garde.
+  atk1_0: { ...A0, arms: [{ s: [12, 15], h: [8, 21], deg: 150, len: 6, back: true }, { s: [16, 15], h: [17, 18], deg: 100, len: 4 }] },
+  atk1_1: { ...A0, arms: [{ s: [12, 15], h: [21, 12], deg: -35, len: 7, back: true }, { s: [16, 15], h: [17, 18], deg: 100, len: 4 }] },
+  atk1_2: { ...A0, arms: [{ s: [12, 15], h: [19, 9], deg: -75, len: 6, back: true }, { s: [16, 15], h: [17, 18], deg: 100, len: 4 }] },
+  // 3e coup : estoc des deux dagues en fente.
+  atk2_0: { ...A2, arms: [{ s: [12, 15], h: [12, 19], deg: 10, len: 5, back: true }, { s: [16, 15], h: [14, 17], deg: 0, len: 6 }] },
+  atk2_1: { ...A2, arms: [{ s: [12, 15], h: [20, 19], deg: 4, len: 7, back: true }, { s: [16, 15], h: [21, 16], deg: 0, len: 7 }] },
+  atk2_2: { ...A2, arms: [{ s: [12, 15], h: [18, 20], deg: 25, len: 6, back: true }, { s: [16, 15], h: [20, 18], deg: 18, len: 7 }] },
+  cast: { ...A0, arms: [{ s: [16, 15], h: [21, 16], open: true }] },
   hurt: { bob: 0, lean: -1, legs: [[6, 29, 6], [13, 28, 6]], flare: 1, hem: 1 },
 };
 
 function px(c: CanvasRenderingContext2D, col: string, x: number, y: number, w = 1, h = 1) {
   c.fillStyle = col; c.fillRect(x, y, w, h);
 }
+
+function line(c: CanvasRenderingContext2D, col: string, x0: number, y0: number, x1: number, y1: number, w = 1) {
+  const n = Math.max(Math.abs(x1 - x0), Math.abs(y1 - y0), 1);
+  for (let i = 0; i <= n; i++) px(c, col, Math.round(x0 + ((x1 - x0) * i) / n), Math.round(y0 + ((y1 - y0) * i) / n), w, w);
+}
+
+/** Dague dans la main (hx, hy) : pommeau, garde perpendiculaire, lame d'acier à reflet lunaire. */
+function dagger(c: CanvasRenderingContext2D, hx: number, hy: number, deg: number, len: number) {
+  const a = (deg * Math.PI) / 180, dx = Math.cos(a), dy = Math.sin(a), ox = hx + 1, oy = hy + 1;
+  const at = (i: number, j = 0) => [Math.round(ox + dx * i - dy * j), Math.round(oy + dy * i + dx * j)] as const;
+  px(c, '#4a2e1a', ...at(-1)); px(c, '#9aa6c8', ...at(-2));
+  for (const j of [-1.5, 0, 1.5]) px(c, '#9aa6c8', ...at(1.5, j));
+  for (let i = 2; i < len + 2; i++) {
+    px(c, i === len + 1 ? '#a6fcff' : '#dfe8ff', ...at(i));
+    if (i < len) px(c, '#7a86ac', ...at(i, 0.9)); // dos de lame (2 px près de la garde)
+  }
+}
+
+function arm(c: CanvasRenderingContext2D, r: Arm, L: number) {
+  const [sx, sy] = r.s, hx = r.h[0] + L, hy = r.h[1];
+  line(c, r.back ? P.m : P.c, sx + L, sy, hx, hy, 2);
+  if (!r.back) line(c, P.s, sx + L, sy, hx, hy);
+  if (r.open) { px(c, '#a6fcff', hx, hy, 2, 2); px(c, '#ffffff', hx + 1, hy, 1, 1); return; } // main ouverte (sort)
+  px(c, r.back ? P.l : P.h, hx, hy, 2, 2);
+  if (r.deg !== undefined) dagger(c, hx, hy, r.deg, r.len ?? 6);
+}
+
+/** Hors attaque : la dague de la main avant est tenue en prise inversée, lame le long de la cuisse. */
+const REST: Arm[] = [{ s: [16, 15], h: [16, 19], deg: 100, len: 5 }];
 
 // Cape au vent : textures précalculées par vent horizontal h (-1 plaquée … 3 course … 5 dash),
 // vent vertical v (en l'air : -2 montée = pend vers le bas … 2 chute = gonfle vers le haut) et phase
@@ -70,6 +116,8 @@ function capeOf(h: number, v: number, ph: number): Cape {
 function drawPlayer(c: CanvasRenderingContext2D, p: Pose, cape?: Cape) {
   c.save(); c.translate(OX, 0);
   const cp = cape ?? { flare: p.flare, lift: 0, ph: p.hem * 2, hem: p.hem, amp: 0.8, rows: 21, sq: 1 }, minX = cape ? 1 - OX : 1;
+  const arms = p.arms ?? REST;
+  for (const r of arms) if (r.back) arm(c, r, p.lean); // bras du fond, derrière le corps
   // Jambes + bottes.
   for (const [x, y, h] of p.legs) {
     px(c, '#1a1830', x, y, 3, h);
@@ -107,14 +155,8 @@ function drawPlayer(c: CanvasRenderingContext2D, p: Pose, cape?: Cape) {
     const l = 6 - Math.floor(i / 2) + L, r = 16 + L;
     for (let x = l; x <= r; x++) px(c, i === 4 ? P.d : x === r ? P.l : x === l ? P.d : i === 0 ? P.s : P.c, x, 12 + i);
   }
-  if (p.arm) {
-    // Bras tendu + lame courte.
-    px(c, P.c, 15 + L, 16, 4, 3);
-    px(c, P.s, 15 + L, 16, 4, 1);
-    px(c, P.h, 19 + L, 16, 2, 3);
-    px(c, '#a6fcff', 21 + L, 15, 1, 3);
-  }
   drawMap(c, HOOD, P, 4 + L, 1 + p.bob);
+  for (const r of arms) if (!r.back) arm(c, r, L); // bras avant devant la capuche (armé levé)
   c.restore();
 }
 

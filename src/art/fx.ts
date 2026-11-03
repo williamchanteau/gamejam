@@ -27,10 +27,20 @@ function sphere(c: CanvasRenderingContext2D, size: number, cols: string[]) {
 
 export function makeFxArt(scene: Phaser.Scene) {
   canvasTex(scene, 'px', 2, 2, (c) => { c.fillStyle = '#fff'; c.fillRect(0, 0, 2, 2); });
-  // Entaille de l'attaque (cyan joueur) : croissant + liseré intérieur.
+  // Entaille de dague (cyan joueur) : croissant fin + fil blanc.
   canvasTex(scene, 'slash', 33, 36, (c) => {
-    crescent(c, 12, 18, 16, 7, 16, '#d8fbff', '#7ff6ff');
-    crescent(c, 12, 18, 16, 3, 16.5, '#ffffff', '#ffffff');
+    crescent(c, 12, 18, 16, 4, 16, '#d8fbff', '#7ff6ff');
+    crescent(c, 12, 18, 16, 1.6, 16.4, '#ffffff', '#ffffff');
+  });
+  // Estoc des deux dagues : deux traits effilés, pointe blanche.
+  canvasTex(scene, 'thrust', 34, 9, (c) => {
+    for (const [y, x0, x1] of [[2, 0, 33], [6, 5, 29]]) for (let x = x0; x <= x1; x++) {
+      const t = (x - x0) / (x1 - x0);
+      c.fillStyle = t > 0.85 ? '#ffffff' : t > 0.4 ? '#d8fbff' : '#7ff6ff';
+      c.globalAlpha = 0.35 + t * 0.65;
+      c.fillRect(x, y - (t > 0.55 ? 1 : 0), 1, t > 0.55 ? 2 : 1);
+    }
+    c.globalAlpha = 1;
   });
   // Éclat lunaire.
   canvasTex(scene, 'moon', 42, 45, (c) => {
