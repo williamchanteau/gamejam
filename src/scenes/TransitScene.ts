@@ -42,7 +42,7 @@ export class TransitScene extends Phaser.Scene {
       txt(this, W / 2, 76, 'LA SUITE ARRIVE BIENTÔT...', COL.ui).setOrigin(0.5, 0).setScale(2);
       this.time.delayedCall(1600, () => {
         this.end = true;
-        txt(this, W / 2, 100, "MERCI D'AVOIR JOUÉ · ENTRÉE / J : MENU", COL.uiDim).setOrigin(0.5, 0);
+        txt(this, W / 2, 100, "MERCI D'AVOIR JOUÉ · ENTRÉE / ESPACE : MENU", COL.uiDim).setOrigin(0.5, 0);
       });
     }
   }
