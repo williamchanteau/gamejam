@@ -37,7 +37,7 @@ export function stoneBlocks(c: Ctx, w: number, h: number, bw: number, bh: number
 }
 
 /** Arc brisé (gothique) : vrai si (x, y) est dans la fenêtre. */
-const inArch = (x: number, y: number, cx: number, yb: number, hw: number) =>
+export const inArch = (x: number, y: number, cx: number, yb: number, hw: number) =>
   Math.abs(x - cx) <= hw && (y >= yb || (Math.hypot(x - (cx + hw), y - yb) <= 2 * hw && Math.hypot(x - (cx - hw), y - yb) <= 2 * hw));
 
 /** Vitrail : verre en losanges plombés, rosace en haut. */

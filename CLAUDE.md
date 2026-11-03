@@ -19,7 +19,8 @@ src/: config.ts (TOUTES les valeurs réglables), input.ts, scenes/, entities/Pla
 
 ## Contrôles (AZERTY, via e.key)
 Q/D ou ←/→ · Saut Z/↑/Espace · Descendre d'une plateforme S/↓ · Attaque J/W · Dash K/X · Sort L/C · Pause Échap. Menus : ↑↓/Z/S, valider Entrée/Espace/J, souris. Une touche peut porter plusieurs actions (input.ts) → `input.reset()` à chaque ouverture/fermeture de menu. Pas de manette.
-DEV seulement : F1 boss à 1 PV, F2 invincible (gate `import.meta.env.DEV`).
+DEV seulement : F1 boss à 1 PV, F2 invincible, URL `#Boss1`/`#Test` = démarrage direct sur la scène, `window.game` exposé (gate `import.meta.env.DEV`).
+Test visuel : chrome-headless-shell de ~/.cache/ms-playwright + libs nspr/nss/asound extraites localement (apt-get download + dpkg -x, LD_LIBRARY_PATH), piloté via CDP (WebSocket Node) sur `bun run dev`.
 
 ## Joueur
 Vif, saut variable, coyote 0,1 s, buffer 0,1 s, double saut via flag (off). Dash = esquive : i-frames tout le dash (~0,22 s), ~84 px, cd ~0,55 s, direction tenue sinon face, 1 dash aérien rechargé au sol, images rémanentes. Combo 3 coups, +1 mana par coup touché. Mana pleine → "Éclat lunaire" (croissant perforant). 5 PV, invu 1,2 s, recul, hit-stop 70 ms.
@@ -34,4 +35,4 @@ Hi-bit, contour 1 px joueur/boss. Cyan lune = joueur/sorts. Rouge/magenta = DANG
 Boss grands (⅓–½ écran), pièces séparées animées par tweens, yeux lumineux. Juice : hit-stop, shake léger, particules, flash blanc.
 
 ## Étapes
-0 setup ✔ · 1 salle de test + joueur + HUD ✔ · 1b 480×270 + art détaillé + menu titre (JOUER/TUTO/OPTIONS stub/QUITTER) + pause (reprendre/recommencer/menu) + tuto = salle de test avec panneaux ✔ (JOUER → salle de test en attendant l'étape 2 : à rebrancher sur l'arène 1) · 2 Boss + Mordrec + salle 1 + mort/retry · 3 Corvina + salle 2 + escalier/fondu + victoire · plus tard : options (à discuter avec l'utilisateur), son d'ambiance, polish, build final.
+0 setup ✔ · 1 salle de test + joueur + HUD ✔ · 1b 480×270 + art détaillé + menu titre (JOUER/TUTO/OPTIONS stub/QUITTER) + pause (reprendre/recommencer/menu) + tuto = salle de test avec panneaux ✔ (JOUER → salle de test en attendant l'étape 2 : à rebrancher sur l'arène 1) · 2 Boss générique (coroutines, entities/Boss.ts) + Mordrec (bosses/mordrec.ts) + nef parallaxe 4 couches (art/nave.ts, scenes/rooms.ts) + barre nommée + intro/retry/victoire ✔ (victoire → menu en attendant l'étape 3) · 3 Corvina + salle 2 + escalier/fondu + victoire · plus tard : options (à discuter avec l'utilisateur), son d'ambiance, polish, build final.

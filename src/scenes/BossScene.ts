@@ -7,6 +7,7 @@ import { txt } from '../art/font';
 import { input } from '../input';
 import { sfx } from '../audio/sfx';
 import { MORDREC } from '../bosses/mordrec';
+import { buildNave, type Room } from './rooms';
 
 /** Salle de boss : intro 2 s (sautée au retry), barre nommée, victoire. */
 export class BossScene extends ArenaScene {
@@ -14,10 +15,11 @@ export class BossScene extends ArenaScene {
   private bar!: BossBar;
   private won = false;
   private def: BossDef = MORDREC;
+  private room!: Room;
 
   constructor(key = 'Boss1') { super(key); }
 
-  buildBackground() { this.add.image(0, 0, 'bg_test').setOrigin(0); }
+  buildBackground() { this.room = buildNave(this); }
 
   create(data?: { retry?: boolean }) {
     super.create(data);
@@ -50,6 +52,7 @@ export class BossScene extends ArenaScene {
     if (DEV && input.take('debug1') && this.boss.alive()) this.boss.hp = 1;
     this.boss.update(dt);
     this.bar.update(dt);
+    this.room.update(this.player.x, dt);
     for (const o of [...this.hazards.getChildren()] as Phaser.Physics.Arcade.Image[]) {
       const life = o.getData('life') - dt;
       o.setData('life', life);

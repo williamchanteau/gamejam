@@ -17,6 +17,7 @@ export class Hud {
     this.fill = scene.add.rectangle(7, 18, 0, 6, COL.moon).setOrigin(0).setDepth(101);
     this.hint = txt(scene, 6, 25, 'L/C : ÉCLAT LUNAIRE', COL.moonLight).setDepth(101);
     this.god = txt(scene, 6, 37, 'INVINCIBLE (F2)', COL.uiDim).setDepth(101);
+    scene.add.rectangle(W, 0, 300, 39, 0x06050c, 0.7).setOrigin(1, 0).setDepth(99);
     txt(scene, W - 4, 1, 'Q/D ou ←/→ : BOUGER · Z/↑/ESPACE : SAUTER\nS/↓ : DESCENDRE · J/W : ATTAQUER\nK/X : DASH (ESQUIVE) · L/C : SORT · ÉCHAP : PAUSE', COL.uiDim)
       .setOrigin(1, 0).setRightAlign().setDepth(100);
   }

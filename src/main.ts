@@ -25,3 +25,4 @@ const game = new Phaser.Game({
   scene: [BootScene, MenuScene, TestScene, BossScene, PauseScene],
 });
 addEventListener('resize', () => game.scale.setZoom(zoom()));
+if (import.meta.env.DEV) (window as unknown as { game: Phaser.Game }).game = game;

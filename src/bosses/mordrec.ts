@@ -142,7 +142,7 @@ function* slash(b: Boss, tele = M.slash.tele, recover = M.slash.recover, last = 
   // Télégraphe : épée levée en arrière, accroupi, trajet au sol en rouge.
   b.tw(p.sword, { angle: -70 }, tt * 0.6, 'Back.out');
   b.tw(p.body, { scaleY: 0.95 }, tt * 0.6);
-  const line = b.temp(b.scene.add.rectangle(Math.min(b.x, tx), b.floorY - 2, Math.abs(tx - b.x), 2, COL.danger, 0.5).setOrigin(0, 0).setDepth(4));
+  const line = b.temp(b.scene.add.rectangle(Math.min(b.x, tx), b.floorY - 3, Math.abs(tx - b.x), 3, COL.danger, 0.7).setOrigin(0, 0).setDepth(4));
   b.tw(line, { alpha: 0.15, repeat: -1, yoyo: true }, 0.12, 'Linear');
   yield tt;
   // Actif : ruée + taille en arc.
@@ -182,15 +182,17 @@ function* slam(b: Boss, double = false) {
   // Repère au sol sous le joueur.
   const tx = b.clampX(b.player.x);
   b.root.x = tx; b.face();
-  const mark = b.temp(sc.add.image(tx, b.floorY + 1, 'mord_mark').setDepth(4).setBlendMode(Phaser.BlendModes.ADD));
-  const col = b.temp(sc.add.rectangle(tx, 0, 30, b.floorY, COL.danger, 0.12).setOrigin(0.5, 0).setDepth(3));
-  b.tw([mark, col], { alpha: 0.3, repeat: -1, yoyo: true }, 0.1, 'Linear');
+  const mark = b.temp(sc.add.image(tx, b.floorY + 1, 'mord_mark').setDepth(6).setScale(1.3, 1.2));
+  const halo = b.temp(sc.add.image(tx, b.floorY - 4, 'glowR').setDepth(6).setBlendMode(Phaser.BlendModes.ADD).setScale(2, 0.8));
+  const col = b.temp(sc.add.rectangle(tx, 0, 36, b.floorY, COL.danger, 0.22).setOrigin(0.5, 0).setDepth(3));
+  b.tw([mark, halo], { alpha: 0.55, repeat: -1, yoyo: true }, 0.12, 'Linear');
+  b.tw(col, { alpha: 0.08, repeat: -1, yoyo: true }, 0.12, 'Linear');
   sfx.warn();
   yield b.tele(s.mark);
   // Chute + impact + ondes rasantes.
   b.tw(b.root, { y: b.floorY }, b.t(s.fall), 'Quad.in');
   yield b.t(s.fall);
-  mark.destroy(); col.destroy();
+  mark.destroy(); halo.destroy(); col.destroy();
   b.tw(p.body, { scaleY: 0.85, yoyo: true }, 0.06);
   b.tw(p.sword, { angle: 150 }, 0.08);
   b.hitbox = () => new Phaser.Geom.Rectangle(tx - 34, b.floorY - 90, 68, 90);
@@ -215,9 +217,9 @@ function* blades(b: Boss) {
   b.eyes('tele'); sfx.warn();
   const tt = b.tele(s.tele);
   b.tw(p.sword, { angle: -10 }, tt * 0.7, 'Back.out');
-  const glint = b.temp(b.scene.add.image(6, -110, 'glowR').setBlendMode(Phaser.BlendModes.ADD).setScale(0.8)); // pointe de l'épée levée
+  const glint = b.temp(b.scene.add.image(6, -110, 'glowR').setBlendMode(Phaser.BlendModes.ADD).setScale(1.1)); // pointe de l'épée levée
   b.root.add(glint);
-  b.tw(glint, { scale: 1.4, alpha: 0.5, repeat: -1, yoyo: true }, 0.1, 'Linear');
+  b.tw(glint, { scale: 1.7, alpha: 0.7, repeat: -1, yoyo: true }, 0.1, 'Linear');
   yield tt;
   glint.destroy();
   for (let i = 0; i < 3; i++) {
