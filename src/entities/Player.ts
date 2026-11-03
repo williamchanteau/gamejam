@@ -148,10 +148,10 @@ export class Player {
     if (this.grounded) this.body.velocity.x = this.facing * s.lunge;
     // Visuel seul (la zone touchée reste checkHits/reach) : entailles aux coups 1-2, estoc au 3e.
     const fx = i === 2
-      ? this.scene.add.image(this.x + this.facing * 27, this.y - 5, 'thrust').setDepth(11).setFlipX(this.facing < 0).setAlpha(0)
+      ? this.scene.add.image(this.x + this.facing * 20, this.y - 5, 'thrust').setDepth(11).setFlipX(this.facing < 0).setAlpha(0)
       : this.scene.add.image(this.x + this.facing * 12, this.y - 3, 'slash').setDepth(11).setFlipX(this.facing < 0).setFlipY(i === 1).setAlpha(0);
     this.scene.tweens.add({ targets: fx, alpha: { from: 1, to: 0 }, delay: s.windup * 1000, duration: 140, onComplete: () => fx.destroy() });
-    if (i === 2) this.scene.tweens.add({ targets: fx, x: fx.x + this.facing * 6, delay: s.windup * 1000, duration: 140, ease: 'Quad.out' });
+    if (i === 2) this.scene.tweens.add({ targets: fx, x: fx.x + this.facing * 5, delay: s.windup * 1000, duration: 140, ease: 'Quad.out' });
     this.scene.time.delayedCall(s.windup * 1000, () => sfx.swing(i));
   }
 
