@@ -13,10 +13,10 @@ export const NIGHT = {
   litLife: 3.2, exposeR: 92, // portée où une lanterne ou un feu rend Noctis vulnérable (> demi-écart : toujours couvert)
   fallTime: 0.35, fireDamage: 3, fireTick: 0.35, fireLife: 4.5, fireWidth: 132,
   rushTime: 0.65,
-  ombre: { fade: 0.22, dark: 0.34, dist: 74, tele: 0.8, active: 0.16, reach: 104, height: 72, recover: 1.05, quick: 0.35 },
-  salve: { aim: 0.65, last: 0.95, gap: 0.12, speed: 165, recover: 0.95 },
-  onde: { tele: 0.9, speed: 215, gap: 0.65, recover: 0.95 },
-  trial: { count: 3, show: 0.6, window: 7, damage: 14, stun: 3, sweepTele: 0.85, sweepGap: 0.7, bandH: 40, recover: 1.1 },
+  ombre: { fade: 0.22, dark: 0.34, dist: 74, tele: 0.8, turn: 0.1, active: 0.16, reach: 100, height: 112, recover: 1.05 },
+  moulinet: { dist: 74, tele: 0.75, time: 0.95, centerY: 50, radius: 99, safe: 62, hit: 24, recover: 1.05 },
+  onde: { tele: 0.9, speed: 215, ressac: 0.6, back: 260, recover: 0.95 },
+  trial: { count: 3, lead: 0.1, fly: 0.12, show: 0.12, window: 5, damage: 14, stun: 2.4, sweepTele: 0.8, bandH: 40, recover: 1.1 },
 };
 
 export interface Lamp {
@@ -32,6 +32,8 @@ const TAG = 0xffc45c; // cible à frapper, pas un danger : or, jamais rouge
 export class Lanterns {
   lamps: Lamp[];
   trial: Trial | null = null;
+  /** Lanternes du corps allumées (position monde) : seule lumière émise par le boss. */
+  lights: () => { x: number; y: number }[] = () => [];
   private dark: Phaser.GameObjects.RenderTexture;
   private stamps: Record<number, Phaser.GameObjects.Image> = {};
   private fireG: Phaser.GameObjects.Graphics;
@@ -130,7 +132,7 @@ export class Lanterns {
   filterHit(dmg: number) {
     const b = this.b;
     if (b.root.alpha < 0.4) return false; // déjà effacé dans le noir
-    if (dmg >= PLAYER.spell.damage || this.exposed(b.x)) return true;
+    if (dmg >= PLAYER.spell.damage || this.exposed(b.x) || this.lights().length > 0) return true;
     this.burst(b.x, b.y - 58, 0x8a80a8, 7);
     b.scene.puffs(b.x, b.y - 40, 2);
     sfx.crack();
@@ -229,12 +231,11 @@ export class Lanterns {
       else if (l.fall <= 0 && l.fire <= 0) hole(20, l.x, l.y + 12, 0.45); // repère : on devine les lanternes éteintes
     }
     for (const s of (sc as unknown as { spells: { img: Phaser.GameObjects.Image }[] }).spells) hole(62, s.img.x, s.img.y);
-    // Corps visible dès qu'il frappe ou qu'il est exposé ; sinon seulement le masque et la lampe de sa perche.
+    // Le boss n'émet rien au repos (ses yeux sont dessinés au-dessus du noir) : seule une lanterne allumée le révèle.
     if (b.root.alpha > 0.4) {
-      if (b.hitbox || this.exposed(b.x) || b.state === 'dead' || b.state === 'phase') hole(62, b.x, b.y - 58);
-      const lamp = (b.parts.lamp as Phaser.GameObjects.Image | undefined)?.getWorldTransformMatrix();
-      if (lamp) hole(20, lamp.tx, lamp.ty + 12 , 0.8);
-      if ((b.parts.eyes as Phaser.GameObjects.Image | undefined)?.visible) hole(20, b.x + b.dir * 7, b.y - 90);
+      if (this.exposed(b.x) || b.state === 'dead' || b.state === 'phase') hole(62, b.x, b.y - 58);
+      const flick = 0.92 + 0.08 * Math.sin(this.t * 13);
+      for (const q of this.lights()) hole(96, q.x, q.y, flick);
     }
   }
 }
