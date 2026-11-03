@@ -6,11 +6,12 @@ import type { ArenaScene } from '../scenes/ArenaScene';
 
 /** Un pattern est une coroutine : chaque `yield` = secondes à attendre (déjà mises à l'échelle). */
 export type PatternFn = (b: Boss) => Generator<number, void, unknown>;
-export interface PatternDef { name: string; weight: number; phase: 0 | 1 | 2; run: PatternFn; far?: boolean }
+export interface PatternDef { name: string; weight: number; phase: 0 | 1 | 2; run: PatternFn; far?: boolean; elevated?: boolean }
 export interface BossDef {
   name: string;
   title: string;
   hp: number;
+  fireOnly?: boolean;
   hurt: { w: number; h: number };
   /** Crée les pièces (parts) dans b.root, pose de repos incluse. */
   build(b: Boss): void;
@@ -119,6 +120,7 @@ export class Boss implements Target {
     const h = this.history;
     const far = Math.abs(this.player.x - this.x) > BOSS.farRange;
     let ok = this.def.patterns.filter((p) => (p.phase === 0 || p.phase === this.phase) && !(h[0] === p.name && h[1] === p.name));
+    if (this.player.rect().bottom < this.floorY - 45 && ok.some((p) => p.elevated)) ok = ok.filter((p) => p.elevated);
     if (far && ok.some((p) => p.far)) ok = ok.filter((p) => p.far);
     let r = Math.random() * ok.reduce((s, p) => s + p.weight, 0);
     const p = ok.find((q) => (r -= q.weight) < 0) ?? ok[0];
@@ -150,6 +152,13 @@ export class Boss implements Target {
   }
 
   hit(dmg: number, _fromX: number) {
+    if (this.def.fireOnly) return;
+    this.damage(dmg);
+  }
+
+  burn(dmg: number) { this.damage(dmg); }
+
+  private damage(dmg: number) {
     if (!this.alive()) return;
     this.hp = Math.max(0, this.hp - dmg);
     for (const p of this.flashParts) p.setTintFill(0xffffff);

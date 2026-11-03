@@ -335,6 +335,8 @@ function* slam(b: Boss, double = false) {
   yield b.tele(s.mark);
   // Chute (étiré) puis impact (écrasé).
   b.tw(p.rig, { scaleX: 0.9, scaleY: 1.15 }, b.t(s.fall));
+  // La chute traverse les plateformes : le corps reste dangereux pendant la descente.
+  b.hitbox = () => new Phaser.Geom.Rectangle(b.x - 30, b.y - 86, 60, 86);
   b.tw(b.root, { y: b.floorY }, b.t(s.fall), 'Quad.in');
   yield b.t(s.fall);
   mark.destroy(); halo.destroy(); col.destroy();
@@ -476,9 +478,9 @@ export const MORDREC: BossDef = {
   },
   patterns: [
     { name: 'slash', weight: 3, phase: 0, run: (b) => slash(b) },
-    { name: 'slam', weight: 2, phase: 0, run: (b) => slam(b), far: true },
+    { name: 'slam', weight: 2, phase: 0, run: (b) => slam(b), far: true, elevated: true },
     { name: 'blades', weight: 2, phase: 0, run: blades, far: true },
     { name: 'combo', weight: 3, phase: 2, run: combo },
-    { name: 'slam2', weight: 2, phase: 2, run: (b) => slam(b, true), far: true },
+    { name: 'slam2', weight: 2, phase: 2, run: (b) => slam(b, true), far: true, elevated: true },
   ],
 };

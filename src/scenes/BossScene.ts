@@ -17,9 +17,9 @@ export class BossScene extends ArenaScene {
   boss!: Boss;
   private bar!: BossBar;
   private won = false;
-  private def: BossDef = MORDREC;
+  protected def: BossDef = MORDREC;
   private room!: Room;
-  private floor = 0;
+  protected floor = 0;
   private gate!: Phaser.GameObjects.Image;
   private gateOpen = false;
   private climbing = false;

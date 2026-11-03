@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { DarkBossScene } from './scenes/DarkBossScene';
 import { W, H, PHYS } from './config';
 import { BootScene } from './scenes/BootScene';
 import { TestScene } from './scenes/TestScene';
@@ -22,6 +23,6 @@ const game = new Phaser.Game({
   audio: { noAudio: true },
   input: { keyboard: false },
   physics: { default: 'arcade', arcade: { gravity: { x: 0, y: PHYS.gravity } } },
-  scene: [BootScene, MenuScene, TestScene, OutsideScene, BossScene, TransitScene, PauseScene, GameOverScene],
+  scene: [BootScene, MenuScene, TestScene, OutsideScene, BossScene, DarkBossScene, TransitScene, PauseScene, GameOverScene],
 });
 if (import.meta.env.DEV) (window as unknown as { game: Phaser.Game }).game = game;
