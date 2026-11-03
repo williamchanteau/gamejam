@@ -24,9 +24,8 @@ export class MenuScene extends Phaser.Scene {
       scale: { start: 1, end: 0.5 }, alpha: { start: 1, end: 0 }, tint: [0xff8a2a, 0xffd36a, 0xc0441a], frequency: 120,
     }).setDepth(30);
 
-    // JOUER mène pour l'instant à la salle d'entraînement (arène du boss : étape 2).
     this.menu = new Menu(this, W / 2, 100, [
-      { label: 'JOUER', act: () => this.go('Test') },
+      { label: 'JOUER', act: () => this.go('Boss1') },
       { label: 'TUTO', act: () => this.go('Test') },
       { label: 'OPTIONS', act: () => this.popup('OPTIONS\n\nBIENTÔT !') },
       { label: 'QUITTER', act: () => this.quit() },

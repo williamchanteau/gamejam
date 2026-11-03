@@ -68,6 +68,21 @@ export const DUMMY = {
   orbLife: 5,
 };
 
+// Boss générique (les valeurs propres à chaque boss sont dans bosses/).
+export const BOSS = {
+  teleMinP1: 0.6, // télégraphe minimum (s) phase 1
+  teleMinP2: 0.45, // ... phase 2
+  pauseMin: 0.4, // pause minimum entre deux patterns
+  idlePause: [0.6, 0.9], // pause entre patterns (avant ×vitesse)
+  p2Speed: 1.15,
+  p2Invuln: 1, // durée du rugissement à 50 % PV
+  introTime: 2,
+  retryDelay: 0.5, // délai avant la 1re attaque après un retry (intro sautée)
+  walkSpeed: 45,
+  walkRange: 150, // marche vers le joueur s'il est plus loin que ça
+  victoryTime: 4,
+};
+
 export const AUDIO = { volume: 0.35 };
 
 // Couleurs (rouge/magenta réservés au DANGER).

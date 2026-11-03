@@ -15,7 +15,7 @@ export class PauseScene extends Phaser.Scene {
     txt(this, W / 2, 70, 'PAUSE', COL.moonLight).setOrigin(0.5, 0).setScale(3);
     this.menu = new Menu(this, W / 2, 112, [
       { label: 'REPRENDRE', act: () => this.resume() },
-      { label: 'RECOMMENCER', act: () => this.scene.start(this.from) },
+      { label: 'RECOMMENCER', act: () => this.scene.start(this.from, { retry: true }) },
       { label: 'MENU PRINCIPAL', act: () => { this.scene.stop(this.from); this.scene.start('Menu'); } },
     ]);
     txt(this, W / 2, H - 13, 'ÉCHAP : REPRENDRE', COL.uiDim).setOrigin(0.5, 0);

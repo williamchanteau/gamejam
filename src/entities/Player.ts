@@ -13,7 +13,7 @@ export class Player {
   body: Phaser.Physics.Arcade.Body;
   spr: Phaser.GameObjects.Image;
   scarf: Phaser.GameObjects.Graphics;
-  hp = C.hp; mana = 0; facing = 1; state: State = 'normal'; god = false;
+  hp = C.hp; mana = 0; facing = 1; state: State = 'normal'; god = false; safe = false;
   private stateT = 0; private coyote = 0; private airDashes = 0; private airJumps = 0;
   private dashCd = 0; private dashDir = 1; private afterT = 0; private invuln = 0;
   private jumpHeld = false; private wasGrounded = true; private lastVy = 0;
@@ -35,7 +35,8 @@ export class Player {
   get y() { return this.body.y + BH / 2; }
   get grounded() { return this.body.blocked.down || this.body.touching.down; }
   /** Vrai pendant le dash, l'invulnérabilité ou en mode invincible. */
-  get invulnerable() { return this.state === 'dash' || this.invuln > 0 || this.god || this.state === 'dead'; }
+  get invulnerable() { return this.state === 'dash' || this.invuln > 0 || this.god || this.safe || this.state === 'dead'; }
+  rect() { return new Phaser.Geom.Rectangle(this.body.x, this.body.y, BW, BH); }
   get canDash() { return this.dashCd <= 0 && (this.grounded || this.airDashes > 0); }
   get canDrop() { return this.scene.time.now < this.dropUntil; }
 

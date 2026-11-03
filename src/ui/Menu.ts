@@ -30,7 +30,7 @@ export class Menu {
     this.i = (k + this.items.length) % this.items.length;
     this.texts.forEach((t, j) => t.setTint(j === this.i ? COL.moonLight : COL.uiDim));
     const t = this.texts[this.i];
-    this.cursor.setPosition(Math.round(t.x - t.displayWidth / 2 - 10), Math.round(t.y + 5.5 * this.scale));
+    this.cursor.setPosition(Math.round(t.x - t.displayWidth / 2 - 10), Math.round(t.y + 6.5 * this.scale));
     if (!silent) sfx.tick();
   }
 

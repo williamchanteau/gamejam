@@ -19,7 +19,8 @@ export class ArenaScene extends Phaser.Scene {
   private sparkFx!: Phaser.GameObjects.Particles.ParticleEmitter;
   private dustFx!: Phaser.GameObjects.Particles.ParticleEmitter;
 
-  create() {
+  create(_data?: { retry?: boolean }) {
+    this.tweens.timeScale = 1; this.time.timeScale = 1;
     // Tout réinitialiser ici : restart() ne relance pas les initialiseurs de champs.
     input.reset();
     this.targets = [];
@@ -72,8 +73,12 @@ export class ArenaScene extends Phaser.Scene {
       return;
     }
     const world = this.physics.world;
-    if (performance.now() < this.hitstopEnd) { if (!world.isPaused) world.pause(); return; }
-    if (world.isPaused) world.resume();
+    // Hit-stop : physique, tweens et timers gelés ensemble (une seule horloge).
+    if (performance.now() < this.hitstopEnd) {
+      if (!world.isPaused) { world.pause(); this.tweens.timeScale = 0; this.time.timeScale = 0; }
+      return;
+    }
+    if (world.isPaused) { world.resume(); this.tweens.timeScale = 1; this.time.timeScale = 1; }
     const dt = Math.min(deltaMs / 1000, 1 / 30);
     this.player.update(dt);
     this.updateSpells(dt);
@@ -117,6 +122,6 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   onPlayerDeath() {
-    this.time.delayedCall(PLAYER.deathRetryDelay * 1000, () => this.scene.restart());
+    this.time.delayedCall(PLAYER.deathRetryDelay * 1000, () => this.scene.restart({ retry: true }));
   }
 }

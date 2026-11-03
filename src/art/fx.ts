@@ -43,6 +43,7 @@ export function makeFxArt(scene: Phaser.Scene) {
   canvasTex(scene, 'orb', 15, 15, (c) => sphere(c, 15, ['#ffe6ee', '#ff6a90', '#ff2a5a', '#a0103c']));
   glowTex(scene, 'glowR', 48, '255,42,90');
   glowTex(scene, 'glowO', 64, '255,138,42');
+  glowTex(scene, 'glowW', 32, '255,255,255');
   // PV : cœurs cyan (jamais rouges).
   mapTex(scene, 'hp_full', HEART, { x: '#5fd8f0', H: '#d8fbff', s: '#2f98b8' });
   mapTex(scene, 'hp_empty', HEART, { x: '#262b45', H: '#30365a', s: '#1c2036' });

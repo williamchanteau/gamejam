@@ -63,5 +63,13 @@ export const sfx = {
   shoot: () => tone(300, 150, 0.15, 'square', 0.08),
   tick: () => tone(660, 700, 0.04, 'square', 0.05),
   select: () => { tone(440, 880, 0.12, 'triangle', 0.15); tone(660, 1320, 0.16, 'triangle', 0.1, 0.06); },
+  roar: () => { tone(110, 50, 0.9, 'sawtooth', 0.3); tone(165, 70, 0.8, 'square', 0.1); noise(0.8, 0.3, 250); },
+  slam: () => { tone(120, 35, 0.4, 'square', 0.3); noise(0.45, 0.5, 180, 0.6); },
+  clank: () => { tone(900, 620, 0.06, 'square', 0.08); noise(0.08, 0.22, 3200, 3); },
+  whoosh: () => noise(0.2, 0.32, 800, 0.8),
+  blade: () => { tone(900, 380, 0.2, 'sawtooth', 0.06); noise(0.15, 0.15, 2200, 2); },
+  leap: () => tone(140, 320, 0.25, 'triangle', 0.18),
+  bossDeath: () => { tone(220, 30, 1.6, 'sawtooth', 0.3); noise(1.3, 0.35, 350); },
+  victory: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, f, 0.35, 'triangle', 0.15, i * 0.14)),
   death: () => { tone(300, 40, 0.7, 'sawtooth', 0.25); noise(0.5, 0.3, 300); },
 };

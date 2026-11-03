@@ -4,6 +4,7 @@ import { makePlayerArt } from '../art/player';
 import { makeFxArt } from '../art/fx';
 import { makeRoomArt } from '../art/room';
 import { makeTitleArt } from '../art/title';
+import { makeMordrecArt } from '../bosses/mordrec';
 
 // Génère toutes les textures par code, puis lance le jeu.
 export class BootScene extends Phaser.Scene {
@@ -14,6 +15,7 @@ export class BootScene extends Phaser.Scene {
     makeFxArt(this);
     makeRoomArt(this);
     makeTitleArt(this);
+    makeMordrecArt(this);
     this.scene.start('Menu');
   }
 }
