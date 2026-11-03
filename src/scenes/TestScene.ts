@@ -4,7 +4,7 @@ import { ArenaScene } from './ArenaScene';
 import { txt } from '../art/font';
 import { sfx } from '../audio/sfx';
 import type { Target } from '../entities/types';
-import { keyLabel, getLayout } from '../input';
+import { input, keyLabel, getLayout } from '../input';
 import { Portal } from '../entities/Portal';
 
 /** Épouvantail d'entraînement : encaisse les coups et tire une orbe lente. */
@@ -118,7 +118,7 @@ export class TestScene extends ArenaScene {
     if (this.layout !== getLayout()) { this.scene.restart({ retry: true }); return; } // panneaux à réécrire
     this.dummy.update(dt);
     this.portal.update(dt);
-    if (!this.leaving && this.player.x < 24) {
+    if (!this.leaving && this.player.x < 24 && input.isDown('left')) { // pas de sortie sur un recul
       this.leaving = true;
       this.portal.swallow(() => this.scene.start('Outside', { fromTuto: true }));
     }
