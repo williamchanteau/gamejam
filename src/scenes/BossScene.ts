@@ -98,7 +98,7 @@ export class BossScene extends ArenaScene {
       this.cameras.main.shake(700, 0.003);
       this.puffs(STAIRS.x, this.floorY, 6);
       this.tweens.add({ targets: this.gate, scaleY: 0.05, duration: 1100, ease: 'Quad.inOut', onComplete: () => { this.gateOpen = true; } });
-      const hint = txt(this, STAIRS.x, STAIRS.base - 60, 'MONTER →', COL.moonLight).setOrigin(0.5, 0).setDepth(20);
+      const hint = txt(this, STAIRS.x - 14, STAIRS.base - 62, 'MONTER →', COL.moonLight).setOrigin(0.5, 0).setDepth(20);
       this.tweens.add({ targets: hint, x: STAIRS.x + 4, duration: 450, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
     });
   }

@@ -134,17 +134,31 @@ export function makeOutsideArt(scene: Phaser.Scene) {
   });
 }
 
-/** Escalier (arche + marches éclairées) peint dans les accessoires de la nef. */
+/** Fond de la nef : mur de pierre plein, porte en ogive de la tour d'escalier, marches éclairées à l'intérieur. */
 export function paintStairs(c: Ctx) {
-  const { x: sx, hw, base } = STAIRS;
+  const { x: sx, hw, base } = STAIRS, x0 = sx - hw - 22, WW = ARENA.bossW;
+  // Mur du fond (jusqu'au plafond), contrefort éclairé sur sa tranche gauche.
+  c.save(); c.beginPath(); c.rect(x0, 0, WW - x0, FY); c.clip(); c.translate(x0, 0);
+  stoneBlocks(c, WW - x0, FY, 18, 9, ['#100e1a', '#1e1b2e', '#29263c', '#353150', ''], 13);
+  c.restore();
+  px(c, '#06050c', x0 - 2, 0, 2, FY); px(c, '#4a4868', x0, 0, 2, FY); px(c, '#2e2b45', x0 + 2, 0, 3, FY);
+  for (let y = 0; y < FY; y += 26) { px(c, '#3d3a58', x0 - 3, y, 8, 3); px(c, '#06050c', x0 - 3, y + 3, 8, 1); } // chaînage d'angle
+  // Meurtrière haute + clé de voûte sculptée.
+  for (let y = 60; y < 96; y++) px(c, '#06050c', sx - 2, y, 4, 1);
+  px(c, '#3a6aa0', sx - 1, 66, 2, 26); pool(c, sx, 78, 20, '127,170,255', 0.12);
+  // Porte : voussoirs alternés, intérieur sombre.
   for (let y = 120; y <= FY; y++)
     for (let x = sx - hw - 7; x <= sx + hw + 7; x++) {
       if (inArch(x, y, sx, base, hw)) px(c, '#0c0a14', x, y);
       else if (inArch(x, y, sx, base, hw + 6)) px(c, (Math.floor((x + y) / 5) % 2) ? '#45425e' : '#55526e', x, y);
     }
-  pool(c, sx + 14, base - 30, 40, '255,150,60', 0.25);
+  px(c, '#6a6480', sx - 4, base - Math.round(Math.sqrt(3) * hw) - 7, 8, 9); px(c, '#8a84a0', sx - 3, base - Math.round(Math.sqrt(3) * hw) - 6, 6, 1);
+  // Marches qui montent vers la droite et disparaissent dans le noir, lumière de torche en haut.
+  pool(c, sx + 16, base - 26, 34, '255,150,60', 0.28);
   for (let k = 0; k < 8; k++) {
-    const x = sx - hw + 2 + k * 5, y = FY - 6 - k * 7;
-    px(c, '#2e2b45', x, y, sx + hw - x, 7); px(c, '#6a6480', x, y, sx + hw - x, 1);
+    const x = sx - hw + 2 + k * 5, y = FY - 6 - k * 6, sh = Math.max(0, 1 - k / 9);
+    px(c, k < 6 ? '#2e2b45' : '#1e1b2e', x, y, sx + hw - x, 6);
+    px(c, `rgba(150,140,180,${0.4 + 0.5 * (1 - sh)})`, x, y, sx + hw - x, 1);
   }
+  px(c, '#ffb050', sx + hw - 6, base - 34, 2, 3); px(c, '#ffe0a0', sx + hw - 6, base - 34, 1, 1); // flamme lointaine
 }

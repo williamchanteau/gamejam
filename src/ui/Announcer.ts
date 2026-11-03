@@ -75,7 +75,7 @@ export function announce(s: Phaser.Scene, def: BossDef, label: string, onDone: (
   // Titre + étiquette d'étage.
   const ttl = keep(txt(s, -200, y0 + 44, def.title, 0xffb060).setScale(2));
   s.time.delayedCall(700 + name.length * 70 + 80, () => { tw({ targets: ttl, x: x0 + 2, duration: 220, ease: 'Cubic.out' }); sfx.roar(); });
-  const lab = keep(txt(s, x0 + 2, y0 - 16, label, COL.ui).setAlpha(0));
+  const lab = keep(txt(s, x0 + 2, 40, label, COL.ui).setAlpha(0)); // au-dessus des bandeaux
   tw({ targets: lab, alpha: 1, delay: 600, duration: 200 });
 
   // Sortie : tout file hors champ, puis « EN GARDE ! ».

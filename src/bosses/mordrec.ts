@@ -121,16 +121,20 @@ export function makeMordrecArt(scene: Phaser.Scene) {
   canvasTex(scene, 'smear0', 146, 146, (c) => smear(c, -75, 125, 26, 72));
   canvasTex(scene, 'smear1', 146, 146, (c) => smear(c, 20, 125, 40, 72));
   canvasTex(scene, 'smear2', 146, 146, (c) => smear(c, 80, 125, 56, 72));
-  for (const [k, lean] of [['mord_spike', 0], ['mord_spike2', 2]] as [string, number][])
-    canvasTex(scene, k, 16, 26, (c) => {
-      for (let y = 1; y < 25; y++) {
-        const t = (y - 1) / 23, hw = Math.max(0, Math.round(t * 6)), cx = 8 + Math.round((1 - t) * lean);
+  // Pics de roche à facettes (face éclairée / ombre), fissure rouge incandescente, pointe chauffée à blanc.
+  for (const [k, hgt, hw0, lean] of [['mord_spike', 26, 6, 0], ['mord_spike2', 20, 5, 2], ['mord_spike3', 30, 7, -1]] as [string, number, number, number][])
+    canvasTex(scene, k, 18, 32, (c) => {
+      const top = 31 - hgt;
+      for (let y = top; y < 31; y++) {
+        const t = (y - top) / (hgt - 1), hw = Math.max(0, Math.round(t * hw0)), cx = 9 + Math.round((1 - t) * lean);
         for (let x = cx - hw; x <= cx + hw; x++) {
-          const crack = Math.abs(x - cx - Math.round(Math.sin(y * 0.9))) < 1 && y > 6;
-          px(c, crack ? (y % 5 ? '#ff2a5a' : '#ffd6e0') : x <= cx - hw + 1 ? '#7a86ac' : x >= cx + hw - 1 ? '#262b45' : '#4a5275', x, y);
+          const u = hw ? (x - cx) / hw : 0, seam = Math.abs(x - cx - Math.round(Math.sin(y * 0.7) * 0.6)) < 1 && t > 0.25;
+          px(c, seam ? (t > 0.8 ? '#ffd6e0' : '#ff2a5a') : t < 0.18 ? '#ffd6e0' : u < -0.45 ? '#9aa6c8' : u < 0 ? '#6a759a' : u < 0.5 ? '#454d70' : '#262b45', x, y);
         }
       }
+      px(c, '#3a3448', 9 - hw0 - 1, 30, hw0 * 2 + 3, 1); // éboulis à la base
     }, OUTLINE);
+  canvasTex(scene, 'mord_crack', 12, 3, (c) => { px(c, '#ff2a5a', 0, 1, 12, 1); px(c, '#ffd6e0', 3, 1, 5, 1); px(c, '#c0144a', 2, 0, 3, 1); px(c, '#c0144a', 7, 2, 3, 1); });
   canvasTex(scene, 'mord_ghost', 58, 14, (c) => {
     for (let x = 6; x < 56; x++) {
       const hw = x > 46 ? Math.round((56 - x) * 0.33) : 3;
@@ -210,22 +214,35 @@ function impact(b: Boss, x: number, y: number, power: number) {
   sc.debris(x, y - 2, 4 * power);
   if (power >= 2) sc.flashScreen(0.22);
 }
-/** Onde de pics de roche : hitbox invisible au front, pics qui jaillissent puis s'enfoncent derrière. */
+/** Onde de pics de roche : une fissure rouge court au sol, les pics jaillissent derrière (écrasement → rebond),
+ *  tiennent un instant puis se rétractent dans le sol (échelle, jamais à travers le dallage) en lâchant des gravillons. */
 function spikeWave(b: Boss, x: number, dir: number) {
   const sc = b.scene, fy = b.floorY;
   const o = b.hazard('mord_spike', x, fy, dir * M.slam.waveSpeed * b.speed, 18, 15, 3).setAlpha(0);
-  let t = 0, n = 0;
-  o.setData('tick', (dt: number) => {
-    t -= dt;
-    if (t > 0) return;
-    t = 0.05;
-    const sp = sc.add.image(o.x, fy + 2, n++ % 2 ? 'mord_spike' : 'mord_spike2').setOrigin(0.5, 1).setDepth(11).setFlipX(dir < 0).setScale(1, 0);
-    sc.tweens.add({
-      targets: sp, scaleY: Phaser.Math.FloatBetween(0.8, 1.15), duration: 50, ease: 'Back.out',
-      onComplete: () => sc.tweens.add({ targets: sp, y: fy + 28, delay: 30, duration: 100, ease: 'Quad.in', onComplete: () => sp.destroy() }),
+  const halo = sc.add.image(x, fy - 2, 'glowR').setBlendMode(ADD).setDepth(10).setScale(0.9, 0.5).setAlpha(0.7);
+  const keys = ['mord_spike3', 'mord_spike', 'mord_spike2'];
+  let lastX = x - dir * 12, n = 0;
+  o.on('destroy', () => halo.destroy());
+  o.setData('tick', () => {
+    halo.setPosition(o.x + dir * 4, fy - 2).setAlpha(0.5 + Math.random() * 0.3);
+    if ((o.x - lastX) * dir < 11) return;
+    lastX = o.x;
+    const k = n++ % 3, sx = o.x + Phaser.Math.Between(-1, 1);
+    // Fissure au sol qui s'éteint.
+    const cr = sc.add.image(sx, fy + 1, 'mord_crack').setDepth(6).setFlipX(dir < 0);
+    sc.tweens.add({ targets: cr, alpha: 0, delay: 250, duration: 400, onComplete: () => cr.destroy() });
+    const sp = sc.add.image(sx, fy + 1, keys[k]).setOrigin(0.5, 1).setDepth(11).setFlipX(dir < 0).setScale(1.25, 0);
+    sc.tweens.chain({
+      targets: sp,
+      tweens: [
+        { scaleY: 1.15, scaleX: 0.9, duration: 55, ease: 'Quad.out' },
+        { scaleY: 1, scaleX: 1, duration: 70, ease: 'Back.out' },
+        { scaleY: 0, scaleX: 1.2, delay: 110, duration: 130, ease: 'Quad.in' },
+      ],
+      onComplete: () => { sp.destroy(); },
     });
-    if (n % 2) sc.debris(o.x, fy - 4, 1);
-    if (n % 3 === 0) { sc.puffs(o.x, fy, 1); sfx.crack(); }
+    sc.time.delayedCall(250, () => sc.debris(sx, fy - 3, 1));
+    if (k === 0) { sc.puffs(sx, fy, 1); sfx.crack(); }
   });
 }
 /** Épée fantôme qui rase le sol : étincelles de frottement + traînée. */

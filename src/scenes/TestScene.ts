@@ -4,7 +4,7 @@ import { ArenaScene } from './ArenaScene';
 import { txt } from '../art/font';
 import { sfx } from '../audio/sfx';
 import type { Target } from '../entities/types';
-import { keyLabel } from '../input';
+import { keyLabel, getLayout } from '../input';
 
 /** Épouvantail d'entraînement : encaisse les coups et tire une orbe lente. */
 class Dummy implements Target {
@@ -51,6 +51,7 @@ export class TestScene extends ArenaScene {
   private dummy!: Dummy;
   private torches!: { img: Phaser.GameObjects.Image; glow: Phaser.GameObjects.Image }[];
   private flickT = 0;
+  private layout = getLayout();
   showControls = false;
   spawnX = 132;
   constructor() { super('Test'); }
@@ -59,6 +60,7 @@ export class TestScene extends ArenaScene {
 
   create() {
     super.create();
+    this.layout = getLayout();
     this.dummy = new Dummy(this, 452, this.floorY);
     this.targets.push(this.dummy);
     this.torches = [168, 312].map((x) => ({
@@ -105,6 +107,7 @@ export class TestScene extends ArenaScene {
   }
 
   tick(dt: number) {
+    if (this.layout !== getLayout()) { this.scene.restart(); return; } // panneaux à réécrire
     this.dummy.update(dt);
     this.flickT -= dt;
     if (this.flickT <= 0) {

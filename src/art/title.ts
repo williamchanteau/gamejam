@@ -34,6 +34,9 @@ function makeLogo(scene: Phaser.Scene, key: string, text: string, S: number) {
   });
 }
 
+/** Lune de l'écran titre (la cathédrale est à droite, le menu à gauche). */
+export const TITLE_MOON = [414, 60];
+
 export function makeTitleArt(scene: Phaser.Scene) {
   makeLogo(scene, 'logo', 'ASHENBORN', 4);
   canvasTex(scene, 'bg_title', W, H, (c) => {
@@ -48,7 +51,7 @@ export function makeTitleArt(scene: Phaser.Scene) {
       px(c, hash(i, 3) < 0.2 ? '#d8fbff' : '#5a5f88', x, y);
     }
     // Lune et cratères.
-    const mx = 372, my = 66, mr = 32;
+    const [mx, my] = TITLE_MOON, mr = 32;
     for (let y = -mr; y <= mr; y++)
       for (let x = -mr; x <= mr; x++) {
         const d = Math.hypot(x, y);
@@ -60,17 +63,9 @@ export function makeTitleArt(scene: Phaser.Scene) {
       for (let y = -r; y <= r; y++)
         for (let x = -r; x <= r; x++)
           if (Math.hypot(x, y) <= r) px(c, Math.hypot(x - 1, y - 1) <= r - 1 ? '#c2cfee' : '#9aaad6', mx + cx + x, my + cy + y);
-    // Nuages sombres devant la lune.
-    for (const [cx, cy, rx] of [[330, 82, 60], [410, 92, 48], [120, 60, 70], [60, 100, 50]])
-      for (let y = -6; y <= 6; y++)
-        for (let x = -rx; x <= rx; x++)
-          if ((x / rx) ** 2 + (y / 6) ** 2 <= 1) px(c, y < -3 ? '#2e2a4e' : '#1e1a36', cx + x, cy + y);
-    // Chauves-souris.
-    for (const [bx, by] of [[300, 40], [318, 52], [420, 30], [250, 70]]) {
-      px(c, '#06050c', bx - 3, by - 1, 2, 1); px(c, '#06050c', bx - 1, by, 3, 1); px(c, '#06050c', bx + 2, by - 1, 2, 1);
-    }
     // Cathédrale en silhouette, fenêtres de braise.
     const sil = '#0d0b18';
+    c.save(); c.translate(100, 0);
     px(c, sil, 130, 170, 220, 100);
     const towers: number[][] = [[140, 120, 34, 86], [306, 120, 34, 86], [214, 96, 52, 40]];
     for (const [x, y, w, sp] of towers) {
@@ -91,6 +86,7 @@ export function makeTitleArt(scene: Phaser.Scene) {
         if (d > 11) continue;
         px(c, d > 10 || Math.abs(Math.sin(a * 4)) < 0.2 || d < 2 ? sil : d < 5 ? '#ffd36a' : '#ff8a2a', 240 + x, 205 + y);
       }
+    c.restore();
     // Colline, tombes et citrouilles au premier plan.
     for (let x = 0; x < W; x++) {
       const y = 228 + Math.round(Math.sin(x / 40) * 6 + Math.sin(x / 13) * 2);
@@ -110,4 +106,16 @@ export function makeTitleArt(scene: Phaser.Scene) {
       px(c, '#ffd36a', x - 3, y + 3, 2, 1); px(c, '#ffd36a', x + 2, y + 3, 2, 1); px(c, '#ffd36a', x - 3, y + 6, 7, 1);
     }
   });
+  // Nuages : amas de bosses, bord supérieur éclairé par la lune, bas tramé.
+  for (const [k, rx] of [['cloud0', 60], ['cloud1', 44]] as [string, number][])
+    canvasTex(scene, k, rx * 2 + 2, 18, (c) => {
+      const blobs = [[0, 12, rx, 3], [-rx * 0.45, 9, rx * 0.45, 5], [rx * 0.05, 7, rx * 0.4, 7], [rx * 0.5, 10, rx * 0.35, 4]];
+      const inside = (x: number, y: number) => blobs.some(([bx, by, brx, bry]) => ((x - bx) / brx) ** 2 + ((y - by) / bry) ** 2 <= 1);
+      for (let y = 0; y < 18; y++)
+        for (let x = -rx; x <= rx; x++) {
+          if (!inside(x, y)) continue;
+          if (y > 12 && (x + y) % 2) continue; // bas effiloché
+          px(c, !inside(x, y - 2) ? '#4a4878' : !inside(x, y - 4) ? '#2e2a52' : '#1e1a38', rx + 1 + x, y);
+        }
+    });
 }

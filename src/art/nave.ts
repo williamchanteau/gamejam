@@ -12,11 +12,12 @@ export const layerW = (f: number) => Math.ceil(W + f * (WW - W)) + 8;
 type Ctx = CanvasRenderingContext2D;
 const px = (c: Ctx, col: string, x: number, y: number, w = 1, h = 1) => { c.fillStyle = col; c.fillRect(x, y, w, h); };
 
-const COLS = (w: number) => { const r: number[] = []; for (let x = 70; x < w; x += 160) r.push(x); return r; };
+/** Piliers isolés de la couche 2 (devant le mur). */
+const COLS = (w: number) => { const r: number[] = []; for (let x = 70; x < w; x += 290) r.push(x); return r; };
 /** Coordonnées des éléments animés, en repère de leur couche. */
 export const NAVE = {
-  torches: COLS(layerW(0.8)).filter((_, i) => i % 2 === 1), // couche 2
-  candles: [60, 250, 470, 700, 900].map((x) => [x, FY - 2]), // accessoires (monde)
+  torches: COLS(layerW(0.8)), // couche 2, une torche par pilier
+  candles: [60, 250, 470, 700, 852].map((x) => [x, FY - 2]), // accessoires (monde)
   pumpkins: [[140, FY - 1], [560, FY - 1], [830, FY - 1]],
   lanterns: [[130, 74], [478, 58], [860, 70]], // couche premier plan
 };
@@ -42,58 +43,72 @@ function candle(c: Ctx, x: number, y: number, h: number) {
 
 export function makeNaveArt(scene: Phaser.Scene) {
   const glass = ['#14204a', '#1c2c55', '#223563', '#2a4580', '#35558f', '#5a7ec0'];
-  // Couche 0 : mur du fond, arcades lointaines, fenêtres hautes.
+  // Un seul édifice : couche 0 = voûte lointaine (visible au-dessus de la corniche), couche 1 = mur gouttereau
+  // (travées régulières : pilastres + vitraux, rosace au centre), couche 2 = piliers isolés plus proches (ombrés).
   const w0 = layerW(NAVE_F[0]), w1 = layerW(NAVE_F[1]), w2 = layerW(NAVE_F[2]), w3 = layerW(NAVE_F[4]);
+  const wallTop = 34;
   canvasTex(scene, 'nave0', w0, H, (c) => {
-    for (let y = 0; y < H; y++) {
-      const t = y / H, d = (y % 2) * 0.5;
-      c.fillStyle = `rgb(${26 - 15 * t + d | 0},${22 - 12 * t + d | 0},${48 - 28 * t + d | 0})`;
-      c.fillRect(0, y, w0, 1);
-    }
-    c.globalAlpha = 0.3;
-    stoneBlocks(c, w0, H, 28, 14, ['#0b0a14', '#141226', '#191730', '#221f3c', ''], 11);
-    c.globalAlpha = 1;
-    for (let ax = 40; ax < w0; ax += 80) {
-      for (let y = 96; y < FY; y++)
-        for (let x = ax - 30; x <= ax + 30; x++)
-          if (inArch(x, y, ax, 130, 24)) px(c, y > FY - 30 ? '#0c0a18' : '#0e0c1c', x, y);
-          else if (inArch(x, y, ax, 130, 27)) px(c, '#1d1a33', x, y);
-      stainedWindow(c, ax, 20, 66, 7, ['#101830', '#14204a', '#1c2c55', '#223563', '#2a3a70', '#35558f']);
-    }
-    for (let x = 0; x < w0; x++) { // nervures de voûte
-      const k = (x % 80) / 80, y = Math.round(10 * Math.sin(k * Math.PI));
-      px(c, '#262243', x, y + 2, 1, 2);
-    }
+    px(c, '#0a0914', 0, 0, w0, H);
+    for (let ax = 0; ax < w0 + 100; ax += 100) // nervures de voûte qui se croisent
+      for (let x = -50; x <= 50; x++) {
+        const y = Math.round(44 - 40 * Math.sqrt(1 - (x / 50) ** 2));
+        px(c, '#1d1a33', ax + x, y, 1, 2); px(c, '#2a2744', ax + x, y, 1, 1);
+      }
+    for (let ax = 50; ax < w0; ax += 100) { px(c, '#2a2744', ax - 2, 3, 5, 4); px(c, '#3d4463', ax - 1, 4, 3, 2); } // clés de voûte
   });
-  // Couche 1 : grands vitraux bleus + rosace + rayons de lune.
   canvasTex(scene, 'nave1', w1, H, (c) => {
-    const L = w1, wins = [Math.round(L * 0.17), Math.round(L * 0.83)];
-    for (const cx of wins) stainedWindow(c, cx, 40, 186, 26, glass);
-    rose(c, L / 2, 74, 38, glass);
-    for (let y = 124; y < FY; y++) // porte en ogive sous la rosace
-      for (let x = L / 2 - 30; x <= L / 2 + 30; x++)
-        if (inArch(x, y, L / 2, 156, 24)) px(c, (x - L / 2 + 24) % 8 === 0 ? '#0a0812' : '#120f1e', x, y);
-        else if (inArch(x, y, L / 2, 156, 28)) px(c, x < L / 2 ? '#2a2744' : '#3a3858', x, y);
-    c.fillStyle = 'rgba(127,170,255,0.06)';
-    for (const [cx, w] of [[wins[0], 20], [wins[1], 20], [L / 2, 30]]) {
-      c.beginPath(); c.moveTo(cx - w, 70); c.lineTo(cx + w, 70); c.lineTo(cx + w + 70, FY); c.lineTo(cx - w + 10, FY); c.fill();
+    const L = w1, mid = Math.round(L / 2), bay = 125;
+    for (let y = wallTop; y < H; y++) {
+      const t = (y - wallTop) / (H - wallTop), d = (y % 2) * 0.5;
+      c.fillStyle = `rgb(${25 - 12 * t + d | 0},${22 - 10 * t + d | 0},${44 - 22 * t + d | 0})`;
+      c.fillRect(0, y, L, 1);
     }
-    for (let y = FY - 44; y < FY; y++) { c.fillStyle = `rgba(60,70,110,${((y - FY + 44) / 44) * 0.2})`; c.fillRect(0, y, L, 1); }
-  });
-  // Couche 2 : colonnes, arcs, bannières, bougies, citrouilles, toiles.
-  canvasTex(scene, 'nave2', w2, H, (c) => {
-    const cols = COLS(w2);
-    for (let i = 0; i < cols.length - 1; i++) { // arcs entre colonnes
-      const a = cols[i], b = cols[i + 1], mid = (a + b) / 2, hw = (b - a) / 2;
-      for (let x = a; x <= b; x++) {
-        const k = Math.abs(x - mid) / hw, y = Math.round(4 + 26 * (1 - Math.sqrt(1 - Math.min(1, k * k))) ** 0.8);
-        px(c, '#2e2b45', x, y, 1, 4); px(c, '#45425e', x, y, 1, 1); px(c, '#14121f', x, y + 4, 1, 1);
+    c.save(); c.globalAlpha = 0.35; c.translate(0, wallTop);
+    stoneBlocks(c, L, H - wallTop, 28, 14, ['#0b0a14', '#141226', '#191730', '#221f3c', ''], 11);
+    c.restore();
+    const pil: number[] = [];
+    for (let x = mid - bay / 2 - bay * 3; x < L + bay; x += bay) pil.push(Math.round(x));
+    // Formerets : arcs brisés entre pilastres, sous la corniche.
+    for (let i = 0; i < pil.length - 1; i++) {
+      const a = pil[i], b2 = pil[i + 1], m = (a + b2) / 2, hw = (b2 - a) / 2;
+      for (let x = a; x <= b2; x++) {
+        const k = Math.abs(x - m) / hw, y = Math.round(wallTop + 4 + 22 * (1 - Math.sqrt(1 - Math.min(1, k * k))) ** 0.8);
+        px(c, '#2e2b45', x, y, 1, 3); px(c, '#45425e', x, y, 1, 1); px(c, '#14121f', x, y + 3, 1, 1);
       }
     }
-    for (const cx of cols) column(c, cx, 0, FY, 12);
-    // Flaques de lumière chaude autour des torches.
+    // Travées : un grand vitrail chacune, la rosace au centre au-dessus d'une arcature aveugle.
+    for (let i = 0; i < pil.length - 1; i++) {
+      const bx = Math.round((pil[i] + pil[i + 1]) / 2);
+      if (Math.abs(bx - mid) < 3) {
+        rose(c, bx, 104, 40, glass);
+        for (const k of [-1, 0, 1]) {
+          const ax = bx + k * 20;
+          for (let y = 160; y < 196; y++) for (let x = ax - 8; x <= ax + 8; x++)
+            if (inArch(x, y, ax, 172, 7)) px(c, '#100e1c', x, y); else if (inArch(x, y, ax, 172, 8)) px(c, '#2e2b45', x, y);
+        }
+        px(c, '#4a4868', bx - 36, 196, 72, 2);
+      } else stainedWindow(c, bx, 66, 188, 20, glass);
+    }
+    // Rayons de lune qui tombent des vitraux.
+    c.fillStyle = 'rgba(127,170,255,0.05)';
+    for (let i = 0; i < pil.length - 1; i++) {
+      const bx = (pil[i] + pil[i + 1]) / 2;
+      c.beginPath(); c.moveTo(bx - 18, 100); c.lineTo(bx + 18, 100); c.lineTo(bx + 78, FY); c.lineTo(bx + 14, FY); c.fill();
+    }
+    for (const x of pil) column(c, x, wallTop, FY, 8); // pilastres engagés
+    // Corniche, soubassement.
+    px(c, '#06050c', 0, wallTop - 2, L, 2); px(c, '#3d3a58', 0, wallTop, L, 2); px(c, '#2a2744', 0, wallTop + 2, L, 3); px(c, '#14121f', 0, wallTop + 5, L, 1);
+    for (let y = FY - 38; y < FY; y++) { c.fillStyle = `rgba(6,5,12,${((y - FY + 38) / 38) * 0.45})`; c.fillRect(0, y, L, 1); }
+    px(c, '#2e2b45', 0, FY - 40, L, 2); px(c, '#45425e', 0, FY - 40, L, 1);
+  });
+  canvasTex(scene, 'nave2', w2, H, (c) => {
+    const cols = COLS(w2);
+    for (const cx of cols) {
+      column(c, cx, 0, FY, 13);
+      c.fillStyle = 'rgba(6,5,12,0.35)'; c.fillRect(cx - 13, 0, 26, FY); // plus proches, à contre-jour
+    }
     for (const x of NAVE.torches) pool(c, x, 116, 64, '255,138,42', 0.2);
-    for (const cx of cols.filter((_, i) => i % 2 === 0)) { // bannières en lambeaux
+    for (const cx of cols) { // bannière en lambeaux accrochée au pilier
       for (let y = 30; y < 92; y++)
         for (let x = cx - 9; x < cx + 9; x++) {
           if (y > 84 && (x * 3 + y) % 4 < y - 84) continue;
@@ -105,10 +120,10 @@ export function makeNaveArt(scene: Phaser.Scene) {
         if (d <= 6 && d2 > 5) px(c, '#9aa6c8', cx + x, 56 + y);
       }
     }
-    c.fillStyle = 'rgba(200,207,232,0.22)'; // toiles aux arcs
-    for (const [sx, dir] of cols.flatMap((x) => [[x + 12, 1], [x - 12, -1]])) {
-      for (let i = 0; i < 4; i++) for (let k = 0; k < 22; k++) c.fillRect(Math.round(sx + dir * k * Math.cos(i * 0.45)), Math.round(14 + k * Math.sin(i * 0.45 + 0.1)), 1, 1);
-      for (const r of [7, 13, 19]) for (let a = 0; a < 1.5; a += 0.09) c.fillRect(Math.round(sx + dir * r * Math.cos(a)), Math.round(14 + r * Math.sin(a) * 0.9), 1, 1);
+    c.fillStyle = 'rgba(200,207,232,0.2)'; // toiles entre pilier et voûte
+    for (const [sx, dir] of cols.flatMap((x) => [[x + 13, 1], [x - 13, -1]])) {
+      for (let i = 0; i < 4; i++) for (let k = 0; k < 22; k++) c.fillRect(Math.round(sx + dir * k * Math.cos(i * 0.45)), Math.round(4 + k * Math.sin(i * 0.45 + 0.1)), 1, 1);
+      for (const r of [7, 13, 19]) for (let a = 0; a < 1.5; a += 0.09) c.fillRect(Math.round(sx + dir * r * Math.cos(a)), Math.round(4 + r * Math.sin(a) * 0.9), 1, 1);
     }
   });
   // Accessoires posés au sol (facteur 1, largeur du monde).

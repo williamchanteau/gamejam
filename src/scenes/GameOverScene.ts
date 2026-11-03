@@ -19,11 +19,14 @@ export class GameOverScene extends Phaser.Scene {
     const place = f ? `${f.name} · ${f.place}` : PLACES[this.from] ?? '';
     const dim = this.add.rectangle(0, 0, W, H, 0x06050c, 0).setOrigin(0);
     this.tweens.add({ targets: dim, fillAlpha: 0.82, duration: 350 });
-    const title = txt(this, W / 2, 56, 'TU ES TOMBÉ', COL.moonLight).setOrigin(0.5, 0).setScale(3).setAlpha(0);
-    const sub = txt(this, W / 2, 96, `DERNIÈRE SAUVEGARDE : ${place}`, COL.uiDim).setOrigin(0.5, 0).setAlpha(0);
-    this.tweens.add({ targets: [title, sub], alpha: 1, duration: 400, delay: 150 });
-    this.tweens.add({ targets: title, y: 60, duration: 500, delay: 150, ease: 'Quad.out' });
-    this.menu = new Menu(this, W / 2, 128, [
+    // GAME OVER rouge : claque depuis plus grand, ombre portée, léger tremblement.
+    const sh = txt(this, W / 2 + 3, 54 + 3, 'GAME OVER', 0x000000).setOrigin(0.5, 0).setScale(5).setAlpha(0);
+    const title = txt(this, W / 2, 54, 'GAME OVER', COL.danger).setOrigin(0.5, 0).setScale(9).setAlpha(0);
+    const sub = txt(this, W / 2, 100, `DERNIÈRE SAUVEGARDE : ${place}`, COL.uiDim).setOrigin(0.5, 0).setAlpha(0);
+    this.tweens.add({ targets: title, scale: 5, alpha: 1, duration: 260, delay: 150, ease: 'Back.out', onComplete: () => this.cameras.main.shake(160, 0.008) });
+    this.tweens.add({ targets: sh, alpha: 0.7, duration: 200, delay: 300 });
+    this.tweens.add({ targets: sub, alpha: 1, duration: 400, delay: 450 });
+    this.menu = new Menu(this, W / 2, 134, [
       { label: 'DERNIÈRE SAUVEGARDE', act: () => this.scene.start(this.from) },
       { label: "REVENIR À L'ACCUEIL", act: () => { this.scene.stop(this.from); this.scene.start('Menu'); } },
     ]);
