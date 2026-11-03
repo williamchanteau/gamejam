@@ -1,44 +1,17 @@
 import Phaser from 'phaser';
 import { W, H } from '../config';
-import { canvasTex, addOutline } from './pixel';
-import { glyphRow } from './font';
+import { canvasTex } from './pixel';
+import { makeLogo } from './logo';
 import { hash } from './room';
 
 type Ctx = CanvasRenderingContext2D;
 const px = (c: Ctx, col: string, x: number, y: number, w = 1, h = 1) => { c.fillStyle = col; c.fillRect(x, y, w, h); };
 
-/** Logo : police 5×7 agrandie, dégradé cendre/lune, biseau, braise dessous. */
-function makeLogo(scene: Phaser.Scene, key: string, text: string, S: number) {
-  const cols = text.length * 6 - 1, w = cols * S + 4, h = 7 * S + 6;
-  const on = (gx: number, gy: number) => {
-    const ch = Math.floor(gx / 6), b = gx % 6;
-    if (gx < 0 || gy < 0 || gy > 6 || ch >= text.length || b === 5) return false;
-    return (glyphRow(text[ch], gy) & (16 >> b)) > 0;
-  };
-  const grad = ['#ffffff', '#ece6ff', '#cfcdf2', '#aeb0e0', '#8a8ec8', '#6a6eaa'];
-  canvasTex(scene, key, w, h, (c) => {
-    for (let gy = 0; gy < 7; gy++)
-      for (let gx = 0; gx < cols; gx++) {
-        if (!on(gx, gy)) continue;
-        const x0 = 2 + gx * S, y0 = 2 + gy * S;
-        for (let y = 0; y < S; y++) {
-          const t = (gy * S + y) / (7 * S);
-          px(c, grad[Math.min(grad.length - 1, Math.floor(t * grad.length))], x0, y0 + y, S, 1);
-        }
-        if (!on(gx, gy - 1)) px(c, '#ffffff', x0, y0, S, 1);
-        if (!on(gx - 1, gy)) px(c, '#e0dcff', x0, y0, 1, S);
-        if (!on(gx + 1, gy)) px(c, '#4a4f88', x0 + S - 1, y0, 1, S);
-        if (!on(gx, gy + 1)) { px(c, '#3a3f78', x0, y0 + S - 1, S, 1); px(c, '#ff8a2a', x0, y0 + S, S, 1); px(c, '#9a3f12', x0, y0 + S + 1, S, 1); }
-      }
-    addOutline(c, w, h, '#06050c');
-  });
-}
-
 /** Lune de l'écran titre (la cathédrale est à droite, le menu à gauche). */
 export const TITLE_MOON = [414, 60];
 
 export function makeTitleArt(scene: Phaser.Scene) {
-  makeLogo(scene, 'logo', 'ASHENBORN', 4);
+  makeLogo(scene);
   canvasTex(scene, 'bg_title', W, H, (c) => {
     // Ciel tramé + étoiles.
     for (let y = 0; y < H; y++) {

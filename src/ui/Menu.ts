@@ -4,7 +4,9 @@ import { txt } from '../art/font';
 import { input, goFullscreen } from '../input';
 import { sfx } from '../audio/sfx';
 
-export type Item = { label: string; act: () => void; x?: number; y?: number };
+export type Item = { label: string; act: () => void; x?: number; y?: number; /** largeur de cadre propre */ w?: number };
+const FP = 6; // marge verticale des boutons encadrés
+
 export interface MenuOpts { scale?: number; gap?: number; depth?: number; /** Boutons encadrés de largeur fixe. */ framed?: number }
 
 /** Liste verticale : ↑↓, valider Entrée/Espace, ou souris. Le curseur glisse vers l'entrée choisie, qui « claque ». */
@@ -17,14 +19,16 @@ export class Menu {
   private hits: Phaser.GameObjects.GameObject[] = [];
   private scale: number;
   private fw: number;
+  private fws: number[];
 
   constructor(private scene: Phaser.Scene, private x: number, y: number, private items: Item[], o: MenuOpts = {}) {
     const scale = (this.scale = o.scale ?? 2), gap = o.gap ?? 24, depth = o.depth ?? 50;
     this.fw = o.framed ?? 0;
+    this.fws = items.map((it) => it.w ?? this.fw);
     this.texts = items.map((it, k) => {
       const t = txt(scene, it.x ?? x, it.y ?? (y + k * gap), it.label).setOrigin(0.5, 0).setScale(scale).setDepth(depth + 1);
       if (this.fw) this.frames.push(scene.add.graphics().setDepth(depth));
-      const hit = this.fw ? scene.add.zone(t.x, t.y + 6.5 * scale, this.fw, 7 * scale + 10).setDepth(depth + 2) : t;
+      const hit = this.fw ? scene.add.zone(t.x, t.y + 6.5 * scale, this.fws[k], 7 * scale + FP).setDepth(depth + 2) : t;
       hit.setInteractive({ useHandCursor: true });
       if (hit !== t) this.hits.push(hit);
       hit.on('pointerover', () => this.enabled && this.select(k));
@@ -35,8 +39,8 @@ export class Menu {
     this.select(0, true);
   }
 
-  private cursorX(t: Phaser.GameObjects.BitmapText) {
-    return Math.round((this.fw ? t.x - this.fw / 2 - 8 : t.x - t.displayWidth / 2 - 10));
+  private cursorX(t: Phaser.GameObjects.BitmapText, k: number) {
+    return Math.round((this.fw ? t.x - this.fws[k] / 2 - 13 : t.x - t.displayWidth / 2 - 14));
   }
 
   select(k: number, silent = false) {
@@ -44,7 +48,7 @@ export class Menu {
     this.i = (k + this.items.length) % this.items.length;
     this.texts.forEach((t, j) => t.setTint(j === this.i ? COL.moonLight : COL.uiDim));
     this.frames.forEach((g, j) => this.drawFrame(g, j, j === this.i));
-    const t = this.texts[this.i], cx = this.cursorX(t), cy = Math.round(t.y + 6.5 * this.scale);
+    const t = this.texts[this.i], cx = this.cursorX(t, this.i), cy = Math.round(t.y + 6.5 * this.scale);
     // Curseur : glisse vers l'entrée, puis oscille vers elle (« pointe »).
     const tw = this.scene.tweens;
     tw.killTweensOf(this.cursor);
@@ -64,7 +68,7 @@ export class Menu {
 
   /** Bouton encadré : pierre sombre, liseré lune et lueur braise si sélectionné. */
   private drawFrame(g: Phaser.GameObjects.Graphics, j: number, on: boolean) {
-    const t = this.texts[j], w = this.fw, h = 7 * this.scale + 10, x = Math.round(t.x - w / 2), y = Math.round(t.y + 6.5 * this.scale - h / 2);
+    const t = this.texts[j], w = this.fws[j], h = 7 * this.scale + FP, x = Math.round(t.x - w / 2), y = Math.round(t.y + 6.5 * this.scale - h / 2);
     g.clear();
     g.fillStyle(0x06050c, 0.9).fillRect(x - 1, y - 1, w + 2, h + 2);
     g.fillStyle(on ? 0x221d3a : 0x12101e, 0.92).fillRect(x, y, w, h);
@@ -73,7 +77,7 @@ export class Menu {
     if (on) { // coins éclairés + braise en bas
       g.fillStyle(0xd8fbff);
       for (const [cx, cy] of [[x + 1, y + 1], [x + w - 2, y + 1], [x + 1, y + h - 2], [x + w - 2, y + h - 2]]) g.fillRect(cx, cy, 1, 1);
-      g.fillStyle(0xff8a2a, 0.5).fillRect(x + 6, y + h - 3, w - 12, 1);
+      g.fillStyle(0xff8a2a, 0.5).fillRect(x + 6, y + h - 2, w - 12, 1);
     }
   }
 
@@ -99,8 +103,8 @@ export class Menu {
     sfx.select();
     goFullscreen();
     input.reset();
-    // Petit éclat sur le curseur à la validation.
-    this.scene.tweens.add({ targets: this.cursor, scaleX: 1.8, scaleY: 1.8, duration: 70, yoyo: true });
+    // Coup d'estoc de la dague à la validation.
+    this.scene.tweens.add({ targets: this.cursor, x: this.cursor.x + 6, duration: 60, yoyo: true });
     this.items[this.i].act();
   }
 
