@@ -29,6 +29,9 @@ export class Portal {
     } });
   }
 
+  /** Le joueur est dans le vortex (pas au-dessus, en saut). */
+  holds(py: number) { return py > this.cy - 20; }
+
   /** Le portail « avale » : pulsation du cœur et de l'anneau, gerbe d'étincelles. */
   private gulp() {
     const s = this.s;

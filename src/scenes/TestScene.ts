@@ -117,7 +117,7 @@ export class TestScene extends ArenaScene {
   tick(dt: number) {
     if (this.layout !== getLayout()) { this.scene.restart({ retry: true }); return; } // panneaux à réécrire
     this.dummy.update(dt);
-    if (!this.leaving && this.player.x < 24 && input.isDown('left')) { // pas de sortie sur un recul
+    if (!this.leaving && this.player.x < 24 && this.portal.holds(this.player.y) && input.isDown('left')) { // pas de sortie sur un recul
       this.leaving = true;
       this.portal.swallow(() => this.scene.start('Outside', { fromTuto: true }));
     }

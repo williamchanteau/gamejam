@@ -70,7 +70,7 @@ export class OutsideScene extends ArenaScene {
   tick() {
     if (this.entering) return;
     if (this.player.x > DOOR.x - 30) this.enter();
-    else if (this.player.x < PORTAL.x + 6) { this.entering = true; this.portal.swallow(() => this.scene.start('Test')); }
+    else if (this.player.x < PORTAL.x + 6 && this.portal.holds(this.player.y)) { this.entering = true; this.portal.swallow(() => this.scene.start('Test')); }
   }
 
   /** Les battants pivotent vers l'intérieur, la lumière se déverse, le joueur entre dans l'ombre, la porte se referme. */
