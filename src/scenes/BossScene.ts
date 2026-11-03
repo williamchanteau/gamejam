@@ -35,7 +35,7 @@ export class BossScene extends ArenaScene {
   create(data?: { retry?: boolean }) {
     super.create(data);
     this.won = false; this.gateOpen = false; this.climbing = false;
-    this.gate = this.add.image(STAIRS.x, this.floorY, 'gate').setOrigin(0.5, 1).setDepth(4.5);
+    this.gate = this.add.image(STAIRS.x, this.floorY - 62, 'gate').setOrigin(0.5, 0).setDepth(4.5);
     this.boss = new Boss(this, this.def, 440, this.floorY);
     this.targets.push(this.boss);
     this.bar = new BossBar(this, this.boss);
@@ -97,7 +97,7 @@ export class BossScene extends ArenaScene {
       sfx.rumble();
       this.cameras.main.shake(700, 0.003);
       this.puffs(STAIRS.x, this.floorY, 6);
-      this.tweens.add({ targets: this.gate, y: this.floorY - 64, duration: 1100, ease: 'Quad.inOut', onComplete: () => { this.gateOpen = true; } });
+      this.tweens.add({ targets: this.gate, scaleY: 0.05, duration: 1100, ease: 'Quad.inOut', onComplete: () => { this.gateOpen = true; } });
       const hint = txt(this, STAIRS.x, STAIRS.base - 60, 'MONTER →', COL.moonLight).setOrigin(0.5, 0).setDepth(20);
       this.tweens.add({ targets: hint, x: STAIRS.x + 4, duration: 450, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
     });
