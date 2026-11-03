@@ -58,7 +58,6 @@ export class MenuScene extends Phaser.Scene {
     this.tweens.add({ targets: logo, y: 47, duration: 1800, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
     this.menu = new Menu(this, MX, 96, [
       { label: 'JOUER', act: () => this.go('Outside') },
-      { label: 'TUTO', act: () => this.go('Test') },
       { label: 'OPTIONS', act: () => this.options() },
       { label: 'QUITTER', act: () => this.quit() },
       { label: 'TESTER BOSS', x: W - 94, y: H - 32, act: () => this.bosses() },

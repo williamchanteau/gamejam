@@ -74,6 +74,7 @@ export const sfx = {
   step: () => tone(70, 45, 0.1, 'sine', 0.12),
   thud: () => { tone(80, 45, 0.14, 'sine', 0.22); noise(0.08, 0.15, 220); },
   rumble: () => noise(0.55, 0.22, 110, 0.5),
+  portal: () => { tone(180, 900, 0.6, 'sine', 0.14); tone(270, 1350, 0.6, 'triangle', 0.06, 0.05); noise(0.5, 0.18, 700, 0.8); },
   ting: () => { tone(2300, 2600, 0.16, 'triangle', 0.07); tone(3400, 3600, 0.1, 'sine', 0.04, 0.03); },
   crack: () => noise(0.07, 0.22, 1300, 1.5),
   scrape: () => noise(0.22, 0.1, 3600, 4),

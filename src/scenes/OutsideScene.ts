@@ -3,13 +3,15 @@ import { W, COL } from '../config';
 import { ArenaScene } from './ArenaScene';
 import { txt } from '../art/font';
 import { sfx } from '../audio/sfx';
-import { DOOR, OUT } from '../art/outside';
+import { DOOR, OUT, PORTAL } from '../art/outside';
+import { Portal } from '../entities/Portal';
 
 /** Devant le château : on marche jusqu'à la porte, elle s'ouvre, on entre au rez-de-chaussée. */
 export class OutsideScene extends ArenaScene {
   plats = [];
   floorKey = 'ground_out';
-  spawnX = 40;
+  spawnX = 190;
+  private portal!: Portal;
   private entering = false;
   private doors: Phaser.GameObjects.Image[] = [];
   private flick: { o: Phaser.GameObjects.Image; a: number; s: number }[] = [];
@@ -37,7 +39,8 @@ export class OutsideScene extends ArenaScene {
     this.add.image(0, 0, 'vignette').setOrigin(0).setDepth(90).setScrollFactor(0);
   }
 
-  create(data?: { retry?: boolean }) {
+  create(data?: { retry?: boolean; fromTuto?: boolean }) {
+    this.spawnX = data?.fromTuto ? PORTAL.x + 16 : 190; // avant super.create (le joueur y est construit)
     super.create(data);
     this.entering = false;
     this.flickT = 0;
@@ -47,8 +50,17 @@ export class OutsideScene extends ArenaScene {
     ];
     const hint = txt(this, DOOR.x, 112, 'ENTRER →', COL.moonLight).setOrigin(0.5, 0).setDepth(20);
     this.tweens.add({ targets: hint, x: DOOR.x + 4, duration: 450, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
-    const t = txt(this, 130, 60, 'LE CHÂTEAU', COL.ui).setOrigin(0.5, 0).setScale(2).setDepth(20).setAlpha(0);
-    this.tweens.add({ targets: t, alpha: 1, duration: 600, yoyo: true, hold: 1400 });
+    // Portail violet vers le tuto, pancarte d'Halloween devant.
+    this.portal = new Portal(this, PORTAL.x, this.floorY);
+    this.add.image(PORTAL.sign, this.floorY + 1, 'sign_tuto').setOrigin(0.5, 1).setDepth(4);
+    txt(this, PORTAL.sign + 2, this.floorY - 37, 'TUTO', 0xffc060).setOrigin(0.5, 0).setDepth(4);
+    const pk = this.add.image(PORTAL.sign - 9, this.floorY - 6, 'glowO').setBlendMode(Phaser.BlendModes.ADD).setScale(0.6).setAlpha(0.5).setDepth(4);
+    this.flick.push({ o: pk, a: 0.5, s: 0.6 });
+    if (data?.fromTuto) this.portal.spit();
+    else {
+      const t = txt(this, 130, 60, 'LE CHÂTEAU', COL.ui).setOrigin(0.5, 0).setScale(2).setDepth(20).setAlpha(0);
+      this.tweens.add({ targets: t, alpha: 1, duration: 600, yoyo: true, hold: 1400 });
+    }
     this.cameras.main.fadeIn(300);
   }
 
@@ -59,7 +71,10 @@ export class OutsideScene extends ArenaScene {
       for (const t of this.torches) t.setTexture(Math.random() < 0.5 ? 'torch0' : 'torch1');
       for (const f of this.flick) f.o.setAlpha(f.a * (0.8 + Math.random() * 0.4)).setScale(f.s * (0.95 + Math.random() * 0.1));
     }
-    if (!this.entering && this.player.x > DOOR.x - 30) this.enter();
+    this.portal.update(dt);
+    if (this.entering) return;
+    if (this.player.x > DOOR.x - 30) this.enter();
+    else if (this.player.x < PORTAL.x + 6) { this.entering = true; this.portal.swallow(() => this.scene.start('Test')); }
   }
 
   private enter() {

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { W, H, ARENA } from '../config';
-import { canvasTex } from './pixel';
+import { canvasTex, glowTex } from './pixel';
 import { hash, stoneBlocks, inArch } from './room';
 
 type Ctx = CanvasRenderingContext2D;
@@ -11,6 +11,8 @@ export const DOOR = { x: 400, hw: 22, base: 180 };
 export const OUT = { torches: [362, 438], windows: [[352, 124], [452, 124], [311, 80]], moon: [86, 52] };
 /** Escalier de la nef : arche à l'extrémité droite de l'arène. */
 export const STAIRS = { x: 928, hw: 22, base: 182 };
+/** Portail violet du tuto (bord gauche du château) et sa pancarte. */
+export const PORTAL = { x: 24, sign: 68 };
 
 /** Flaque de lumière chaude peinte (dégradé radial). */
 export function pool(c: Ctx, x: number, y: number, r: number, rgb: string, a: number) {
@@ -29,6 +31,7 @@ function lancet(c: Ctx, cx: number, top: number, bottom: number, hw: number, lit
 }
 
 export function makeOutsideArt(scene: Phaser.Scene) {
+  makePortalArt(scene);
   // Sol : pavés arrondis + touffes d'herbe.
   canvasTex(scene, 'ground_out', 48, H - FY, (c) => {
     px(c, '#151220', 0, 0, 48, H - FY);
@@ -116,7 +119,7 @@ export function makeOutsideArt(scene: Phaser.Scene) {
     pool(c, dx, FY - 6, 70, '255,150,60', 0.12);
     for (const [x, y] of OUT.windows) pool(c, x, y, 24, '255,170,80', 0.18);
     // Premier plan gauche : cimetière, grille, arbre mort.
-    for (const [x, kind] of [[40, 0], [78, 1], [118, 0], [176, 1], [214, 0]]) {
+    for (const [x, kind] of [[96, 1], [118, 0], [176, 1], [214, 0]]) {
       const y = FY;
       if (kind) { px(c, '#1a1724', x - 1, y - 18, 3, 18); px(c, '#1a1724', x - 6, y - 13, 13, 3); px(c, '#4a4868', x - 1, y - 18, 1, 18); px(c, '#4a4868', x - 6, y - 13, 6, 1); }
       else { px(c, '#1a1724', x - 6, y - 15, 12, 15); px(c, '#1a1724', x - 5, y - 17, 10, 2); px(c, '#4a4868', x - 6, y - 15, 1, 15); px(c, '#4a4868', x - 5, y - 17, 10, 1); px(c, '#24402a', x - 6, y - 3, 12, 3); }
@@ -161,4 +164,61 @@ export function paintStairs(c: Ctx) {
     px(c, `rgba(150,140,180,${0.4 + 0.5 * (1 - sh)})`, x, y, sx + hw - x, 1);
   }
   px(c, '#ffb050', sx + hw - 6, base - 34, 2, 3); px(c, '#ffe0a0', sx + hw - 6, base - 34, 1, 1); // flamme lointaine
+}
+
+/** Portail : 4 frames de vortex violet (pixels nets), anneau de pierres runiques, pancarte d'Halloween. */
+function makePortalArt(scene: Phaser.Scene) {
+  const VIO = ['#1a0a34', '#3a1668', '#6a30b0', '#9a5ae8', '#d0a8ff'];
+  for (let f = 0; f < 4; f++)
+    canvasTex(scene, 'portal' + f, 26, 44, (c) => {
+      for (let y = 0; y < 44; y++) for (let x = 0; x < 26; x++) {
+        const nx = (x + 0.5 - 13) / 11.5, ny = (y + 0.5 - 22) / 20.5, r = Math.hypot(nx, ny);
+        if (r > 1) continue;
+        const s = Math.sin(Math.atan2(ny, nx) * 3 + r * 9 - f * Math.PI / 2 * 3);
+        let k = s > 0.35 ? 2 : s > -0.35 ? 1 : 0;
+        if (r > 0.88) k = 4; else if (r > 0.72) k += 1; else if (r < 0.28) k = Math.max(0, k - 1);
+        if ((x + y + f) % 2 && r > 0.5 && r < 0.72 && s > 0.7) k = 3; // tramage
+        px(c, VIO[k], x, y);
+      }
+    });
+  glowTex(scene, 'glowP', 48, '150,90,255');
+  canvasTex(scene, 'portal_ring', 36, 54, (c) => {
+    for (let y = 0; y < 54; y++) for (let x = 0; x < 36; x++) {
+      const dx = x + 0.5 - 18, dy = y + 0.5 - 27;
+      if (Math.hypot(dx / 15.5, dy / 25.5) > 1 || Math.hypot(dx / 11.5, dy / 20.5) < 1) continue;
+      const a = (Math.atan2(dy / 25, dx / 15) + Math.PI) / (Math.PI * 2) * 14, fr = a - Math.floor(a);
+      const rim = Math.hypot(dx / 13.5, dy / 23);
+      let col = fr < 0.12 ? '#16121f' : dx + dy < -6 ? '#5a546a' : dx + dy > 8 ? '#2a2536' : '#3a3448';
+      if (Math.floor(a) % 2 === 0 && Math.abs(fr - 0.55) < 0.12 && Math.abs(rim - 1) < 0.06) col = '#c8a0ff'; // rune
+      px(c, col, x, y);
+    }
+    // Socle de dalles moussues.
+    px(c, '#16121f', 3, 47, 30, 7); px(c, '#3a3448', 4, 48, 28, 6); px(c, '#4a4458', 4, 48, 28, 1);
+    for (const x of [12, 22]) px(c, '#16121f', x, 48, 1, 6);
+    for (const x of [5, 9, 25, 29]) px(c, '#24402a', x, 47, 2, 2);
+  }, '#06050c');
+  canvasTex(scene, 'sign_tuto', 52, 46, (c) => {
+    // Piquet tordu.
+    px(c, '#06050c', 30, 18, 6, 28); px(c, '#4a2e1a', 31, 18, 4, 28); px(c, '#6a4428', 31, 18, 1, 28);
+    // Planche en flèche (←), penchée, bout cassé à droite.
+    for (let x = 0; x < 50; x++) {
+      const sy = Math.round((x - 25) * 0.07), tip = Math.max(0, 7 - x), end = x > 45 ? (x * 7) % 5 : 0;
+      for (let y = 4 + tip + sy; y <= 20 - tip + sy - end; y++) {
+        const edge = y === 4 + tip + sy || y === 20 - tip + sy - end || x === 0;
+        px(c, edge ? '#06050c' : y === 12 + sy ? '#24160c' : y === 5 + tip + sy ? '#7a5232' : (x * 3 + y * 7) % 11 === 0 ? '#3a2414' : '#4a2e1a', x, y);
+      }
+    }
+    for (const [x, y] of [[9, 8], [42, 9], [42, 16]]) px(c, '#8a8aa0', x, y, 1, 1);
+    // Toile d'araignée entre planche et piquet.
+    for (let i = 0; i < 9; i++) { px(c, '#8a88a8', 36 + i, 19 + i, 1, 1); px(c, '#8a88a8', 36, 19 + i, 1, 1); }
+    for (const t of [3, 6]) for (let i = 0; i <= t; i++) px(c, '#6a6888', 36 + i, 19 + t, 1, 1);
+    // Citrouille-lanterne au pied.
+    for (let yy = 0; yy < 12; yy++) for (let xx = -9; xx <= 9; xx++) {
+      const dx = xx / 9.5, dy = (yy - 6) / 6;
+      if (dx * dx + dy * dy <= 1) px(c, Math.abs(xx) % 4 === 1 ? '#9a3f12' : dx < -0.2 && dy < 0 ? '#f08a2a' : '#d9661c', 17 + xx, 34 + yy);
+    }
+    px(c, '#4c5a2a', 16, 31, 2, 3);
+    px(c, '#ffd36a', 12, 37, 3, 2); px(c, '#ffd36a', 19, 37, 3, 2); px(c, '#ffd36a', 12, 41, 10, 2);
+    for (let xx = -4; xx < 5; xx += 3) px(c, '#9a3f12', 17 + xx, 41, 1, 1);
+  });
 }

@@ -5,6 +5,7 @@ import { txt } from '../art/font';
 import { sfx } from '../audio/sfx';
 import type { Target } from '../entities/types';
 import { keyLabel, getLayout } from '../input';
+import { Portal } from '../entities/Portal';
 
 /** Épouvantail d'entraînement : encaisse les coups et tire une orbe lente. */
 class Dummy implements Target {
@@ -52,15 +53,22 @@ export class TestScene extends ArenaScene {
   private torches!: { img: Phaser.GameObjects.Image; glow: Phaser.GameObjects.Image }[];
   private flickT = 0;
   private layout = getLayout();
+  private portal!: Portal;
+  private leaving = false;
   showControls = false;
-  spawnX = 132;
+  spawnX = 44;
   constructor() { super('Test'); }
 
   buildBackground() { this.add.image(0, 0, 'bg_test').setOrigin(0); }
 
-  create() {
-    super.create();
+  create(data?: { retry?: boolean }) {
+    super.create(data);
     this.layout = getLayout();
+    this.leaving = false;
+    // Portail de retour au château, au bord gauche.
+    this.portal = new Portal(this, 18, this.floorY);
+    if (!data?.retry) this.portal.spit();
+    this.cameras.main.fadeIn(300);
     this.dummy = new Dummy(this, 452, this.floorY);
     this.targets.push(this.dummy);
     this.torches = [168, 312].map((x) => ({
@@ -69,12 +77,12 @@ export class TestScene extends ArenaScene {
     }));
     // Panneaux placés là où l'action sert : au sol, au-dessus des plateformes, suspendu au plafond.
     const A = keyLabel('attack'), Z = keyLabel('dash'), E = keyLabel('spell');
-    this.sign('post', 64, 192, '←→ : BOUGER\n↑/ESPACE : SAUTER');
+    this.sign('post', 124, 192, '←→ : BOUGER\n↑/ESPACE : SAUTER');
     this.sign('wall', 100, 128, '↓ : DESCENDRE\nDE LA PLATEFORME');
-    this.sign('post', 238, 180, `${A} : COMBO 3 COUPS\n+1 MANA PAR COUP`);
+    this.sign('post', 246, 180, `${A} : COMBO 3 COUPS\n+1 MANA PAR COUP`);
     this.sign('wall', 380, 128, `${Z} : DASH\n= ESQUIVE (INVINCIBLE)`);
     this.sign('hang', 240, 52, `MANA PLEINE ? ${E} : ÉCLAT LUNAIRE`);
-    txt(this, W / 2, ARENA.floorY + 16, "ENTRAÎNEMENT · FRAPPE L'ÉPOUVANTAIL · ESQUIVE SES ORBES · ÉCHAP : MENU", COL.ui)
+    txt(this, W / 2, ARENA.floorY + 16, "ENTRAÎNEMENT · FRAPPE L'ÉPOUVANTAIL · ESQUIVE SES ORBES · ← PORTAIL : CHÂTEAU", COL.ui)
       .setOrigin(0.5, 0).setDepth(6);
   }
 
@@ -107,8 +115,13 @@ export class TestScene extends ArenaScene {
   }
 
   tick(dt: number) {
-    if (this.layout !== getLayout()) { this.scene.restart(); return; } // panneaux à réécrire
+    if (this.layout !== getLayout()) { this.scene.restart({ retry: true }); return; } // panneaux à réécrire
     this.dummy.update(dt);
+    this.portal.update(dt);
+    if (!this.leaving && this.player.x < 24) {
+      this.leaving = true;
+      this.portal.swallow(() => this.scene.start('Outside', { fromTuto: true }));
+    }
     this.flickT -= dt;
     if (this.flickT <= 0) {
       this.flickT = 0.08 + Math.random() * 0.08;
