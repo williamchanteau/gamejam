@@ -91,14 +91,14 @@ export class Player {
   }
 
   private tryJump() {
-    // Ne consommer l'appui que si un saut est possible (sinon il reste en buffer).
-    const drop = input.isDown('down') && this.grounded && this.y + BH / 2 < this.scene.floorY - 2;
-    if (!drop && this.coyote <= 0 && this.airJumps <= 0) return;
-    if (!input.take('jump', C.jumpBuffer)) return;
-    if (drop) {
+    // ↓ sur une plateforme : on la traverse.
+    if (this.grounded && this.y + BH / 2 < this.scene.floorY - 2 && input.take('down')) {
       this.dropUntil = this.scene.time.now + C.dropThrough * 1000;
       return;
     }
+    // Ne consommer l'appui que si un saut est possible (sinon il reste en buffer).
+    if (this.coyote <= 0 && this.airJumps <= 0) return;
+    if (!input.take('jump', C.jumpBuffer)) return;
     if (this.coyote > 0) this.jump(C.jumpVel);
     else if (this.airJumps > 0) { this.airJumps--; this.jump(C.doubleJumpVel); }
   }

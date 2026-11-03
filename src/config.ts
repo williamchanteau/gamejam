@@ -29,7 +29,7 @@ export const PLAYER = {
   jumpBuffer: 0.1,
   doubleJump: false,
   doubleJumpVel: 290,
-  dropThrough: 0.25, // durée pendant laquelle on traverse une plateforme (↓ + saut)
+  dropThrough: 0.25, // durée pendant laquelle on traverse une plateforme (S/↓)
 
   dashDist: 56,
   dashTime: 0.22,
