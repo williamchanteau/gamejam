@@ -65,7 +65,7 @@ export const PLAYER = {
   knockbackX: 165,
   knockbackY: 225,
   hitstop: 0.07,
-  deathRetryDelay: 0.8, // s avant le retry
+  deathRetryDelay: 1.9, // s avant l'écran GAME OVER (animation de mort ≈ 1,7 s)
 };
 
 // Salle de test : épouvantail qui tire des orbes lentes.

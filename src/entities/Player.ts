@@ -20,7 +20,7 @@ export class Player {
   private dashCd = 0; private dashDir = 1; private afterT = 0; private invuln = 0;
   private jumpHeld = false; private wasGrounded = true; private lastVy = 0;
   private combo = 0; private comboT = 0; private swingHits = new Set<Target>(); private animT = 0;
-  private dropUntil = 0; private squashTw?: Phaser.Tweens.Tween;
+  private dropUntil = 0; private squashTw?: Phaser.Tweens.Tween; private knelt = false;
   private capeH = 0; private capeHv = 0; private capeY = 0; private capeYv = 0; private capePh = 0;
 
   constructor(private scene: ArenaScene, x: number, y: number) {
@@ -64,7 +64,10 @@ export class Player {
         if (this.grounded) b.velocity.x *= Math.exp(-dt * 10);
         if (this.stateT >= C.hurtStun) this.state = 'normal';
         break;
-      case 'dead': b.velocity.x *= 0.9; break;
+      case 'dead':
+        b.velocity.x *= 0.9;
+        if (!this.knelt && this.stateT > 0.12 && (ground || this.stateT > 0.9)) this.kneel();
+        break;
     }
     // Saut à hauteur variable + gravité de chute renforcée.
     if (this.jumpHeld && (!input.isDown('jump') || b.velocity.y >= 0)) {
@@ -216,13 +219,43 @@ export class Player {
     if (this.hp <= 0) this.die();
   }
 
+  /** Mort : projeté (pose blessé), retombe à genou sur sa dague, puis se dissout en cendres lunaires. */
   private die() {
-    this.state = 'dead'; this.invuln = 0;
+    this.state = 'dead'; this.stateT = 0; this.invuln = 0; this.knelt = false;
+    this.spr.setTexture('p_hurt').setAlpha(1);
+    this.scene.hitstop(0.16);
+    this.scene.flashScreen(0.35);
     this.scene.sparks(this.x, this.y - 6, COL.moon, 16);
-    this.scene.tweens.add({ targets: this.spr, alpha: 0, angle: -90 * this.facing, duration: 400 });
-    this.scene.tweens.add({ targets: this.scarf, alpha: 0, duration: 300 });
     sfx.death();
     this.scene.onPlayerDeath();
+  }
+
+  private kneel() {
+    const s = this.scene, spr = this.spr;
+    this.knelt = true;
+    spr.setTexture('p_kneel');
+    this.squash(1.2, 0.8, 180);
+    s.dust(this.x, this.y + BH / 2); s.dust(this.x - this.facing * 6, this.y + BH / 2);
+    sfx.thud();
+    const ash = s.add.particles(0, 0, 'px', {
+      speedY: { min: -75, max: -25 }, speedX: { min: -18, max: 18 }, lifespan: { min: 450, max: 1000 },
+      scale: { start: 1, end: 0 }, alpha: { start: 1, end: 0 }, tint: [COL.moon, COL.moonLight, 0x5fd8f0], emitting: false,
+    }).setDepth(11);
+    // Dissolution du haut vers le bas : la ligne de coupe crache des cendres qui montent.
+    s.tweens.addCounter({
+      from: 0, to: spr.height, delay: 450, duration: 800, ease: 'Sine.in',
+      onStart: () => {
+        sfx.ting();
+        const soul = s.add.image(spr.x, spr.y - 16, 'glowC').setBlendMode(Phaser.BlendModes.ADD).setScale(0.35).setAlpha(0.9).setDepth(12);
+        s.tweens.add({ targets: soul, y: soul.y - 46, alpha: 0, scale: 0.15, duration: 1100, ease: 'Sine.out', onComplete: () => soul.destroy() });
+      },
+      onUpdate: (tw) => {
+        const v = Math.floor(tw.getValue() ?? 0);
+        spr.setCrop(0, v, spr.width, spr.height - v);
+        ash.explode(2, spr.x + Phaser.Math.Between(-7, 7), spr.y - spr.height + v);
+      },
+      onComplete: () => spr.setVisible(false),
+    });
   }
 
   private land() {

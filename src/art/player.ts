@@ -25,7 +25,7 @@ const HOOD = [
 
 /** Bras : épaule s → main h ; dague tenue selon l'angle deg (0 = devant, 90 = bas), longueur len ; back = bras du fond. */
 type Arm = { s: number[]; h: number[]; deg?: number; len?: number; back?: boolean; open?: boolean };
-type Pose = { bob: number; lean: number; legs: number[][]; flare: number; hem: number; arms?: Arm[] };
+type Pose = { bob: number; lean: number; legs: number[][]; flare: number; hem: number; arms?: Arm[]; drop?: number; rows?: number };
 // Combo aux dagues (3 frames par coup : armé, frappe, suite) — visuel seul, la hitbox est dans config.combo.
 const A0 = { bob: 0, lean: 1, legs: [[5, 29, 6], [15, 29, 6]], flare: 1, hem: 0 };
 const A2 = { bob: 1, lean: 2, legs: [[3, 29, 6], [16, 29, 6]], flare: 2, hem: 1 };
@@ -51,6 +51,9 @@ const POSES: Record<string, Pose> = {
   atk2_0: { ...A2, arms: [{ s: [12, 15], h: [12, 19], deg: 10, len: 5, back: true }, { s: [16, 15], h: [14, 17], deg: 0, len: 6 }] },
   atk2_1: { ...A2, arms: [{ s: [12, 15], h: [20, 19], deg: 4, len: 7, back: true }, { s: [16, 15], h: [21, 16], deg: 0, len: 7 }] },
   atk2_2: { ...A2, arms: [{ s: [12, 15], h: [18, 20], deg: 25, len: 6, back: true }, { s: [16, 15], h: [20, 18], deg: 18, len: 7 }] },
+  // Mort : genou à terre, tête basse, appuyé sur la dague plantée (corps abaissé de `drop`, jambes en absolu).
+  kneel: { bob: 2, lean: 1, drop: 5, rows: 17, flare: 1, hem: 1, legs: [[12, 27, 3, 6], [16, 29, 6], [8, 27, 6, 3], [5, 32, 3, 4], [3, 32, 3]],
+    arms: [{ s: [16, 15], h: [18, 21], deg: 90, len: 5 }] },
   cast: { ...A0, arms: [{ s: [16, 15], h: [21, 16], open: true }] },
   hurt: { bob: 0, lean: -1, legs: [[6, 29, 6], [13, 28, 6]], flare: 1, hem: 1 },
 };
@@ -115,15 +118,17 @@ function capeOf(h: number, v: number, ph: number): Cape {
 
 function drawPlayer(c: CanvasRenderingContext2D, p: Pose, cape?: Cape) {
   c.save(); c.translate(OX, 0);
-  const cp = cape ?? { flare: p.flare, lift: 0, ph: p.hem * 2, hem: p.hem, amp: 0.8, rows: 21, sq: 1 }, minX = cape ? 1 - OX : 1;
+  const cp = cape ?? { flare: p.flare, lift: 0, ph: p.hem * 2, hem: p.hem, amp: 0.8, rows: p.rows ?? 21, sq: 1 }, minX = cape ? 1 - OX : 1;
   const arms = p.arms ?? REST;
   for (const r of arms) if (r.back) arm(c, r, p.lean); // bras du fond, derrière le corps
   // Jambes + bottes.
-  for (const [x, y, h] of p.legs) {
-    px(c, '#1a1830', x, y, 3, h);
+  for (const [x, y, h, w] of p.legs) {
+    px(c, '#1a1830', x, y, w ?? 3, h);
+    if (w) continue; // segment nu (cuisse/tibia à plat)
     px(c, '#2c2848', x, y + h - 3, 3, 3);
     px(c, '#4a4570', x + 2, y + h - 3, 1, 1);
   }
+  if (p.drop) c.translate(0, p.drop);
   // Tunique + ceinture (visibles devant, la cape flotte derrière).
   const L = p.lean;
   px(c, '#221e38', 9 + L, 13, 8, 17);
