@@ -106,10 +106,10 @@ function makePrompt() {
   const tg = type === 'sort' ? ENTITIES.find((x) => !x.boss)! : type === 'pattern' ? ENTITIES.find((x) => x.label === $('pboss').value)! : e;
   if (tg !== e) L.push(`- Entité visée par la demande : ${tg.label}`);
   const pj = PARAMS[`../art/params/${tg.id}.json`];
-  L.push(`- Params d'art de ${tg.label} (src/art/params/${tg.id}.json) : ${pj ? JSON.stringify(pj) : "fichier pas encore créé (valeurs d'art encore dans le code)"}`);
+  L.push(`- Params d'art de ${tg.label} (src/art/params/${tg.id}.json) : ${pj ? JSON.stringify(pj) : "pas encore de fichier : les valeurs d'art restent dans le code de dessin, ne crée pas src/art/params/"}`);
   const d = tg.boss;
   L.push(`- Gameplay actuel : ${JSON.stringify(d ? { hp: d.hp, hurt: d.hurt, patterns: d.patterns.map(({ name, weight, phase, far, elevated }) => ({ name, weight, phase, far, elevated })) } : PLAYER)}`);
-  L.push('', '## Fichiers concernés', ...tg.files.map((x) => `- ${x}`), `- src/art/params/${tg.id}.json (valeurs d'art)`, '- src/viewer/anims.ts (animations sélectionnables du viewer)');
+  L.push('', '## Fichiers concernés', ...tg.files.map((x) => `- ${x}`), ...(pj ? [`- src/art/params/${tg.id}.json (valeurs d'art)`] : []), '- src/viewer/anims.ts (animations sélectionnables du viewer)');
   if (pat && tg === e) L.push(`- Pattern « ${pat.name} » : entrée de ${d!.name}.patterns dans src/bosses/${e.id}.ts`);
   if (type === 'timing') L.push('', 'Timing : modifie les durées dans la constante du boss (src/bosses/*.ts), pas dans les params d\'art. Vérifie la frise du viewer après coup.');
   if (type === 'sort') {
@@ -126,9 +126,12 @@ function makePrompt() {
   }
   if (type === 'pattern') {
     const b = ENTITIES.find((x) => x.label === $('pboss').value)!, ph = $('pphase').value, dur = +$('pdur').value;
-    const min = ph === '1' ? BOSS.teleMinP1 : BOSS.teleMinP2;
+    // Comme b.tele() : en phase 2 la durée est divisée par p2Speed avant d'être comparée au minimum.
+    const w: string[] = [];
+    if (ph !== '2' && dur < BOSS.teleMinP1) w.push(`phase 1 : ${sec(dur)} < ${sec(BOSS.teleMinP1)} s`);
+    if (ph !== '1' && dur / BOSS.p2Speed < BOSS.teleMinP2) w.push(`phase 2 : ${sec(dur)} ÷ ${sec(BOSS.p2Speed)} = ${sec(dur / BOSS.p2Speed)} < ${sec(BOSS.teleMinP2)} s`);
     L.push('', `## Nouveau pattern de boss — ${b.label}`, `- Nom : ${val('pname')} · Phase : ${ph === '1 et 2' ? '1 et 2 (phase: 0)' : ph}`,
-      `- Télégraphe : ${val('ptele')} · durée ${sec(dur)} s${dur < min ? ` ⚠ sous le minimum de ${sec(min)} s : à rallonger` : ''}`,
+      `- Télégraphe : ${val('ptele')} · durée ${sec(dur)} s${w.length ? ` ⚠ sous le minimum (${w.join(' ; ')}) : à rallonger` : ''}`,
       `- Phase active : ${val('pact')}`, `- Récupération (fenêtre de punition) : ${sec(+$('prec').value)} s`, `- Dégâts : ${val('pdmg')}`, '', 'Exigences :',
       `- Coroutine dans src/bosses/${b.id}.ts, ajoutée à ${b.boss!.name}.patterns ({ name, weight, phase: 0|1|2, far?, elevated? }) ; durées dans la constante en haut du fichier.`,
       "- Réutilise les outils de src/entities/Boss.ts (b.tele() pour le télégraphe, b.t(), b.tw(), b.temp(), b.hazard(), b.eyes('tele'|'off'|'on'), b.hitbox), les effets d'ArenaScene (sparks, debris, puffs, flashScreen) et les patterns existants du fichier comme modèles.",
@@ -142,7 +145,7 @@ function makePrompt() {
     '- Cyan lune = joueur et sorts ; rouge/magenta = DANGER uniquement (jamais PV, HUD ni déco).',
     `- Télégraphes ≥ ${sec(BOSS.teleMinP1)} s en phase 1 et ≥ ${sec(BOSS.teleMinP2)} s en phase 2.`,
     '- Rendu 480×270 pixel art (textures dessinées par code, contour 1 px, aucun fichier image/son).',
-    "- Valeurs de gameplay dans src/config.ts ou src/bosses/*.ts ; valeurs d'art dans src/art/params/*.json.",
+    `- Valeurs de gameplay dans src/config.ts ou src/bosses/*.ts ; valeurs d'art ${pj ? 'dans src/art/params/*.json' : "dans le code de dessin de l'entité (src/art/params/ n'existe pas encore)"}.`,
     '- Aucune donnée personnelle (nom, crédit, lien, chemin) dans le code, les assets, les params ni les textes.',
     '- Vérifie dans /?viewer puis dans le jeu ; bun run check et bun run build doivent passer.',
     '- Réponds en 5 lignes maximum.');
