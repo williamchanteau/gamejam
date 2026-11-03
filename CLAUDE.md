@@ -27,7 +27,7 @@ Vif, saut variable, coyote 0,1 s, buffer 0,1 s, double saut via flag (off). Dash
 
 ## Boss (data-driven)
 Boss générique unique. Pattern = télégraphe → actif → récupération (boss ouvert, yeux éteints). Télégraphe ≥ 0,6 s (P1) / ≥ 0,45 s (P2), couleur danger. Sélection pondérée, jamais 3× le même, pause ≥ 0,4 s. À 50 % PV : 1 s invu + rugissement + tremblement, nouveaux patterns, vitesse ×1,15. Barre de vie nommée EN BAS (phase 2 : la moitié restante remplit la barre). Arène 2 écrans. Annonceur (ui/Announcer.ts, ~2,3 s, jeu figé via ArenaScene.frozen, rejoué après une mort, sauté via pause > recommencer).
-- Boss 1 « Mordrec, le Chevalier Creux » (140 PV, récupérations courtes ; animations lourdes : rig, traînées, débris, ondes de pics, épées fantômes) : taille en arc (dash), saut écrasant + repère au sol + onde rasante (sauter), 2 lames spectrales rasantes (M.blades.count). P2 : enchaînement 3 coups rythme varié, onde double.
+- Boss 1 « Mordrec, le Chasseur Creux » (140 PV ; chasseur nocturne : chapeau à large bord, masque de fer, manteau prune, lanterne de braise à la hanche ; splash art `mord_splash` pour l'annonceur via BossDef.portrait) : fente + revers montant (swings), épée tournoyante ×2 → bond écrasant + ondes de pics (slam, elevated), rafale de lames spectrales qui traquent (flurry, P1 ×2), charge à l'épaule (far). P2 : épée rouge sombre (`mord_sword_r`), téléportation derrière le joueur + repère (warp), combo 3 coups, rafale ×3, double écrasement.
 - Boss 2 « Corvina, la Veuve aux Corbeaux » (~100 PV, flotte) : éventail 5 plumes, colonnes d'ombre (3 marques 0,8 s), disparition → réapparition sur un bord + faux en arc. P2 : 3 orbes en orbite puis tirés, colonnes en vague alternée, feinte (+0,4 s).
 
 ## DA

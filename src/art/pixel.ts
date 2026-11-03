@@ -63,3 +63,35 @@ export function glowTex(scene: Phaser.Scene, key: string, size: number, rgb: str
     c.fillRect(0, 0, size, size);
   });
 }
+
+/** Polygone plein net au pixel (test du centre), points à plat [x0, y0, x1, y1, …]. */
+export function poly(c: Ctx, col: string, pts: number[]) {
+  const n = pts.length / 2;
+  let x0 = Infinity, x1 = -Infinity, y0 = Infinity, y1 = -Infinity;
+  for (let i = 0; i < n; i++) { x0 = Math.min(x0, pts[2 * i]); x1 = Math.max(x1, pts[2 * i]); y0 = Math.min(y0, pts[2 * i + 1]); y1 = Math.max(y1, pts[2 * i + 1]); }
+  c.fillStyle = col;
+  for (let y = Math.floor(y0); y <= y1; y++)
+    for (let x = Math.floor(x0); x <= x1; x++) {
+      const X = x + 0.5, Y = y + 0.5;
+      let inside = false;
+      for (let i = 0, j = n - 1; i < n; j = i++) {
+        const xi = pts[2 * i], yi = pts[2 * i + 1], xj = pts[2 * j], yj = pts[2 * j + 1];
+        if (yi > Y !== yj > Y && X < ((xj - xi) * (Y - yi)) / (yj - yi) + xi) inside = !inside;
+      }
+      if (inside) c.fillRect(x, y, 1, 1);
+    }
+}
+
+/** Trait épais (rectangle orienté) de (x0, y0) à (x1, y1). */
+export function beam(c: Ctx, col: string, x0: number, y0: number, x1: number, y1: number, w: number) {
+  const l = Math.hypot(x1 - x0, y1 - y0) || 1, nx = (-(y1 - y0) / l) * (w / 2), ny = ((x1 - x0) / l) * (w / 2);
+  poly(c, col, [x0 + nx, y0 + ny, x1 + nx, y1 + ny, x1 - nx, y1 - ny, x0 - nx, y0 - ny]);
+}
+
+/** Ellipse pleine. */
+export function ell(c: Ctx, col: string, cx: number, cy: number, rx: number, ry: number) {
+  c.fillStyle = col;
+  for (let y = Math.floor(cy - ry); y <= cy + ry; y++)
+    for (let x = Math.floor(cx - rx); x <= cx + rx; x++)
+      if (((x + 0.5 - cx) / rx) ** 2 + ((y + 0.5 - cy) / ry) ** 2 <= 1) c.fillRect(x, y, 1, 1);
+}

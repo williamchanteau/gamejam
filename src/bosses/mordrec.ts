@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { COL } from '../config';
-import { canvasTex, crescent, OUTLINE } from '../art/pixel';
+import { canvasTex, OUTLINE, poly, beam, ell } from '../art/pixel';
 import { sfx } from '../audio/sfx';
 import type { Boss, BossDef } from '../entities/Boss';
 
@@ -9,8 +9,11 @@ const M = {
   hp: 140,
   slash: { tele: 0.65, dash: 0.28, minDist: 70, maxDist: 250, overshoot: 50, recover: 0.5, reach: 64, height: 54 },
   slam: { tele: 0.6, rise: 0.35, mark: 0.7, fall: 0.16, recover: 0.6, waveSpeed: 210, doubleGap: 0.8 },
-  blades: { tele: 0.65, count: 2, gap: 0.75, speed: 230, recover: 0.45 },
-  combo: { teles: [0.55, 0.45, 0.8], recover: 0.7 },
+  swing: { wind: 0.3, cut: 0.16, height: 80 },
+  flurry: { tele: 0.7, count: 2, gap: 0.3, speed: 210, turn: 2.6, home: 0.85, life: 2.6, recover: 0.45 },
+  charge: { tele: 0.6, speed: 340, dist: 320, recover: 0.6 },
+  warp: { mark: 0.5, behind: 72 },
+  combo: { teles: [0.5, 0.45, 0.7], recover: 0.7 },
 };
 // Pose de repos : épée plantée en avant.
 const REST = { sword: 128, headY: -64 };
@@ -28,85 +31,183 @@ function dome(c: Ctx, cx: number, cy: number, rx: number, ry: number, [dk, md, l
     }
 }
 
+// Chasseur nocturne : fer noirci, manteau prune, laiton, cuir, col de fourrure, lanterne de braise à la hanche.
+const H = {
+  i0: '#1c1e2e', i1: '#2c3148', i2: '#444c6a', i3: '#6a7494', i4: '#a4aecb',
+  c0: '#1a1226', c1: '#2a1c3a', c2: '#3e2a52', c3: '#56406e',
+  b0: '#5a3e1e', b1: '#8a6430', b2: '#c8984a', b3: '#f0d088',
+  l0: '#2a1e1a', l1: '#46322a', l2: '#5e463a', f0: '#2a2630', f1: '#4a4450', f2: '#6e6878',
+  e0: '#ff8a2a', e1: '#ffd36a', e2: '#fff4c8', w: '#a0461e',
+};
+
 function drawBody(c: Ctx) {
-  // Cape en lambeaux derrière (le dos = gauche).
-  for (let y = 14; y < 76; y++) {
-    const t = (y - 14) / 62, l = Math.round(22 - t * 16 + Math.sin(y * 0.4) * 1.2);
-    for (let x = l; x < 36; x++) {
-      if (y > 70 && (x * 7 + y) % 5 < y - 70) continue;
-      px(c, x === l ? A.k : x < l + 3 ? A.c : A.C, x, y);
+  // Long manteau évasé derrière (dos = gauche), plis, ourlet en lambeaux.
+  for (let y = 12; y < 81; y++) {
+    const t = (y - 12) / 68, l = Math.round(20 - t * 17 + Math.sin(y * 0.35) * 1.5), r = Math.round(40 + t * 9);
+    for (let x = l; x < r; x++) {
+      if (y > 70 && (x * 5 + y * 3) % 7 < y - 70) continue;
+      const u = (x - l) / (r - l);
+      px(c, x === l ? A.k : u < 0.12 || (x - l) % 7 === 3 ? H.c0 : u < 0.55 ? H.c1 : H.c2, x, y);
     }
   }
-  // Jambes : grèves, genouillères, solerets.
-  for (const [lx, back] of [[20, 1], [33, 0]]) {
-    px(c, back ? A.d : A.m, lx, 56, 8, 22); px(c, back ? A.m : A.l, lx + 1, 56, 2, 22);
-    px(c, back ? A.m : A.b, lx, 62, 8, 4); px(c, A.k, lx, 66, 8, 1);
-    px(c, back ? A.d : A.m, lx, 77, 12, 4); px(c, back ? A.m : A.l, lx, 77, 12, 1);
+  // Jambes : cuissards de cuir, genouillères de laiton, grèves, solerets.
+  for (const [lx, back] of [[21, 1], [33, 0]]) {
+    const d = back ? H.i1 : H.i2, m = back ? H.i2 : H.i3;
+    px(c, H.l0, lx, 54, 8, 12); px(c, back ? H.l0 : H.l1, lx + 1, 54, 2, 12);
+    px(c, d, lx, 66, 8, 12); px(c, m, lx + 1, 66, 2, 12);
+    px(c, H.b1, lx, 64, 8, 3); px(c, H.b2, lx + 1, 64, 3, 1);
+    px(c, d, lx, 77, 12, 4); px(c, m, lx, 77, 12, 1);
   }
   // Tassettes.
-  for (let i = 0; i < 3; i++) {
-    const y = 47 + i * 4, l = 16 - i, r = 44 + i;
-    px(c, A.m, l, y, r - l, 4); px(c, A.l, l, y, r - l, 1); px(c, A.k, l, y + 3, r - l, 1);
-    for (let x = l + 6; x < r; x += 7) px(c, A.d, x, y + 1, 1, 2);
+  for (let i = 0; i < 2; i++) {
+    const y = 51 + i * 4, l = 18 - i, w = 28 + 2 * i;
+    px(c, H.i1, l, y, w, 4); px(c, H.i2, l, y, w, 1); px(c, A.k, l, y + 3, w, 1);
   }
-  // Cuirasse bombée + arête.
-  for (let y = 18; y < 48; y++) {
-    const hw = Math.round(13 - Math.abs((y - 18) / 30 - 0.35) * 6);
-    for (let x = 30 - hw; x < 32 + hw; x++) {
-      const u = (x - (30 - hw)) / (2 * hw + 2);
-      px(c, u < 0.15 ? A.d : u < 0.4 ? A.m : u < 0.7 ? A.b : u < 0.85 ? A.l : A.m, x, y);
+  // Cuirasse de fer noirci, lames horizontales, arête claire.
+  for (let y = 18; y < 50; y++) {
+    const hw = Math.round(11 - Math.abs((y - 18) / 32 - 0.3) * 5);
+    for (let x = 31 - hw; x < 32 + hw; x++) {
+      const u = (x - (31 - hw)) / (2 * hw + 1);
+      px(c, u < 0.15 ? H.i0 : u < 0.45 ? H.i1 : u < 0.75 ? H.i2 : u < 0.9 ? H.i3 : H.i1, x, y);
     }
   }
-  px(c, A.h, 33, 20, 1, 24); px(c, A.d, 30, 20, 1, 24);
-  // Le « creux » : brèche sombre dans la cuirasse, lueur spectrale.
-  for (const [x, y, w] of [[34, 28, 2], [33, 29, 4], [32, 30, 5], [33, 31, 4], [34, 32, 3], [35, 33, 1]]) px(c, A.k, x, y, w, 1);
-  px(c, '#8a7ac8', 34, 30, 2, 1);
-  // Ceinture, gorgerin.
-  px(c, A.k, 18, 44, 26, 3); px(c, '#4a3a2a', 18, 45, 26, 1); px(c, A.h, 31, 44, 3, 3);
-  px(c, A.m, 24, 11, 14, 8); px(c, A.l, 24, 11, 14, 1); px(c, A.k, 24, 15, 14, 1);
-  dome(c, 19, 20, 8, 6, [A.k, A.d, A.m]);
-  // Bras avant jusqu'à la main (48, 38).
-  px(c, A.m, 40, 24, 7, 10); px(c, A.l, 45, 24, 2, 10);
-  px(c, A.b, 43, 33, 8, 9); px(c, A.h, 49, 33, 2, 9); px(c, A.k, 43, 37, 8, 1);
-  dome(c, 41, 20, 9, 7, [A.m, A.l, A.h]);
+  for (const y of [34, 39, 44]) px(c, H.i0, 22, y, 20, 1);
+  px(c, H.i4, 35, 20, 1, 13);
+  // Baudrier (épaule avant → hanche arrière), boucle de laiton.
+  for (let i = 0; i < 24; i++) px(c, i % 5 === 0 ? H.l0 : H.l1, 40 - Math.round(i * 0.85), 22 + i, 2, 2);
+  px(c, H.b2, 29, 33, 3, 3); px(c, H.b3, 29, 33, 1, 1);
+  // Ceinture.
+  px(c, A.k, 18, 48, 28, 3); px(c, H.l1, 18, 49, 28, 1); px(c, H.b2, 33, 48, 3, 3);
+  // Lanterne de braise à la hanche arrière : chaîne, cage de laiton, flamme.
+  px(c, H.b1, 15, 46, 1, 5);
+  px(c, H.b1, 13, 50, 5, 1); px(c, H.b0, 12, 51, 7, 1);
+  px(c, H.e0, 13, 52, 5, 8); px(c, H.e1, 14, 53, 3, 6); px(c, H.e2, 15, 55, 1, 3);
+  px(c, H.b0, 12, 52, 1, 8); px(c, H.b0, 18, 52, 1, 8); px(c, H.b0, 13, 56, 5, 1);
+  px(c, H.b1, 12, 60, 7, 1); px(c, H.b0, 14, 61, 3, 1);
+  // Col de fourrure sur les épaules.
+  for (let x = 15; x < 46; x++) {
+    const top = 13 + Math.round(Math.abs(x - 31) * 0.18) - ((x * 7) % 3 === 0 ? 1 : 0), bot = 21 + ((x * 5) % 4);
+    for (let y = top; y < bot; y++) px(c, y === top ? H.f2 : y > bot - 3 || (x + y) % 4 === 0 ? H.f0 : H.f1, x, y);
+  }
+  dome(c, 18, 23, 7, 5, [A.k, H.i0, H.i1]);
+  // Bras avant jusqu'à la main (48, 38) : épaulière, brassard de cuir, gantelet.
+  px(c, H.i1, 40, 24, 7, 10); px(c, H.i2, 45, 24, 2, 10);
+  px(c, H.l1, 43, 32, 8, 6); px(c, H.l2, 49, 32, 2, 6); px(c, H.b1, 43, 34, 8, 1);
+  px(c, H.i2, 44, 37, 7, 5); px(c, H.i4, 49, 37, 2, 1); px(c, A.k, 44, 39, 7, 1);
+  dome(c, 41, 21, 9, 6, [H.i1, H.i3, H.i4]);
 }
 
 function drawHead(c: Ctx) {
-  for (let i = 0; i < 12; i++) px(c, i % 3 ? A.r : A.c, 10 - i, 3 + Math.round(i * 0.8), 3, 2 + (i >> 2)); // panache
-  for (let y = 5; y < 27; y++) {
-    const hw = y < 10 ? Math.round(Math.sqrt(1 - ((10 - y) / 6) ** 2) * 9) : 9;
-    for (let x = 13 - hw; x < 13 + hw; x++) {
-      const u = (x - 13 + hw) / (2 * hw);
-      px(c, u < 0.2 ? A.d : u < 0.55 ? A.m : u < 0.8 ? A.b : A.l, x, y);
-    }
+  // Plume à l'arrière du chapeau.
+  for (let i = 0; i < 8; i++) px(c, i % 3 ? H.f1 : H.f2, 7 - i, 7 - Math.round(i * 0.6), 3, 1);
+  // Calotte de feutre (penchée en arrière), bandeau de laiton.
+  for (let y = 1; y < 10; y++) {
+    const off = Math.round((10 - y) * 0.25), l = 8 - off + (y < 3 ? 2 : 0), r = 19 - off - (y < 3 ? 1 : 0);
+    for (let x = l; x < r; x++) px(c, x === l ? H.l0 : x > r - 4 ? H.l2 : H.l1, x, y);
   }
-  px(c, A.h, 15, 6, 1, 9);
-  px(c, A.k, 12, 15, 10, 3); px(c, A.k, 17, 15, 2, 9); // visière en T
-  for (const [x, y] of [[20, 20], [20, 22], [14, 21]]) px(c, A.k, x, y);
-  px(c, A.d, 4, 25, 18, 2); px(c, A.l, 4, 25, 18, 1);
+  px(c, H.l0, 12, 1, 3, 1);
+  px(c, H.b1, 7, 8, 12, 2); px(c, H.b2, 12, 8, 3, 1); px(c, H.b3, 13, 8, 1, 1);
+  // Large bord, plus bas devant.
+  for (let x = 0; x < 26; x++) {
+    const y = 10 + (x > 20 || x < 3 ? 1 : 0);
+    px(c, x > 14 ? H.l2 : H.l1, x, y); px(c, H.l0, x, y + 1);
+  }
+  // Masque de fer dans l'ombre du bord, fente des yeux.
+  for (let y = 12; y < 23; y++) for (let x = 8; x < 21; x++) px(c, y < 14 ? A.k : x > 17 ? H.i2 : x > 12 ? H.i1 : H.i0, x, y);
+  px(c, A.k, 12, 15, 10, 2); px(c, H.i3, 20, 17, 1, 4);
+  // Col montant.
+  for (let y = 21; y < 28; y++)
+    for (let x = 4 + (y - 21); x < 22; x++) px(c, x === 4 + (y - 21) || (x + y) % 5 === 0 ? H.c0 : x > 17 ? H.c3 : H.c2, x, y);
 }
 
-function drawSword(c: Ctx) {
+function drawSword(c: Ctx, red = false) {
+  const S = red ? { e: '#ffd6e0', m: '#ff2a5a', d: '#7a0a30', f: '#c0144a' } : { e: '#e8ecff', m: '#a8b4d8', d: '#5a6386', f: '#7a86ac' };
   for (let y = 2; y < 62; y++) {
-    const hw = y < 8 ? Math.ceil((y - 1) / 2) : 3;
-    for (let x = 8 - hw; x < 8 + hw; x++) px(c, x === 8 - hw ? A.b : x === 8 + hw - 1 ? '#e8ecff' : x === 7 ? A.m : '#a8b4d8', x, y);
+    const hw = y < 9 ? Math.ceil((y - 1) / 2.5) : 3;
+    for (let x = 8 - hw; x < 8 + hw; x++) px(c, x === 8 - hw ? S.d : x === 8 + hw - 1 ? S.e : x === 7 && y > 10 && y < 56 ? S.f : S.m, x, y);
   }
-  c.clearRect(10, 30, 1, 2); c.clearRect(5, 44, 1, 1); // ébréchures
-  px(c, A.m, 1, 62, 14, 3); px(c, A.l, 1, 62, 14, 1);
-  px(c, A.C, 6, 65, 4, 11);
-  for (let y = 66; y < 76; y += 2) px(c, '#4a3a5a', 6, y, 4, 1);
-  px(c, A.b, 5, 76, 6, 4); px(c, A.h, 6, 76, 2, 1);
+  // Garde à quillons recourbés, fusée de cuir, pommeau.
+  px(c, H.b1, 1, 62, 14, 2); px(c, H.b2, 2, 62, 12, 1); px(c, H.b1, 0, 59, 2, 4); px(c, H.b1, 14, 59, 2, 4); px(c, H.b3, 7, 62, 2, 1);
+  px(c, H.l0, 6, 64, 4, 12);
+  for (let y = 65; y < 76; y += 2) px(c, H.l1, 6, y, 4, 1);
+  px(c, H.b1, 5, 76, 6, 4); px(c, H.b2, 6, 76, 3, 1); px(c, H.b3, 6, 76, 1, 1);
+}
+
+/** Splash art de l'annonceur (100×124, tourné vers la gauche) : halo de braise, manteau au vent, épée levée. */
+function drawSplash(c: Ctx) {
+  for (let y = 0; y < 80; y++)
+    for (let x = 18; x < 98; x++) {
+      const d = Math.hypot(x - 58, y - 38);
+      if (d < 36 && d > 33.5) px(c, H.w, x, y);
+      else if (d <= 33.5 && (x + y) % 2 === 0) px(c, d < 22 ? '#3a1a14' : '#24121a', x, y);
+    }
+  // Manteau qui claque au vent, ourlet déchiré.
+  poly(c, H.c0, [44, 44, 72, 42, 88, 70, 99, 112, 92, 118, 86, 111, 80, 122, 72, 114, 64, 124, 40, 124, 34, 116, 28, 124, 24, 100, 34, 62]);
+  poly(c, H.c1, [48, 46, 70, 44, 83, 72, 91, 108, 85, 105, 78, 113, 70, 107, 64, 116, 44, 116, 38, 96, 39, 64]);
+  for (const [x0, y0, x1, y1] of [[60, 50, 74, 112], [67, 48, 86, 104], [52, 54, 54, 112]]) beam(c, H.c2, x0, y0, x1, y1, 1.5);
+  beam(c, H.w, 72, 46, 90, 104, 1);
+  // Jambes, genouillères.
+  poly(c, H.i0, [44, 100, 52, 100, 50, 124, 40, 124]); poly(c, H.i1, [46, 101, 51, 101, 49, 122, 43, 122]);
+  poly(c, H.i0, [56, 100, 64, 100, 68, 124, 58, 124]); poly(c, H.i1, [57, 101, 62, 101, 64, 122, 59, 122]);
+  px(c, H.b1, 43, 108, 8, 3); px(c, H.b2, 44, 108, 3, 1); px(c, H.b1, 58, 110, 8, 3); px(c, H.b2, 59, 110, 3, 1);
+  // Tassettes, cuirasse, baudrier, ceinture.
+  poly(c, H.i1, [41, 92, 67, 90, 69, 101, 39, 103]); beam(c, H.i3, 42, 93, 52, 92, 1); beam(c, A.k, 40, 97, 68, 95, 1);
+  poly(c, H.i0, [40, 48, 66, 48, 64, 88, 44, 90]);
+  poly(c, H.i1, [44, 50, 62, 50, 60, 86, 46, 88]);
+  poly(c, H.i2, [44, 50, 52, 50, 50, 86, 46, 88]);
+  for (const y of [62, 70, 78]) beam(c, H.i0, 44, y, 62, y - 1, 1);
+  beam(c, H.i4, 47, 52, 46, 84, 1); beam(c, H.w, 64, 50, 62, 86, 1);
+  beam(c, H.l1, 64, 54, 44, 84, 3); px(c, H.b2, 52, 67, 3, 3); px(c, H.b3, 52, 67, 1, 1);
+  poly(c, H.l0, [42, 86, 66, 84, 66, 90, 42, 92]); px(c, H.b2, 51, 86, 4, 4); px(c, H.b3, 51, 86, 1, 1);
+  // Lanterne de braise à la hanche, halo tramé.
+  for (let y = 84; y < 118; y++)
+    for (let x = 62; x < 96; x++) {
+      const d = Math.hypot(x - 78, y - 101);
+      if (d < 15 && d > 8 && (x + y) % 3 === 0) px(c, H.e0, x, y);
+    }
+  beam(c, H.b1, 68, 87, 77, 94, 1);
+  poly(c, H.b1, [73, 93, 83, 93, 85, 96, 71, 96]);
+  px(c, H.e0, 72, 96, 12, 11); px(c, H.e1, 74, 98, 8, 7); px(c, H.e2, 77, 100, 2, 3);
+  px(c, H.b0, 71, 96, 1, 11); px(c, H.b0, 84, 96, 1, 11); px(c, H.b0, 75, 96, 1, 11); px(c, H.b0, 80, 96, 1, 11);
+  px(c, H.b1, 71, 107, 14, 2); px(c, H.b0, 75, 109, 6, 1);
+  // Col de fourrure, épaulière avant.
+  poly(c, H.f0, [33, 47, 48, 38, 64, 38, 75, 46, 70, 55, 39, 57]);
+  for (let i = 0; i < 12; i++) px(c, i % 2 ? H.f2 : H.f1, 36 + i * 3, 41 + (i % 3), 2, 3);
+  ell(c, H.i1, 38, 55, 10, 8); ell(c, H.i3, 36, 52, 6, 4); px(c, H.i4, 34, 49, 3, 1);
+  for (const y of [57, 60]) beam(c, H.i0, 29, y, 47, y, 1);
+  // Tête : col, masque, yeux rouges, chapeau à large bord, plume.
+  poly(c, H.c1, [40, 40, 64, 38, 66, 48, 42, 50]); beam(c, H.c3, 42, 42, 62, 40, 1);
+  poly(c, H.i0, [44, 26, 62, 26, 62, 42, 52, 46, 44, 42]);
+  poly(c, H.i1, [46, 30, 52, 30, 52, 44, 46, 41]);
+  px(c, A.k, 44, 33, 18, 3);
+  px(c, '#ff2a5a', 46, 34, 3, 1); px(c, '#ff2a5a', 54, 34, 3, 1); px(c, '#ffd6e0', 47, 34, 1, 1); px(c, '#ffd6e0', 55, 34, 1, 1);
+  poly(c, H.l0, [14, 33, 30, 24, 74, 20, 92, 24, 78, 28, 32, 30]);
+  poly(c, H.l2, [24, 29, 32, 25, 72, 21, 82, 23, 70, 24, 32, 27]);
+  poly(c, H.l1, [38, 26, 40, 8, 50, 2, 62, 4, 68, 22]);
+  poly(c, H.l2, [41, 24, 42, 10, 50, 4, 51, 22]);
+  beam(c, H.l0, 51, 4, 55, 22, 1);
+  poly(c, H.b1, [38, 22, 68, 19, 68, 23, 38, 26]); beam(c, H.b3, 42, 23, 52, 22, 1);
+  poly(c, H.f1, [64, 18, 78, 6, 95, 2, 85, 10, 70, 20]); beam(c, H.f2, 68, 16, 90, 4, 1);
+  // Bras et épée levée en travers : lame, fil, garde, gantelet, pommeau.
+  beam(c, H.i1, 40, 60, 33, 76, 6); beam(c, H.l1, 37, 68, 33, 76, 6); beam(c, H.b1, 38, 70, 35, 71, 6);
+  beam(c, '#5a6386', 31, 72, 6, 4, 5); beam(c, '#a8b4d8', 31, 72, 6, 4, 3); beam(c, '#e8ecff', 30, 71, 6, 5, 1);
+  beam(c, H.b1, 25, 78, 39, 73, 3); px(c, H.b3, 31, 75, 2, 1);
+  ell(c, H.i2, 34, 79, 4, 4); px(c, H.i3, 32, 77, 2, 1);
+  ell(c, H.b1, 36, 86, 2, 2);
+  // Éclat sur la pointe, braises qui volent.
+  for (let i = -4; i <= 4; i++) { px(c, '#ffffff', 9 + i, 13); px(c, '#ffffff', 9, 13 + i); }
+  for (let i = 0; i < 16; i++) px(c, i % 3 ? H.e0 : H.e1, ((i * 37) % 80) + 16, ((i * 53) % 100) + 6);
 }
 
 /** Traînée d'épée : secteur d'anneau autour de la main, de l'angle a0 à a1 (0 = haut, horaire). */
-function smear(c: Ctx, a0: number, a1: number, rIn: number, rOut: number) {
+function smear(c: Ctx, a0: number, a1: number, rIn: number, rOut: number, rev = false) {
   const C = 73;
   for (let y = 0; y < 146; y++)
     for (let x = 0; x < 146; x++) {
       const dx = x + 0.5 - C, dy = y + 0.5 - C, r = Math.hypot(dx, dy);
       const a = (Math.atan2(dx, -dy) * 180) / Math.PI;
       if (r < rIn || r > rOut || a < a0 || a > a1) continue;
-      const u = (a - a0) / (a1 - a0);
+      const u = rev ? (a1 - a) / (a1 - a0) : (a - a0) / (a1 - a0);
       if (u < 0.35 && (x + y) % 2) continue; // queue tramée
       px(c, r > rOut - 3 ? '#ffffff' : u > 0.75 ? '#ffd0dc' : u > 0.4 ? '#ff6a90' : '#c0144a', x, y);
     }
@@ -115,12 +216,17 @@ function smear(c: Ctx, a0: number, a1: number, rIn: number, rOut: number) {
 export function makeMordrecArt(scene: Phaser.Scene) {
   canvasTex(scene, 'mord_body', 60, 82, drawBody, OUTLINE);
   canvasTex(scene, 'mord_head', 26, 28, drawHead, OUTLINE);
-  canvasTex(scene, 'mord_sword', 16, 84, drawSword, OUTLINE);
+  canvasTex(scene, 'mord_sword', 16, 84, (c) => drawSword(c), OUTLINE);
+  canvasTex(scene, 'mord_sword_r', 16, 84, (c) => drawSword(c, true), OUTLINE);
+  canvasTex(scene, 'mord_splash', 100, 124, drawSplash, OUTLINE);
   canvasTex(scene, 'mord_eyes', 9, 3, (c) => { px(c, '#fff', 1, 1, 2, 1); px(c, '#fff', 6, 1, 2, 1); });
   // Danger (rouge/magenta, cœur blanc) : traînées, pics de roche, épée fantôme, repère au sol.
   canvasTex(scene, 'smear0', 146, 146, (c) => smear(c, -75, 125, 26, 72));
   canvasTex(scene, 'smear1', 146, 146, (c) => smear(c, 20, 125, 40, 72));
   canvasTex(scene, 'smear2', 146, 146, (c) => smear(c, 80, 125, 56, 72));
+  canvasTex(scene, 'smearR0', 146, 146, (c) => smear(c, -75, 125, 26, 72, true));
+  canvasTex(scene, 'smearR1', 146, 146, (c) => smear(c, -75, 30, 40, 72, true));
+  canvasTex(scene, 'smearR2', 146, 146, (c) => smear(c, -75, -30, 56, 72, true));
   // Pics de roche à facettes (face éclairée / ombre), fissure rouge incandescente, pointe chauffée à blanc.
   for (const [k, hgt, hw0, lean] of [['mord_spike', 26, 6, 0], ['mord_spike2', 20, 5, 2], ['mord_spike3', 30, 7, -1]] as [string, number, number, number][])
     canvasTex(scene, k, 18, 32, (c) => {
@@ -188,12 +294,12 @@ function glint(b: Boss, a: number) {
   sfx.ting();
 }
 /** Traînée pleine sur 3 frames, attachée au rig. */
-function smearFx(b: Boss) {
-  const rig = b.parts.rig as Cont, sc = b.scene;
-  const img = b.temp(sc.add.image(18, -44, 'smear0').setBlendMode(ADD));
+function smearFx(b: Boss, rev = false) {
+  const rig = b.parts.rig as Cont, sc = b.scene, k = rev ? 'smearR' : 'smear';
+  const img = b.temp(sc.add.image(18, -44, k + '0').setBlendMode(ADD));
   rig.add(img);
-  sc.time.delayedCall(45, () => img.active && img.setTexture('smear1'));
-  sc.time.delayedCall(90, () => img.active && img.setTexture('smear2'));
+  sc.time.delayedCall(45, () => img.active && img.setTexture(k + '1'));
+  sc.time.delayedCall(90, () => img.active && img.setTexture(k + '2'));
   sc.time.delayedCall(140, () => img.destroy());
 }
 /** Image rémanente lilas pendant la ruée. */
@@ -245,21 +351,6 @@ function spikeWave(b: Boss, x: number, dir: number) {
     if (k === 0) { sc.puffs(sx, fy, 1); sfx.crack(); }
   });
 }
-/** Épée fantôme qui rase le sol : étincelles de frottement + traînée. */
-function ghostBlade(b: Boss) {
-  const sc = b.scene, dir = b.dir;
-  const o = b.hazard('mord_ghost', b.x + dir * 56, b.floorY - 1, dir * M.blades.speed * b.speed, 30, 8, 3.5).setBlendMode(ADD);
-  let t = 0;
-  o.setData('tick', (dt: number) => {
-    t -= dt;
-    if (t > 0) return;
-    t = 0.04;
-    sc.sparks(o.x - dir * 22, b.floorY - 2, 0xffb040, 2);
-    const g = sc.add.image(o.x, o.y, 'mord_ghost').setOrigin(0.5, 1).setFlipX(dir < 0).setBlendMode(ADD).setAlpha(0.35).setDepth(14);
-    sc.tweens.add({ targets: g, alpha: 0, duration: 160, onComplete: () => g.destroy() });
-  });
-}
-
 // ---------------------------------------------------------------- patterns
 
 function* slash(b: Boss, tele = M.slash.tele, recover = M.slash.recover, last = true) {
@@ -309,12 +400,18 @@ function* slam(b: Boss, double = false) {
   const p = b.parts, s = M.slam, sc = b.scene;
   b.eyes('tele'); sfx.warn(); sfx.rumble();
   const tt = b.tele(s.tele);
-  // Anticipation : accroupi très bas, gravillons qui tremblent.
+  // Anticipation : l'épée tournoie deux fois dans sa main (traînée circulaire), puis il s'accroupit très bas.
+  const spin = b.temp(sc.add.image(18, -44, 'smearR1').setBlendMode(ADD).setAlpha(0.55));
+  (p.rig as Cont).add(spin);
+  b.tw(p.sword, { angle: REST.sword - 720, onUpdate: () => spin.setAngle(p.sword.angle + 75) }, tt * 0.7, 'Sine.inOut');
+  for (let i = 0; i < 3; i++) sc.time.delayedCall(i * tt * 240, () => b.state === 'pattern' && sfx.whoosh());
   b.tw(p.rig, { scaleX: 1.12, scaleY: 0.82, angle: 5 }, tt * 0.8, 'Quad.in');
   b.tw(p.head, { y: REST.headY + 6 }, tt * 0.8);
-  b.tw(p.sword, { angle: -20 }, tt * 0.8, 'Back.out');
   for (let i = 0; i < 3; i++) sc.time.delayedCall(i * tt * 250, () => b.state === 'pattern' && sc.debris(b.x, b.floorY - 2, 2));
-  yield tt;
+  yield tt * 0.7;
+  spin.destroy(); glint(b, REST.sword);
+  b.tw(p.sword, { angle: -20 }, tt * 0.3, 'Back.out');
+  yield tt * 0.3;
   // Bond hors de l'écran.
   sfx.leap();
   b.tw(p.rig, { scaleX: 0.85, scaleY: 1.2, angle: 0 }, 0.12, 'Back.out');
@@ -366,31 +463,82 @@ function* slam(b: Boss, double = false) {
   b.eyes('on'); b.def.rest(b, 0.3);
 }
 
-function* blades(b: Boss) {
-  const p = b.parts, s = M.blades, sc = b.scene;
-  b.eyes('tele'); sfx.warn();
-  const tt = b.tele(s.tele);
-  b.tw(p.sword, { angle: -10 }, tt * 0.6, 'Back.out');
-  b.tw(p.rig, { angle: -7, scaleY: 0.97 }, tt * 0.6);
-  yield tt * 0.5;
-  glint(b, -10);
-  yield tt * 0.5;
-  for (let i = 0; i < s.count; i++) {
-    // Coup de taille vers le sol : l'épée fantôme part en raclant.
-    b.tw(p.sword, { angle: 108 }, 0.09, 'Quad.in');
-    b.tw(p.rig, { angle: 10, scaleY: 1 }, 0.09);
-    smearFx(b);
-    yield 0.09;
-    const gx = b.x + b.dir * 62;
-    sc.sparks(gx, b.floorY - 2, 0xffb040, 8); sc.puffs(gx, b.floorY, 2); sc.cameras.main.shake(80, 0.005);
-    sfx.blade(); sfx.scrape();
-    ghostBlade(b);
-    if (i < s.count - 1) {
-      const gap = Math.max(0.7, b.t(s.gap));
-      b.tw(p.sword, { angle: -10 }, gap * 0.5, 'Back.out');
-      b.tw(p.rig, { angle: -7 }, gap * 0.5);
-      yield gap - 0.09;
+/** Fente + taille, puis revers montant sur place (il se retourne si on est passé derrière). */
+function* swings(b: Boss, tele = M.slash.tele, recover = M.slash.recover, last = true) {
+  const p = b.parts, s = M.swing, sc = b.scene;
+  yield* slash(b, tele, 0, false);
+  b.face(); b.eyes('tele');
+  const w = b.t(s.wind);
+  b.tw(p.rig, { angle: 9, scaleX: 1.05, scaleY: 0.93 }, w);
+  b.tw(p.sword, { angle: 150 }, w, 'Back.out');
+  glint(b, 150);
+  yield w;
+  const d = b.t(s.cut);
+  b.tw(p.sword, { angle: -60 }, d, 'Quad.out');
+  b.tw(p.rig, { angle: -11, scaleX: 1, scaleY: 1.06 }, d);
+  b.tw(b.root, { x: b.clampX(b.x + b.dir * 26) }, d, 'Expo.out');
+  smearFx(b, true);
+  sc.puffs(b.x, b.floorY, 2);
+  b.hitbox = () => new Phaser.Geom.Rectangle(b.dir > 0 ? b.x - 10 : b.x - M.slash.reach, b.floorY - s.height, M.slash.reach + 10, s.height);
+  sfx.whoosh();
+  yield d;
+  b.hitbox = null;
+  if (!last) { yield b.t(recover); return; }
+  b.eyes('off');
+  b.tw(p.rig, { angle: -4, scaleY: 0.96 }, 0.2);
+  yield b.t(recover);
+  b.eyes('on'); b.def.rest(b, 0.3);
+}
+
+/** Épée spectrale lancée : elle traque le joueur (virage borné) puis file droit. */
+function homingBlade(b: Boss, x: number, y: number, a0: number) {
+  const sc = b.scene, s = M.flurry, v = s.speed * b.speed;
+  const o = b.hazard('mord_ghost', x, y, 0, 14, 14, s.life).setOrigin(0.5).setFlipX(false).setBlendMode(ADD).setData('once', true);
+  (o.body as Phaser.Physics.Arcade.Body).setOffset((o.width - 14) / 2, (o.height - 14) / 2);
+  let a = a0, t = 0, fx = 0;
+  const aim = () => o.setRotation(a).setVelocity(Math.cos(a) * v, Math.sin(a) * v);
+  aim();
+  o.setData('tick', (dt: number) => {
+    t += dt;
+    if (t < s.home) {
+      const want = Math.atan2(b.player.rect().centerY - o.y, b.player.x - o.x);
+      a += Phaser.Math.Clamp(Phaser.Math.Angle.Wrap(want - a), -s.turn * dt, s.turn * dt);
+      aim();
     }
+    if (o.y > b.floorY - 3) { sc.sparks(o.x, b.floorY - 2, COL.danger, 8); sc.puffs(o.x, b.floorY, 1); o.setData('life', 0); return; }
+    fx -= dt;
+    if (fx > 0) return;
+    fx = 0.045;
+    const g = sc.add.image(o.x, o.y, 'mord_ghost').setRotation(a).setBlendMode(ADD).setAlpha(0.3).setDepth(14);
+    sc.tweens.add({ targets: g, alpha: 0, duration: 150, onComplete: () => g.destroy() });
+    sc.sparks(o.x, o.y, COL.danger, 1);
+  });
+}
+
+/** Rafale : l'épée tournoie au-dessus de la tête, des lames spectrales se forment et visent, puis partent une à une. */
+function* flurry(b: Boss, count = M.flurry.count) {
+  const p = b.parts, s = M.flurry, sc = b.scene;
+  b.face(); b.eyes('tele'); sfx.warn();
+  const tt = b.tele(s.tele);
+  b.tw(p.rig, { angle: -6, scaleY: 0.97 }, tt * 0.4);
+  b.tw(p.sword, { angle: REST.sword - 1080 }, tt, 'Cubic.in');
+  for (let i = 0; i < 4; i++) sc.time.delayedCall(i * tt * 250, () => b.state === 'pattern' && sfx.whoosh());
+  const ghosts = [...Array(count)].map((_, i) => {
+    const k = i - (count - 1) / 2;
+    const g = b.temp(sc.add.image(b.x + k * 34, b.y - 118 + Math.abs(k) * 10, 'mord_ghost').setBlendMode(ADD).setAlpha(0).setScale(0.3).setDepth(14));
+    b.tw(g, { alpha: 0.9, scale: 1, onUpdate: () => g.setRotation(Math.atan2(b.player.rect().centerY - g.y, b.player.x - g.x)) }, tt, 'Back.out');
+    sc.sparks(g.x, g.y, COL.danger, 4);
+    return g;
+  });
+  yield tt;
+  b.tw(p.sword, { angle: 110 }, 0.1, 'Quad.in');
+  smearFx(b);
+  for (let i = 0; i < count; i++) {
+    const g = ghosts[i];
+    homingBlade(b, g.x, g.y, Math.atan2(b.player.rect().centerY - g.y, b.player.x - g.x));
+    sc.sparks(g.x, g.y, COL.danger, 8); sfx.blade();
+    g.destroy();
+    if (i < count - 1) yield b.t(s.gap);
   }
   b.eyes('off');
   b.tw(p.rig, { angle: 6, scaleY: 0.95 }, 0.2);
@@ -398,16 +546,66 @@ function* blades(b: Boss) {
   b.eyes('on'); b.def.rest(b, 0.3);
 }
 
-function* combo(b: Boss) {
-  const t = M.combo.teles;
-  yield* slash(b, t[0], 0.12, false);
-  yield* slash(b, t[1], 0.3, false);
-  yield* slash(b, t[2], M.combo.recover, true);
+/** Charge à l'épaule : épaule baissée, épée traînée, ruée qui accélère, freinage dans la poussière. */
+function* charge(b: Boss) {
+  const p = b.parts, s = M.charge, sc = b.scene;
+  b.face(); b.eyes('tele'); sfx.warn();
+  const tt = b.tele(s.tele);
+  const tx = b.clampX(b.x + b.dir * Math.min(s.dist, Math.abs(b.player.x - b.x) + 70));
+  b.tw(p.rig, { angle: 15, scaleX: 1.08, scaleY: 0.9 }, tt * 0.8);
+  b.tw(p.sword, { angle: -140 }, tt * 0.8, 'Back.out');
+  b.tw(b.root, { x: b.clampX(b.x - b.dir * 8) }, tt * 0.8);
+  const zone = b.temp(sc.add.rectangle(Math.min(b.x, tx), b.floorY - 80, Math.abs(tx - b.x) + 1, 80, COL.danger, 0.14).setOrigin(0).setDepth(6));
+  b.tw(zone, { alpha: 0.05, yoyo: true, repeat: -1 }, 0.1, 'Linear');
+  for (let i = 0; i < 3; i++) sc.time.delayedCall(i * tt * 300, () => b.state === 'pattern' && sc.debris(b.x, b.floorY - 2, 2));
+  yield tt;
+  zone.destroy(); sfx.leap(); sfx.whoosh();
+  const d = Math.max(0.12, Math.abs(tx - b.x) / (s.speed * b.speed));
+  b.tw(b.root, { x: tx }, d, 'Quad.in');
+  b.hitbox = () => new Phaser.Geom.Rectangle(b.x - 24, b.y - 82, 48, 82);
+  for (let k = 0; k < d / 0.05; k++) sc.time.delayedCall(k * 50, () => b.state === 'pattern' && ghostTrail(b));
+  yield d;
+  b.hitbox = null;
+  impact(b, b.x + b.dir * 20, b.floorY, 1); sfx.thud(); sfx.scrape();
+  b.tw(b.root, { x: b.clampX(b.x + b.dir * 20) }, 0.22, 'Quad.out');
+  b.tw(p.rig, { angle: -6, scaleX: 1, scaleY: 0.95 }, 0.2);
+  b.eyes('off');
+  yield b.t(s.recover);
+  b.eyes('on'); b.def.rest(b, 0.3);
 }
 
+/** Phase 2 : il se dissout, réapparaît derrière le joueur (repère au sol), puis fente + revers. */
+function* warp(b: Boss) {
+  const p = b.parts, s = M.warp, sc = b.scene;
+  b.eyes('tele'); sfx.warn(); sfx.whoosh();
+  sc.sparks(b.x, b.y - 50, COL.danger, 18); sc.puffs(b.x, b.floorY, 4);
+  b.tw(p.rig, { alpha: 0, scaleX: 0.5, scaleY: 1.35 }, 0.18, 'Quad.in');
+  yield 0.2;
+  const side = Math.sign(b.player.x - b.x) || 1;
+  let tx = b.clampX(b.player.x + side * s.behind);
+  if (Math.abs(tx - b.player.x) < 40) tx = b.clampX(b.player.x - side * s.behind);
+  b.root.x = tx;
+  const mark = b.temp(sc.add.image(tx, b.floorY + 1, 'mord_mark').setDepth(6));
+  const col = b.temp(sc.add.rectangle(tx, b.floorY - 90, 40, 90, COL.danger, 0.15).setOrigin(0.5, 0).setDepth(6));
+  b.tw([mark, col], { alpha: 0.4, yoyo: true, repeat: -1 }, 0.1, 'Linear');
+  yield b.tele(s.mark);
+  mark.destroy(); col.destroy();
+  b.face();
+  b.tw(p.rig, { alpha: 1, scaleX: 1, scaleY: 1 }, 0.12, 'Back.out');
+  sc.sparks(tx, b.y - 50, COL.danger, 14); ring(b, tx, b.floorY - 3, 1.6); sfx.clank();
+  yield 0.12;
+  yield* swings(b, 0.45);
+}
+
+function* combo(b: Boss) {
+  const t = M.combo.teles;
+  yield* swings(b, t[0], 0.15, false);
+  yield* slash(b, t[1], 0.25, false);
+  yield* slash(b, t[2], M.combo.recover, true);
+}
 export const MORDREC: BossDef = {
   name: 'MORDREC',
-  title: 'LE CHEVALIER CREUX',
+  title: 'LE CHASSEUR CREUX',
   hp: M.hp,
   hurt: { w: 40, h: 86 },
   build(b) {
@@ -428,7 +626,7 @@ export const MORDREC: BossDef = {
   },
   rest(b, sec) {
     const p = b.parts;
-    const pose: [object, object][] = [[p.sword, { angle: REST.sword }], [p.head, { y: REST.headY, x: 2, angle: 0 }], [p.rig, { angle: 0, scaleX: 1, scaleY: 1, x: 0, y: 0 }], [p.body, { scaleY: 1 }]];
+    const pose: [object, object][] = [[p.sword, { angle: REST.sword }], [p.head, { y: REST.headY, x: 2, angle: 0 }], [p.rig, { angle: 0, scaleX: 1, scaleY: 1, x: 0, y: 0, alpha: 1 }], [p.body, { scaleY: 1 }]];
     for (const [t, props] of pose) {
       if (sec <= 0) Object.assign(t, props);
       // Tweens non enregistrés : ils doivent survivre à la fin du pattern.
@@ -446,6 +644,9 @@ export const MORDREC: BossDef = {
     sc.tweens.add({ targets: p.rig, angle: -12, scaleY: 1.06, duration: 200, ease: 'Back.out' });
     sc.tweens.add({ targets: p.head, y: REST.headY - 4, duration: 200 });
     sc.tweens.add({ targets: p.sword, angle: -30, duration: 250, ease: 'Back.out' });
+    // L'épée s'embrase de rouge sombre : ses coups deviennent plus lourds.
+    (p.sword as Img).setTexture('mord_sword_r');
+    sc.sparks(b.x + b.dir * 18, b.y - 90, COL.danger, 20);
     for (let i = 0; i < 3; i++) sc.time.delayedCall(i * 220, () => ring(b, b.x, b.y - 60, 3 + i));
     sc.puffs(b.x - 20, b.floorY, 5); sc.puffs(b.x + 20, b.floorY, 5); sc.debris(b.x, b.floorY, 8);
     sc.time.delayedCall(800, () => this.rest(b, 0.25));
@@ -468,19 +669,18 @@ export const MORDREC: BossDef = {
       sc.tweens.add({ targets: b.root, alpha: 0, duration: 600 });
     });
   },
+  /** Splash art (×2 à l'écran : l'annonceur agrandit le portrait ×3). */
   portrait(sc) {
-    const head = sc.add.container(2, REST.headY, [
-      sc.add.image(0, 0, 'mord_head').setOrigin(0.5, 1),
-      sc.add.image(4, -12, 'glowR').setBlendMode(ADD).setScale(0.5),
-      sc.add.image(4, -12, 'mord_eyes').setTint(COL.danger),
-    ]);
-    return sc.add.container(0, 0, [sc.add.image(0, 0, 'mord_body').setOrigin(0.5, 1), head, sc.add.image(18, -44, 'mord_sword').setOrigin(0.5, 70 / 84).setAngle(-25)]);
+    return sc.add.container(0, 0, [sc.add.image(0, 0, 'mord_splash').setOrigin(0.5, 1).setScale(2 / 3)]);
   },
   patterns: [
-    { name: 'slash', weight: 3, phase: 0, run: (b) => slash(b) },
-    { name: 'slam', weight: 2, phase: 0, run: (b) => slam(b), far: true, elevated: true },
-    { name: 'blades', weight: 2, phase: 0, run: blades, far: true },
-    { name: 'combo', weight: 3, phase: 2, run: combo },
-    { name: 'slam2', weight: 2, phase: 2, run: (b) => slam(b, true), far: true, elevated: true },
+    { name: 'swings', weight: 3, phase: 0, run: (b) => swings(b) },
+    { name: 'twirl', weight: 2, phase: 0, run: (b) => slam(b), far: true, elevated: true },
+    { name: 'flurry', weight: 2, phase: 1, run: (b) => flurry(b), far: true, elevated: true },
+    { name: 'charge', weight: 2, phase: 0, run: charge, far: true },
+    { name: 'warp', weight: 3, phase: 2, run: warp, far: true },
+    { name: 'combo', weight: 2, phase: 2, run: combo },
+    { name: 'flurry3', weight: 2, phase: 2, run: (b) => flurry(b, 3), far: true, elevated: true },
+    { name: 'twirl2', weight: 2, phase: 2, run: (b) => slam(b, true), far: true, elevated: true },
   ],
 };
