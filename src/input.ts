@@ -3,18 +3,30 @@ import { unlockAudio } from './audio/sfx';
 export type Action =
   | 'left' | 'right' | 'down' | 'up' | 'jump' | 'attack' | 'dash' | 'spell' | 'ok' | 'pause' | 'debug1' | 'debug2';
 
-// Liaison par lettre affichée (e.key), donc AZERTY natif. Une touche peut porter plusieurs actions (jeu + menus).
+// Liaison par touche PHYSIQUE (e.code) : flèches pour bouger, rangée du haut à gauche pour les actions
+// (A Z E en AZERTY = Q W E en QWERTY, même emplacement). L'option CLAVIER ne change que les lettres affichées.
 const MAP: Record<string, Action[]> = {
-  q: ['left'], arrowleft: ['left'],
-  d: ['right'], arrowright: ['right'],
-  s: ['down'], arrowdown: ['down'],
-  z: ['jump', 'up'], arrowup: ['jump', 'up'], ' ': ['jump', 'ok'],
-  j: ['attack', 'ok'], w: ['attack', 'ok'], enter: ['ok'],
-  k: ['dash'], x: ['dash'],
-  l: ['spell'], c: ['spell'],
-  escape: ['pause'], p: ['pause'],
-  f1: ['debug1'], f2: ['debug2'],
+  ArrowLeft: ['left'], ArrowRight: ['right'], ArrowDown: ['down'],
+  ArrowUp: ['jump', 'up'], Space: ['jump', 'ok'], Enter: ['ok'], NumpadEnter: ['ok'],
+  KeyQ: ['attack'], KeyW: ['dash'], KeyE: ['spell'],
+  Escape: ['pause'], KeyP: ['pause'],
+  F1: ['debug1'], F2: ['debug2'],
 };
+
+export type Layout = 'AZERTY' | 'QWERTY';
+let layout: Layout = 'AZERTY';
+try { if (localStorage.getItem('ashenborn.layout') === 'QWERTY') layout = 'QWERTY'; } catch { /* file:// ou stockage bloqué */ }
+export const getLayout = () => layout;
+export function setLayout(l: Layout) {
+  layout = l;
+  try { localStorage.setItem('ashenborn.layout', l); } catch { /* ignoré */ }
+}
+const LETTERS: Record<Layout, Record<'attack' | 'dash' | 'spell', string>> = {
+  AZERTY: { attack: 'A', dash: 'Z', spell: 'E' },
+  QWERTY: { attack: 'Q', dash: 'W', spell: 'E' },
+};
+/** Lettre affichée pour une action selon le clavier choisi. */
+export const keyLabel = (a: 'attack' | 'dash' | 'spell') => LETTERS[layout][a];
 
 const held = new Map<string, Action[]>();
 const pressedAt: Partial<Record<Action, number>> = {};
@@ -22,14 +34,14 @@ const pressedAt: Partial<Record<Action, number>> = {};
 addEventListener('keydown', (e) => {
   unlockAudio();
   firstFullscreen();
-  const acts = MAP[e.key.toLowerCase()];
+  const acts = MAP[e.code];
   if (!acts) return;
   e.preventDefault();
   if (e.repeat) return;
-  held.set(e.key.toLowerCase(), acts);
+  held.set(e.code, acts);
   for (const a of acts) pressedAt[a] = performance.now();
 });
-addEventListener('keyup', (e) => held.delete(e.key.toLowerCase()));
+addEventListener('keyup', (e) => held.delete(e.code));
 addEventListener('blur', () => held.clear());
 addEventListener('pointerdown', () => { unlockAudio(); firstFullscreen(); });
 

@@ -21,6 +21,8 @@ export class ArenaScene extends Phaser.Scene {
   floorKey = 'floor';
   /** Jeu figé (cinématique) : joueur et salle à l'arrêt. */
   frozen = false;
+  /** Rappel des contrôles en haut à droite (masqué dans le tuto, qui a ses panneaux). */
+  showControls = true;
   private spells!: Spell[];
   private hitstopEnd = 0;
   private sparkFx!: Phaser.GameObjects.Particles.ParticleEmitter;
@@ -77,7 +79,7 @@ export class ArenaScene extends Phaser.Scene {
       speedX: { min: -50, max: 50 }, speedY: { min: -30, max: -5 }, lifespan: { min: 400, max: 700 },
       scale: { start: 0.5, end: 1.6 }, alpha: { start: 0.55, end: 0 }, tint: [0x8088a8, 0x6a7090, 0xa8a0b8], emitting: false,
     }).setDepth(8);
-    this.hud = new Hud(this, this.player);
+    this.hud = new Hud(this, this.player, this.showControls);
     // Sortie du plein écran (Échap du navigateur) → pause.
     const onFs = () => { if (!document.fullscreenElement && this.scene.isActive()) this.openPause(); };
     document.addEventListener('fullscreenchange', onFs);
@@ -154,7 +156,12 @@ export class ArenaScene extends Phaser.Scene {
     this.spells = this.spells.filter((s) => s.img.active);
   }
 
+  /** Mort : écran de fin (dernière sauvegarde = cette salle, intro rejouée ; ou accueil). */
   onPlayerDeath() {
-    this.time.delayedCall(PLAYER.deathRetryDelay * 1000, () => this.scene.restart({ retry: true }));
+    this.time.delayedCall(PLAYER.deathRetryDelay * 1000, () => {
+      input.reset();
+      this.scene.launch('GameOver', { from: this.scene.key });
+      this.scene.pause();
+    });
   }
 }
