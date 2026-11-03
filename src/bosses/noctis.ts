@@ -3,7 +3,7 @@ import type { Boss, BossDef } from '../entities/Boss';
 import { COL } from '../config';
 import { sfx } from '../audio/sfx';
 
-export const NIGHT = { hp: 96, fireDamage: 4, fireTick: 0.3, fireLife: 6, recharge: 8, fireWidth: 132, lanterns: [190, 390, 590, 790] };
+export const NIGHT = { hp: 96, fireDamage: 4, fireTick: 0.3, fireLife: 6, recharge: 8, fireWidth: 132, lanterns: [190, 390, 590, 790], orbSpeed: 150, rushTime: 0.65, rainGap: 0.35 };
 
 function* hunt(b: Boss) {
   const s = b.scene;
@@ -41,6 +41,58 @@ function* sweep(b: Boss) {
   b.eyes('on');
 }
 
+/** Salve visée : les orbes traversent la salle à la hauteur verrouillée du joueur. */
+function* barrage(b: Boss) {
+  const sc = b.scene;
+  const count = b.phase === 2 ? 5 : 3;
+  b.face(); b.eyes('tele'); sfx.warn();
+  const x = b.x, y = b.y - 64;
+  const angle = Math.atan2(b.player.rect().centerY - y, b.player.x - x);
+  const rays = b.temp(sc.add.graphics().setDepth(80));
+  rays.lineStyle(1, COL.danger, 0.65);
+  for (let i = 0; i < count; i++) {
+    const a = angle + (i - (count - 1) / 2) * 0.24;
+    rays.lineBetween(x, y, x + Math.cos(a) * 260, y + Math.sin(a) * 260);
+  }
+  yield b.tele(1);
+  rays.destroy(); sfx.blade();
+  for (let i = 0; i < count; i++) {
+    const a = angle + (i - (count - 1) / 2) * 0.24;
+    const o = b.hazard('glowR', x, y, Math.cos(a) * NIGHT.orbSpeed * b.speed, 12, 12, 5);
+    o.setOrigin(0.5).setBlendMode(Phaser.BlendModes.ADD).setData('once', true);
+    (o.body as Phaser.Physics.Arcade.Body).setOffset((o.width - 12) / 2, (o.height - 12) / 2);
+    o.setVelocityY(Math.sin(a) * NIGHT.orbSpeed * b.speed);
+    let trail = 0;
+    o.setData('tick', (dt: number) => {
+      trail -= dt;
+      if (trail <= 0) { trail = 0.08; sc.sparks(o.x, o.y, COL.danger, 2); }
+    });
+  }
+  b.eyes('off'); yield b.t(0.9); b.eyes('on');
+}
+
+/** Ruée annoncée : Noctis traverse les flammes au lieu de les éviter. */
+function* rush(b: Boss) {
+  b.face(); b.eyes('tele'); sfx.warn();
+  const end = b.clampX(b.player.x + b.dir * 120);
+  const mark = b.temp(b.scene.add.rectangle(Math.min(b.x, end) - 30, b.floorY - 92, Math.abs(end - b.x) + 60, 92, COL.danger, 0.16).setOrigin(0).setDepth(80));
+  yield b.tele(1.05);
+  mark.destroy(); sfx.whoosh();
+  b.tw(b.root, { x: end }, b.t(NIGHT.rushTime), 'Sine.inOut');
+  b.hitbox = () => new Phaser.Geom.Rectangle(b.x - 30, b.y - 90, 60, 90);
+  yield b.t(NIGHT.rushTime);
+  b.hitbox = null; b.eyes('off');
+  yield b.t(1); b.eyes('on');
+}
+
+/** Phase 2 : trois impacts successifs, chaque position est annoncée séparément. */
+function* rain(b: Boss) {
+  for (let i = 0; i < 3; i++) {
+    yield* hunt(b);
+    yield NIGHT.rainGap;
+  }
+}
+
 export const NOCTIS: BossDef = {
   name: 'NOCTIS', title: "LE DÉVOREUR DE LUMIÈRE", hp: NIGHT.hp,
   fireOnly: true, hurt: { w: 60, h: 92 },
@@ -56,6 +108,9 @@ export const NOCTIS: BossDef = {
   },
   rest() {},
   patterns: [
+    { name: 'barrage', weight: 2, phase: 0, far: true, run: barrage },
+    { name: 'rush', weight: 3, phase: 0, far: true, run: rush },
+    { name: 'rain', weight: 2, phase: 2, far: true, run: rain },
     { name: 'hunt', weight: 3, phase: 0, far: true, run: hunt },
     { name: 'sweep', weight: 2, phase: 2, far: true, run: sweep },
   ],

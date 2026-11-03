@@ -4,6 +4,9 @@ import { txt } from '../art/font';
 import { input } from '../input';
 import { Menu } from '../ui/Menu';
 import { OptionsPanel } from '../ui/Options';
+import { FLOORS } from '../floors';
+import { MORDREC } from '../bosses/mordrec';
+import { NOCTIS } from '../bosses/noctis';
 import { TITLE_MOON } from '../art/title';
 
 const MX = 118; // colonne du menu (moitié gauche)
@@ -12,6 +15,7 @@ const hillY = (x: number) => 228 + Math.round(Math.sin(x / 40) * 6 + Math.sin(x 
 /** Écran titre : logo + boutons encadrés à gauche, scène vivante à droite (cathédrale, lune, nuages, veilleur). */
 export class MenuScene extends Phaser.Scene {
   private menu!: Menu;
+  private bossMenu: Menu | null = null;
   private sub: Phaser.GameObjects.Container | null = null;
   private opts: OptionsPanel | null = null;
 
@@ -19,7 +23,7 @@ export class MenuScene extends Phaser.Scene {
 
   create() {
     input.reset();
-    this.sub = null; this.opts = null;
+    this.sub = null; this.opts = null; this.bossMenu = null;
     this.add.image(0, 0, 'bg_title').setOrigin(0);
     const [mx, my] = TITLE_MOON;
     const halo = this.add.image(mx, my, 'glowC').setBlendMode(Phaser.BlendModes.ADD).setScale(3.2).setAlpha(0.3);
@@ -57,6 +61,7 @@ export class MenuScene extends Phaser.Scene {
       { label: 'TUTO', act: () => this.go('Test') },
       { label: 'OPTIONS', act: () => this.options() },
       { label: 'QUITTER', act: () => this.quit() },
+      { label: 'TESTER BOSS', x: W - 94, y: H - 32, act: () => this.bosses() },
     ], { framed: 140, gap: 30 });
     txt(this, MX, H - 13, '↑↓ : CHOISIR · ENTRÉE/ESPACE : VALIDER', COL.uiDim).setOrigin(0.5, 0).setDepth(40);
     this.cameras.main.fadeIn(250);
@@ -72,8 +77,23 @@ export class MenuScene extends Phaser.Scene {
 
   private go(key: string) {
     this.menu.enabled = false;
+    if (this.bossMenu) this.bossMenu.enabled = false;
     this.cameras.main.fadeOut(200, 6, 5, 12);
     this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start(key));
+  }
+
+  private bosses() {
+    if (this.sub || this.opts) return;
+    input.reset();
+    this.menu.enabled = false; this.menu.setVisible(false);
+    const backdrop = this.add.rectangle(0, 0, W, H, 0x06050c, 0.94).setOrigin(0);
+    const title = txt(this, W / 2, 45, 'TESTER LES BOSS', COL.moonLight).setOrigin(0.5, 0).setScale(2);
+    this.sub = this.add.container(0, 0, [backdrop, title]).setDepth(100);
+    const defs = [MORDREC, NOCTIS];
+    this.bossMenu = new Menu(this, W / 2, 100, [
+      ...FLOORS.map((f, i) => ({ label: defs[i]?.name ?? f.place, act: () => this.go(f.scene) })),
+      { label: 'RETOUR', act: () => this.closeSub() },
+    ], { framed: 220, gap: 38, depth: 110 });
   }
 
   private options() {
@@ -103,7 +123,9 @@ export class MenuScene extends Phaser.Scene {
   }
 
   private closeSub() {
+    this.bossMenu?.destroy(); this.bossMenu = null;
     this.sub?.destroy(); this.sub = null;
+    this.menu.setVisible(true);
     this.menu.enabled = true;
     input.reset();
   }
@@ -111,6 +133,11 @@ export class MenuScene extends Phaser.Scene {
   update() {
     if (this.opts) return this.opts.update();
     if (!this.sub) return this.menu.update();
+    if (this.bossMenu) {
+      if (input.take('pause')) this.closeSub();
+      else this.bossMenu.update();
+      return;
+    }
     if (input.take('pause') || input.take('ok')) this.closeSub();
   }
 }

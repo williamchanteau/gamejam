@@ -4,7 +4,7 @@ import { txt } from '../art/font';
 import { input, goFullscreen } from '../input';
 import { sfx } from '../audio/sfx';
 
-export type Item = { label: string; act: () => void };
+export type Item = { label: string; act: () => void; x?: number; y?: number };
 export interface MenuOpts { scale?: number; gap?: number; depth?: number; /** Boutons encadrés de largeur fixe. */ framed?: number }
 
 /** Liste verticale : ↑↓, valider Entrée/Espace, ou souris. Le curseur glisse vers l'entrée choisie, qui « claque ». */
@@ -22,9 +22,9 @@ export class Menu {
     const scale = (this.scale = o.scale ?? 2), gap = o.gap ?? 24, depth = o.depth ?? 50;
     this.fw = o.framed ?? 0;
     this.texts = items.map((it, k) => {
-      const t = txt(scene, x, y + k * gap, it.label).setOrigin(0.5, 0).setScale(scale).setDepth(depth + 1);
+      const t = txt(scene, it.x ?? x, it.y ?? (y + k * gap), it.label).setOrigin(0.5, 0).setScale(scale).setDepth(depth + 1);
       if (this.fw) this.frames.push(scene.add.graphics().setDepth(depth));
-      const hit = this.fw ? scene.add.zone(x, t.y + 6.5 * scale, this.fw, 7 * scale + 10).setDepth(depth + 2) : t;
+      const hit = this.fw ? scene.add.zone(t.x, t.y + 6.5 * scale, this.fw, 7 * scale + 10).setDepth(depth + 2) : t;
       hit.setInteractive({ useHandCursor: true });
       if (hit !== t) this.hits.push(hit);
       hit.on('pointerover', () => this.enabled && this.select(k));
@@ -36,7 +36,7 @@ export class Menu {
   }
 
   private cursorX(t: Phaser.GameObjects.BitmapText) {
-    return Math.round((this.fw ? this.x - this.fw / 2 - 8 : t.x - t.displayWidth / 2 - 10));
+    return Math.round((this.fw ? t.x - this.fw / 2 - 8 : t.x - t.displayWidth / 2 - 10));
   }
 
   select(k: number, silent = false) {
@@ -64,7 +64,7 @@ export class Menu {
 
   /** Bouton encadré : pierre sombre, liseré lune et lueur braise si sélectionné. */
   private drawFrame(g: Phaser.GameObjects.Graphics, j: number, on: boolean) {
-    const t = this.texts[j], w = this.fw, h = 7 * this.scale + 10, x = Math.round(this.x - w / 2), y = Math.round(t.y + 6.5 * this.scale - h / 2);
+    const t = this.texts[j], w = this.fw, h = 7 * this.scale + 10, x = Math.round(t.x - w / 2), y = Math.round(t.y + 6.5 * this.scale - h / 2);
     g.clear();
     g.fillStyle(0x06050c, 0.9).fillRect(x - 1, y - 1, w + 2, h + 2);
     g.fillStyle(on ? 0x221d3a : 0x12101e, 0.92).fillRect(x, y, w, h);
@@ -86,6 +86,7 @@ export class Menu {
   setVisible(v: boolean) {
     for (const t of this.texts) t.setVisible(v);
     for (const f of this.frames) f.setVisible(v);
+    for (const h of this.hits) (h as Phaser.GameObjects.Zone).setVisible(v);
     this.cursor.setVisible(v);
   }
 
