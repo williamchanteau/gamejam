@@ -12,6 +12,7 @@ export class Player {
   zone: Phaser.GameObjects.Zone;
   body: Phaser.Physics.Arcade.Body;
   spr: Phaser.GameObjects.Image;
+  /** Vide (la cape du sprite suffit) ; gardé pour les fondus des scènes. */
   scarf: Phaser.GameObjects.Graphics;
   hp = C.hp; mana = 0; facing = 1; state: State = 'normal'; god = false; safe = false;
   private stateT = 0; private coyote = 0; private airDashes = 0; private airJumps = 0;
@@ -19,7 +20,6 @@ export class Player {
   private jumpHeld = false; private wasGrounded = true; private lastVy = 0;
   private combo = 0; private comboT = 0; private swingHits = new Set<Target>(); private animT = 0;
   private dropUntil = 0; private squashTw?: Phaser.Tweens.Tween;
-  private pts: { x: number; y: number }[] = [];
 
   constructor(private scene: ArenaScene, x: number, y: number) {
     this.zone = scene.add.zone(x, y - BH / 2, BW, BH);
@@ -28,7 +28,6 @@ export class Player {
     this.body.setCollideWorldBounds(true).setMaxVelocity(1000, 1000);
     this.scarf = scene.add.graphics().setDepth(9);
     this.spr = scene.add.image(x, y, 'p_idle0').setOrigin(0.5, 1).setDepth(10);
-    for (let i = 0; i < 7; i++) this.pts.push({ x, y: y - 23 });
   }
 
   get x() { return this.body.x + BW / 2; }
@@ -247,30 +246,5 @@ export class Player {
       s.setTexture('p_' + k);
       s.setAlpha(this.invuln > 0 && Math.floor(this.invuln * 16) % 2 ? 0.35 : 1);
     }
-    this.drawScarf(dt);
-  }
-
-  // Écharpe : chaîne de points qui traîne derrière et ondule.
-  private drawScarf(dt: number) {
-    const s = this.spr, f = this.facing, b = this.body, pts = this.pts, t = this.scene.time.now / 1000;
-    pts[0].x = s.x - f * 3; pts[0].y = s.y - 23;
-    for (let i = 1; i < pts.length; i++) {
-      const p = pts[i], q = pts[i - 1];
-      let dx = -f * 0.9 - b.velocity.x * 0.0027, dy = 0.35 + Math.sin(t * 9 - i) * 0.35 - b.velocity.y * 0.002;
-      const l = Math.hypot(dx, dy) || 1;
-      const tx = q.x + (dx / l) * 3.75, ty = q.y + (dy / l) * 3.75;
-      const k = Math.min(1, dt * 30);
-      p.x += (tx - p.x) * k; p.y += (ty - p.y) * k;
-      const ex = p.x - q.x, ey = p.y - q.y, el = Math.hypot(ex, ey) || 1;
-      if (el > 4.5) { p.x = q.x + (ex / el) * 4.5; p.y = q.y + (ey / el) * 4.5; }
-    }
-    const g = this.scarf.clear();
-    g.setAlpha(s.alpha);
-    for (const pass of [0, 1])
-      pts.forEach((p, i) => {
-        const w = i < 3 ? 3 : i < 5 ? 2 : 1, x = Math.round(p.x), y = Math.round(p.y);
-        if (pass === 0) g.fillStyle(0x06050c).fillRect(x - 1, y - 1, w + 2, w + 2);
-        else g.fillStyle(i % 2 ? 0x5fd8f0 : 0x9ff2ff).fillRect(x, y, w, w);
-      });
   }
 }

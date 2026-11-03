@@ -11,7 +11,7 @@ export interface Entity { id: string; label: string; boss?: BossDef; files: stri
 const BOSS_ENGINE = 'src/entities/Boss.ts (moteur générique : b.tele/t/tw/temp/hazard/eyes/hitbox)';
 /** Ajouter un boss au viewer = ajouter une ligne ici (id = nom du fichier de params). */
 export const ENTITIES: Entity[] = [
-  { id: 'player', label: 'JOUEUR', files: ['src/art/player.ts (dessin : palette P, HOOD, POSES)', 'src/entities/Player.ts (états, animation, écharpe, sort)', 'src/config.ts → PLAYER (gameplay)', 'src/scenes/ArenaScene.ts (spawnSpell/updateSpells, particules)', 'src/art/fx.ts (textures slash, moon, glowC…)'] },
+  { id: 'player', label: 'JOUEUR', files: ['src/art/player.ts (dessin : palette P, HOOD, POSES)', 'src/entities/Player.ts (états, animation, sort)', 'src/config.ts → PLAYER (gameplay)', 'src/scenes/ArenaScene.ts (spawnSpell/updateSpells, particules)', 'src/art/fx.ts (textures slash, moon, glowC…)'] },
   { id: 'mordrec', label: 'MORDREC', boss: MORDREC, files: ['src/bosses/mordrec.ts (dessin makeMordrecArt, build/rest/roar/death, patterns, valeurs M)', BOSS_ENGINE] },
   { id: 'noctis', label: 'NOCTIS', boss: NOCTIS, files: ['src/bosses/noctis.ts (dessin build, patterns, valeurs NIGHT)', 'src/scenes/DarkBossScene.ts (lanternes, feu)', BOSS_ENGINE] },
 ];
