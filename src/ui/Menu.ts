@@ -6,7 +6,7 @@ import { sfx } from '../audio/sfx';
 
 export type Item = { label: string; act: () => void };
 
-/** Liste verticale : ↑↓ ou Z/S, valider Entrée/Espace/J, ou souris. */
+/** Liste verticale : ↑↓, valider Entrée/Espace, ou souris. */
 export class Menu {
   i = 0;
   enabled = true;
@@ -32,6 +32,22 @@ export class Menu {
     const t = this.texts[this.i];
     this.cursor.setPosition(Math.round(t.x - t.displayWidth / 2 - 10), Math.round(t.y + 6.5 * this.scale));
     if (!silent) sfx.tick();
+  }
+
+  /** Change le libellé d'une entrée (ex. option qui bascule). */
+  setLabel(k: number, label: string) {
+    this.texts[k].setText(label);
+    this.select(this.i, true);
+  }
+
+  setVisible(v: boolean) {
+    for (const t of this.texts) t.setVisible(v);
+    this.cursor.setVisible(v);
+  }
+
+  destroy() {
+    for (const t of this.texts) t.destroy();
+    this.cursor.destroy();
   }
 
   confirm() {

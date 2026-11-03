@@ -1,19 +1,21 @@
 import Phaser from 'phaser';
 import { W, H, COL } from '../config';
 import { txt } from '../art/font';
-import { input } from '../input';
+import { input, getLayout, setLayout, keyLabel } from '../input';
 import { Menu } from '../ui/Menu';
 
 /** Écran titre : JOUER (sélectionné par défaut), TUTO, OPTIONS, QUITTER. */
 export class MenuScene extends Phaser.Scene {
   private menu!: Menu;
   private sub: Phaser.GameObjects.Container | null = null;
+  private opts: Menu | null = null;
+  private optsBox: Phaser.GameObjects.Container | null = null;
 
   constructor() { super('Menu'); }
 
   create() {
     input.reset();
-    this.sub = null;
+    this.sub = null; this.opts = null; this.optsBox = null;
     this.add.image(0, 0, 'bg_title').setOrigin(0);
     this.add.image(372, 66, 'glowC').setBlendMode(Phaser.BlendModes.ADD).setScale(3.2).setAlpha(0.35);
     const logo = this.add.image(W / 2, 40, 'logo').setDepth(40);
@@ -27,10 +29,10 @@ export class MenuScene extends Phaser.Scene {
     this.menu = new Menu(this, W / 2, 100, [
       { label: 'JOUER', act: () => this.go('Outside') },
       { label: 'TUTO', act: () => this.go('Test') },
-      { label: 'OPTIONS', act: () => this.popup('OPTIONS\n\nBIENTÔT !') },
+      { label: 'OPTIONS', act: () => this.options() },
       { label: 'QUITTER', act: () => this.quit() },
     ]);
-    txt(this, W / 2, H - 13, '↑↓ OU Z/S : CHOISIR · ENTRÉE, ESPACE OU J : VALIDER', COL.uiDim).setOrigin(0.5, 0).setDepth(40);
+    txt(this, W / 2, H - 13, '↑↓ : CHOISIR · ENTRÉE/ESPACE : VALIDER', COL.uiDim).setOrigin(0.5, 0).setDepth(40);
     this.cameras.main.fadeIn(250);
   }
 
@@ -38,6 +40,34 @@ export class MenuScene extends Phaser.Scene {
     this.menu.enabled = false;
     this.cameras.main.fadeOut(200, 6, 5, 12);
     this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start(key));
+  }
+
+  /** Options : choix du clavier (lettres affichées pour les actions). */
+  private options() {
+    const w = 280, h = 120, x = W / 2 - w / 2, y = 90;
+    const g = this.add.graphics();
+    g.fillStyle(0x06050c, 0.85).fillRect(0, 0, W, H);
+    g.fillStyle(0x161428).fillRect(x, y, w, h);
+    g.lineStyle(1, 0x3d4463).strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+    const head = txt(this, W / 2, y + 8, 'OPTIONS', COL.moonLight).setOrigin(0.5, 0);
+    const keys = txt(this, W / 2, y + 88, '', COL.uiDim).setOrigin(0.5, 0).setCenterAlign();
+    const show = () => keys.setText(`←→ BOUGER · ↑/ESPACE SAUTER · ↓ DESCENDRE\n${keyLabel('attack')} ATTAQUE · ${keyLabel('dash')} DASH · ${keyLabel('spell')} SORT`);
+    show();
+    this.optsBox = this.add.container(0, 0, [g, head, keys]).setDepth(45);
+    this.menu.setVisible(false);
+    this.menu.enabled = false;
+    this.opts = new Menu(this, W / 2, y + 26, [
+      { label: `CLAVIER : ${getLayout()}`, act: () => { setLayout(getLayout() === 'AZERTY' ? 'QWERTY' : 'AZERTY'); this.opts!.setLabel(0, `CLAVIER : ${getLayout()}`); show(); } },
+      { label: 'RETOUR', act: () => this.closeOptions() },
+    ]);
+  }
+
+  private closeOptions() {
+    this.opts?.destroy(); this.opts = null;
+    this.optsBox?.destroy(); this.optsBox = null;
+    this.menu.setVisible(true);
+    this.menu.enabled = true;
+    input.reset();
   }
 
   private quit() {
@@ -67,6 +97,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   update() {
+    if (this.opts) { if (input.take('pause')) this.closeOptions(); else this.opts.update(); return; }
     if (!this.sub) return this.menu.update();
     if (input.take('pause') || input.take('ok')) this.closeSub();
   }

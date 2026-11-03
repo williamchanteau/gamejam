@@ -9,7 +9,7 @@ const M = {
   hp: 140,
   slash: { tele: 0.65, dash: 0.28, minDist: 70, maxDist: 250, overshoot: 50, recover: 0.5, reach: 64, height: 54 },
   slam: { tele: 0.6, rise: 0.35, mark: 0.7, fall: 0.16, recover: 0.6, waveSpeed: 210, doubleGap: 0.8 },
-  blades: { tele: 0.65, gap: 0.75, speed: 230, recover: 0.45 },
+  blades: { tele: 0.65, count: 2, gap: 0.75, speed: 230, recover: 0.45 },
   combo: { teles: [0.55, 0.45, 0.8], recover: 0.7 },
 };
 // Pose de repos : épée plantée en avant.
@@ -356,7 +356,7 @@ function* blades(b: Boss) {
   yield tt * 0.5;
   glint(b, -10);
   yield tt * 0.5;
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < s.count; i++) {
     // Coup de taille vers le sol : l'épée fantôme part en raclant.
     b.tw(p.sword, { angle: 108 }, 0.09, 'Quad.in');
     b.tw(p.rig, { angle: 10, scaleY: 1 }, 0.09);
@@ -366,7 +366,7 @@ function* blades(b: Boss) {
     sc.sparks(gx, b.floorY - 2, 0xffb040, 8); sc.puffs(gx, b.floorY, 2); sc.cameras.main.shake(80, 0.005);
     sfx.blade(); sfx.scrape();
     ghostBlade(b);
-    if (i < 2) {
+    if (i < s.count - 1) {
       const gap = Math.max(0.7, b.t(s.gap));
       b.tw(p.sword, { angle: -10 }, gap * 0.5, 'Back.out');
       b.tw(p.rig, { angle: -7 }, gap * 0.5);

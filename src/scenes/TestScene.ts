@@ -4,6 +4,7 @@ import { ArenaScene } from './ArenaScene';
 import { txt } from '../art/font';
 import { sfx } from '../audio/sfx';
 import type { Target } from '../entities/types';
+import { keyLabel } from '../input';
 
 /** Épouvantail d'entraînement : encaisse les coups et tire une orbe lente. */
 class Dummy implements Target {
@@ -50,6 +51,8 @@ export class TestScene extends ArenaScene {
   private dummy!: Dummy;
   private torches!: { img: Phaser.GameObjects.Image; glow: Phaser.GameObjects.Image }[];
   private flickT = 0;
+  showControls = false;
+  spawnX = 132;
   constructor() { super('Test'); }
 
   buildBackground() { this.add.image(0, 0, 'bg_test').setOrigin(0); }
@@ -62,24 +65,43 @@ export class TestScene extends ArenaScene {
       img: this.add.image(x, 118, 'torch0').setDepth(2),
       glow: this.add.image(x, 112, 'glowO').setBlendMode(Phaser.BlendModes.ADD).setScale(1.6).setAlpha(0.5).setDepth(2),
     }));
-    this.panel(74, 'S/↓ : DESCENDRE\nD\'UNE PLATEFORME');
-    this.panel(220, 'J/W : COMBO 3 COUPS\nCHAQUE COUP : +1 MANA');
-    this.panel(366, 'MANA PLEINE : L/C\nK/X : DASH = ESQUIVE');
+    // Panneaux placés là où l'action sert : au sol, au-dessus des plateformes, suspendu au plafond.
+    const A = keyLabel('attack'), Z = keyLabel('dash'), E = keyLabel('spell');
+    this.sign('post', 64, 192, '←→ : BOUGER\n↑/ESPACE : SAUTER');
+    this.sign('wall', 100, 128, '↓ : DESCENDRE\nDE LA PLATEFORME');
+    this.sign('post', 238, 180, `${A} : COMBO 3 COUPS\n+1 MANA PAR COUP`);
+    this.sign('wall', 380, 128, `${Z} : DASH\n= ESQUIVE (INVINCIBLE)`);
+    this.sign('hang', 240, 52, `MANA PLEINE ? ${E} : ÉCLAT LUNAIRE`);
     txt(this, W / 2, ARENA.floorY + 16, "ENTRAÎNEMENT · FRAPPE L'ÉPOUVANTAIL · ESQUIVE SES ORBES · ÉCHAP : MENU", COL.ui)
       .setOrigin(0.5, 0).setDepth(6);
   }
 
-  /** Plaque de pierre avec consigne, accrochée au mur. */
-  private panel(cx: number, text: string) {
-    const w = 140, h = 30, x = cx - w / 2, y = 188;
+  /** Panneau : planche sur piquet (sol), plaque de pierre (mur) ou enseigne à chaînes (plafond). */
+  private sign(kind: 'post' | 'wall' | 'hang', cx: number, y: number, text: string) {
+    const t = txt(this, cx, y + 5, text, kind === 'post' ? 0xf0dcc0 : COL.ui).setOrigin(0.5, 0).setCenterAlign().setDepth(4);
+    const w = Math.ceil(t.width / 2) * 2 + 14, h = Math.ceil(t.height) + 9, x = Math.round(cx - w / 2);
     const g = this.add.graphics().setDepth(3);
+    if (kind === 'post') { // piquet planté
+      const fy = this.floorY;
+      g.fillStyle(0x06050c).fillRect(cx - 3, y + h, 6, fy - y - h);
+      g.fillStyle(0x4a2e1a).fillRect(cx - 2, y + h, 4, fy - y - h);
+      g.fillStyle(0x6a4428).fillRect(cx - 2, y + h, 1, fy - y - h);
+      g.fillStyle(0x24402a).fillRect(cx - 4, fy - 2, 2, 2).fillRect(cx + 3, fy - 3, 1, 3);
+    } else if (kind === 'hang') { // chaînes
+      for (const hx of [x + 10, x + w - 11])
+        for (let yy = 0; yy < y - 1; yy += 4) { g.fillStyle(0x06050c).fillRect(hx - 1, yy, 3, 3); g.fillStyle(0x4a4868).fillRect(hx, yy + 1, 1, 1); }
+    } else { // pattes de fer
+      g.fillStyle(0x06050c).fillRect(x - 4, y + 3, 5, 4).fillRect(x + w - 1, y + 3, 5, 4);
+      g.fillStyle(0x4a4868).fillRect(x - 3, y + 4, 3, 1).fillRect(x + w, y + 4, 3, 1);
+    }
+    const [base, hi, lo] = kind === 'post' ? [0x4a2e1a, 0x7a5232, 0x24160c] : [0x161428, 0x3d4463, 0x0d0b18];
     g.fillStyle(0x06050c).fillRect(x - 1, y - 1, w + 2, h + 2);
-    g.fillStyle(0x161428).fillRect(x, y, w, h);
-    g.fillStyle(0x3d4463).fillRect(x, y, w, 1).fillRect(x, y, 1, h);
-    g.fillStyle(0x0d0b18).fillRect(x, y + h - 1, w, 1).fillRect(x + w - 1, y, 1, h);
-    g.fillStyle(0x7a86ac);
+    g.fillStyle(base).fillRect(x, y, w, h);
+    if (kind === 'post') { g.fillStyle(0x3a2414); for (let yy = y + 6; yy < y + h - 2; yy += 7) g.fillRect(x + 1, yy, w - 2, 1); }
+    g.fillStyle(hi).fillRect(x, y, w, 1).fillRect(x, y, 1, h);
+    g.fillStyle(lo).fillRect(x, y + h - 1, w, 1).fillRect(x + w - 1, y, 1, h);
+    g.fillStyle(kind === 'post' ? 0xc8a050 : 0x7a86ac);
     for (const [rx, ry] of [[2, 2], [w - 3, 2], [2, h - 3], [w - 3, h - 3]]) g.fillRect(x + rx, y + ry, 1, 1);
-    txt(this, cx, y + 2, text, COL.ui).setOrigin(0.5, 0).setCenterAlign().setDepth(4);
   }
 
   tick(dt: number) {
