@@ -10,6 +10,8 @@ import { OutsideScene } from './scenes/OutsideScene';
 import { TransitScene } from './scenes/TransitScene';
 import { GameOverScene } from './scenes/GameOverScene';
 
+const scenes = [BootScene, MenuScene, TestScene, OutsideScene, BossScene, DarkBossScene, TransitScene, PauseScene, GameOverScene];
+function start(extra: Phaser.Types.Scenes.SceneType[] = []) {
 const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: 'game',
@@ -23,6 +25,10 @@ const game = new Phaser.Game({
   audio: { noAudio: true },
   input: { keyboard: false },
   physics: { default: 'arcade', arcade: { gravity: { x: 0, y: PHYS.gravity } } },
-  scene: [BootScene, MenuScene, TestScene, OutsideScene, BossScene, DarkBossScene, TransitScene, PauseScene, GameOverScene],
+  scene: [...scenes, ...extra],
 });
 if (import.meta.env.DEV) (window as unknown as { game: Phaser.Game }).game = game;
+}
+// DEV : /?viewer = visualiseur d'animations (src/viewer/, remplacé par un module vide au build).
+if (import.meta.env.DEV && location.search.includes('viewer')) import('./viewer/ViewerScene').then((m) => start([m.ViewerScene]));
+else start();

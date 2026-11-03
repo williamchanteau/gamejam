@@ -14,10 +14,18 @@ const classicScript = (): Plugin => ({
   },
 });
 
+// Le viewer (src/viewer/) est un outil de dev : au build, ses modules sont remplacés par un module vide.
+const noViewer = (): Plugin => ({
+  name: 'no-viewer',
+  apply: 'build',
+  enforce: 'pre',
+  load: (id) => (id.includes('/src/viewer/') ? 'export {};' : null),
+});
+
 export default defineConfig({
   base: './',
   esbuild: { legalComments: 'none' },
-  plugins: [classicScript()],
+  plugins: [noViewer(), classicScript()],
   build: {
     sourcemap: false,
     modulePreload: false,

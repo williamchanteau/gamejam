@@ -20,7 +20,8 @@ export class BootScene extends Phaser.Scene {
     makeMordrecArt(this);
     makeOutsideArt(this);
     makeNaveArt(this);
-    // DEV : #Boss1, #Test... pour démarrer directement sur une scène.
-    this.scene.start(import.meta.env.DEV && location.hash ? location.hash.slice(1) : 'Menu');
+    // DEV : #Boss1, #Test... pour démarrer directement sur une scène ; /?viewer = visualiseur.
+    const dev = import.meta.env.DEV ? (location.search.includes('viewer') ? 'Viewer' : location.hash.slice(1)) : '';
+    this.scene.start(dev || 'Menu');
   }
 }
