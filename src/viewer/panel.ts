@@ -2,6 +2,7 @@
 import { BOSS } from '../config';
 import { V, ENTITIES, animsOf, type Seg } from './anims';
 import type { ViewerScene } from './ViewerScene';
+import { buildAsk } from './ask';
 
 let sc: ViewerScene;
 let root: HTMLDivElement | null = null;
@@ -35,6 +36,7 @@ export function buildPanel(s: ViewerScene) {
 <div class="checks">${CHECKS.map(([k, l]) => `<label><input type="checkbox" data-k="${k}"${getF(k) ? ' checked' : ''}> ${l}</label>`).join('')}</div>
 <div id="v-info"></div><div id="v-frise"></div><div id="v-segs"></div><div id="v-warn"></div>`;
   document.body.appendChild(root);
+  buildAsk(root);
   document.getElementById('game')!.style.cssText = 'position:fixed;left:300px;top:0;width:calc(100% - 300px);height:100%';
   s.scale.refresh();
 

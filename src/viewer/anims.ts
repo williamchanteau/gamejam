@@ -7,9 +7,14 @@ import { NOCTIS } from '../bosses/noctis';
 import type { ViewerScene } from './ViewerScene';
 
 export interface Anim { label: string; pattern?: boolean; p1?: boolean; setup(v: ViewerScene): void; done(v: ViewerScene, t: number): boolean }
-export interface Entity { label: string; boss?: BossDef }
-/** Ajouter un boss au viewer = ajouter une ligne ici. */
-export const ENTITIES: Entity[] = [{ label: 'JOUEUR' }, { label: 'MORDREC', boss: MORDREC }, { label: 'NOCTIS', boss: NOCTIS }];
+export interface Entity { id: string; label: string; boss?: BossDef; files: string[] }
+const BOSS_ENGINE = 'src/entities/Boss.ts (moteur générique : b.tele/t/tw/temp/hazard/eyes/hitbox)';
+/** Ajouter un boss au viewer = ajouter une ligne ici (id = nom du fichier de params). */
+export const ENTITIES: Entity[] = [
+  { id: 'player', label: 'JOUEUR', files: ['src/art/player.ts (dessin : palette P, HOOD, POSES)', 'src/entities/Player.ts (états, animation, écharpe, sort)', 'src/config.ts → PLAYER (gameplay)', 'src/scenes/ArenaScene.ts (spawnSpell/updateSpells, particules)', 'src/art/fx.ts (textures slash, moon, glowC…)'] },
+  { id: 'mordrec', label: 'MORDREC', boss: MORDREC, files: ['src/bosses/mordrec.ts (dessin makeMordrecArt, build/rest/roar/death, patterns, valeurs M)', BOSS_ENGINE] },
+  { id: 'noctis', label: 'NOCTIS', boss: NOCTIS, files: ['src/bosses/noctis.ts (dessin build, patterns, valeurs NIGHT)', 'src/scenes/DarkBossScene.ts (lanternes, feu)', BOSS_ENGINE] },
+];
 
 export type Seg = { k: 't' | 'a' | 'r' | 'n'; from: number; n: number };
 export const V = {
