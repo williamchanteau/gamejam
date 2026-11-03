@@ -71,5 +71,11 @@ export const sfx = {
   leap: () => tone(140, 320, 0.25, 'triangle', 0.18),
   bossDeath: () => { tone(220, 30, 1.6, 'sawtooth', 0.3); noise(1.3, 0.35, 350); },
   victory: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, f, 0.35, 'triangle', 0.15, i * 0.14)),
+  step: () => tone(70, 45, 0.1, 'sine', 0.12),
+  thud: () => { tone(80, 45, 0.14, 'sine', 0.22); noise(0.08, 0.15, 220); },
+  rumble: () => noise(0.55, 0.22, 110, 0.5),
+  ting: () => { tone(2300, 2600, 0.16, 'triangle', 0.07); tone(3400, 3600, 0.1, 'sine', 0.04, 0.03); },
+  crack: () => noise(0.07, 0.22, 1300, 1.5),
+  scrape: () => noise(0.22, 0.1, 3600, 4),
   death: () => { tone(300, 40, 0.7, 'sawtooth', 0.25); noise(0.5, 0.3, 300); },
 };

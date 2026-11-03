@@ -98,28 +98,45 @@ function drawSword(c: Ctx) {
   px(c, A.b, 5, 76, 6, 4); px(c, A.h, 6, 76, 2, 1);
 }
 
+/** Traînée d'épée : secteur d'anneau autour de la main, de l'angle a0 à a1 (0 = haut, horaire). */
+function smear(c: Ctx, a0: number, a1: number, rIn: number, rOut: number) {
+  const C = 73;
+  for (let y = 0; y < 146; y++)
+    for (let x = 0; x < 146; x++) {
+      const dx = x + 0.5 - C, dy = y + 0.5 - C, r = Math.hypot(dx, dy);
+      const a = (Math.atan2(dx, -dy) * 180) / Math.PI;
+      if (r < rIn || r > rOut || a < a0 || a > a1) continue;
+      const u = (a - a0) / (a1 - a0);
+      if (u < 0.35 && (x + y) % 2) continue; // queue tramée
+      px(c, r > rOut - 3 ? '#ffffff' : u > 0.75 ? '#ffd0dc' : u > 0.4 ? '#ff6a90' : '#c0144a', x, y);
+    }
+}
+
 export function makeMordrecArt(scene: Phaser.Scene) {
   canvasTex(scene, 'mord_body', 60, 82, drawBody, OUTLINE);
   canvasTex(scene, 'mord_head', 26, 28, drawHead, OUTLINE);
   canvasTex(scene, 'mord_sword', 16, 84, drawSword, OUTLINE);
   canvasTex(scene, 'mord_eyes', 9, 3, (c) => { px(c, '#fff', 1, 1, 2, 1); px(c, '#fff', 6, 1, 2, 1); });
-  // Danger (rouge/magenta) : arc de taille, onde, lame spectrale, repère au sol.
-  canvasTex(scene, 'mord_arc', 56, 72, (c) => {
-    crescent(c, 20, 36, 34, 12, 32, '#ff6a90', '#ff2a5a');
-    crescent(c, 20, 36, 34, 5, 33, '#ffd6e0', '#ffd6e0');
-  });
-  canvasTex(scene, 'mord_wave', 28, 18, (c) => {
-    for (let x = 0; x < 28; x++) {
-      const h = Math.round(15 * Math.sin((Math.PI * x) / 27) ** 0.6 * (0.55 + 0.45 * (x / 27)));
-      for (let y = 17 - h; y < 18; y++) px(c, y === 17 - h ? '#ffd6e0' : y < 20 - h ? '#ff6a90' : y > 14 ? '#c0144a' : '#ff2a5a', x, y);
+  // Danger (rouge/magenta, cœur blanc) : traînées, pics de roche, épée fantôme, repère au sol.
+  canvasTex(scene, 'smear0', 146, 146, (c) => smear(c, -75, 125, 26, 72));
+  canvasTex(scene, 'smear1', 146, 146, (c) => smear(c, 20, 125, 40, 72));
+  canvasTex(scene, 'smear2', 146, 146, (c) => smear(c, 80, 125, 56, 72));
+  for (const [k, lean] of [['mord_spike', 0], ['mord_spike2', 2]] as [string, number][])
+    canvasTex(scene, k, 16, 26, (c) => {
+      for (let y = 1; y < 25; y++) {
+        const t = (y - 1) / 23, hw = Math.max(0, Math.round(t * 6)), cx = 8 + Math.round((1 - t) * lean);
+        for (let x = cx - hw; x <= cx + hw; x++) {
+          const crack = Math.abs(x - cx - Math.round(Math.sin(y * 0.9))) < 1 && y > 6;
+          px(c, crack ? (y % 5 ? '#ff2a5a' : '#ffd6e0') : x <= cx - hw + 1 ? '#7a86ac' : x >= cx + hw - 1 ? '#262b45' : '#4a5275', x, y);
+        }
+      }
+    }, OUTLINE);
+  canvasTex(scene, 'mord_ghost', 58, 14, (c) => {
+    for (let x = 6; x < 56; x++) {
+      const hw = x > 46 ? Math.round((56 - x) * 0.33) : 3;
+      for (let y = 7 - hw; y <= 7 + hw; y++) px(c, y === 7 - hw ? '#ffd6e0' : y === 7 ? '#ffffff' : y === 7 + hw ? '#c0144a' : '#ff6a90', x, y);
     }
-  });
-  canvasTex(scene, 'mord_blade', 32, 12, (c) => {
-    for (let x = 0; x < 32; x++) {
-      if (x < 10) { if ((x * 5) % 3 !== 0) px(c, '#ff2a5a', x, 5 + (x % 3) - 1); continue; }
-      const hw = x > 26 ? Math.round((31 - x) * 0.5) : 2;
-      for (let y = 6 - hw; y <= 6 + hw; y++) px(c, y === 6 - hw ? '#ffd6e0' : y === 6 ? '#ff6a90' : '#ff2a5a', x, y);
-    }
+    px(c, '#ff6a90', 3, 1, 3, 12); px(c, '#ffd6e0', 3, 1, 1, 12); px(c, '#c0144a', 0, 6, 3, 3);
   });
   canvasTex(scene, 'mord_mark', 56, 10, (c) => {
     for (let y = 0; y < 10; y++)
@@ -128,116 +145,238 @@ export function makeMordrecArt(scene: Phaser.Scene) {
         if (d <= 1) px(c, d > 0.7 ? '#ff2a5a' : d > 0.35 ? '#c0144a' : '#ff6a90', x, y);
       }
   });
+  // Neutres : éclat, débris, poussière, onde de choc.
+  canvasTex(scene, 'glint', 17, 17, (c) => {
+    for (let i = 0; i < 8; i++) { px(c, '#ffffff', 8, i, 1, 1); px(c, '#ffffff', 8, 16 - i, 1, 1); px(c, '#ffffff', i, 8, 1, 1); px(c, '#ffffff', 16 - i, 8, 1, 1); }
+    px(c, '#ffffff', 7, 7, 3, 3); px(c, '#ffd6e0', 6, 8, 5, 1); px(c, '#ffd6e0', 8, 6, 1, 5);
+  });
+  canvasTex(scene, 'rock', 4, 4, (c) => { px(c, '#ffffff', 0, 0, 4, 3); px(c, '#9a9ab0', 1, 3, 3, 1); px(c, '#9a9ab0', 3, 1, 1, 2); });
+  canvasTex(scene, 'puff', 14, 14, (c) => {
+    for (let y = 0; y < 14; y++) for (let x = 0; x < 14; x++) {
+      const d = Math.hypot(x + 0.5 - 7, y + 0.5 - 7);
+      if (d < 6.5 && (d < 4 || (x + y) % 2 === 0)) px(c, '#ffffff', x, y);
+    }
+  });
+  canvasTex(scene, 'ring', 64, 64, (c) => {
+    for (let y = 0; y < 64; y++) for (let x = 0; x < 64; x++) {
+      const d = Math.hypot(x + 0.5 - 32, y + 0.5 - 32);
+      if (d > 29 && d < 31.5) px(c, '#ffffff', x, y);
+    }
+  });
+}
+
+// ---------------------------------------------------------------- effets
+
+type Img = Phaser.GameObjects.Image;
+type Cont = Phaser.GameObjects.Container;
+const ADD = Phaser.BlendModes.ADD;
+
+/** Pointe de l'épée (monde), pour une épée à l'angle a (rig non incliné). */
+function tipAt(b: Boss, a: number) {
+  const r = Phaser.Math.DegToRad(a);
+  return { x: b.x + b.dir * (18 + 66 * Math.sin(r)), y: b.y - 44 - 66 * Math.cos(r) };
+}
+/** Éclat en étoile sur la lame : « ça va frapper ». */
+function glint(b: Boss, a: number) {
+  const { x, y } = tipAt(b, a);
+  const g = b.temp(b.scene.add.image(x, y, 'glint').setBlendMode(ADD).setDepth(20).setScale(0));
+  b.tw(g, { scale: 1.4, angle: 90, yoyo: true }, 0.13, 'Quad.out');
+  sfx.ting();
+}
+/** Traînée pleine sur 3 frames, attachée au rig. */
+function smearFx(b: Boss) {
+  const rig = b.parts.rig as Cont, sc = b.scene;
+  const img = b.temp(sc.add.image(18, -44, 'smear0').setBlendMode(ADD));
+  rig.add(img);
+  sc.time.delayedCall(45, () => img.active && img.setTexture('smear1'));
+  sc.time.delayedCall(90, () => img.active && img.setTexture('smear2'));
+  sc.time.delayedCall(140, () => img.destroy());
+}
+/** Image rémanente lilas pendant la ruée. */
+function ghostTrail(b: Boss) {
+  const g = b.scene.add.image(b.x, b.y, 'mord_body').setOrigin(0.5, 1).setFlipX(b.dir < 0).setTintFill(0xd8d0ff).setAlpha(0.35).setDepth(6);
+  b.scene.tweens.add({ targets: g, alpha: 0, duration: 220, onComplete: () => g.destroy() });
+}
+function ring(b: Boss, x: number, y: number, scale: number) {
+  const r = b.scene.add.image(x, y, 'ring').setBlendMode(ADD).setDepth(13).setScale(0.2).setScale(0.2, 0.08);
+  b.scene.tweens.add({ targets: r, scaleX: scale, scaleY: scale * 0.35, alpha: 0, duration: 380, ease: 'Quad.out', onComplete: () => r.destroy() });
+}
+/** Impact lourd : hit-stop, secousse, poussière, débris, flash. */
+function impact(b: Boss, x: number, y: number, power: number) {
+  const sc = b.scene;
+  sc.hitstop(0.035 * power);
+  sc.cameras.main.shake(90 + 120 * power, 0.004 + 0.006 * power);
+  sc.puffs(x, y, 3 * power);
+  sc.debris(x, y - 2, 4 * power);
+  if (power >= 2) sc.flashScreen(0.22);
+}
+/** Onde de pics de roche : hitbox invisible au front, pics qui jaillissent puis s'enfoncent derrière. */
+function spikeWave(b: Boss, x: number, dir: number) {
+  const sc = b.scene, fy = b.floorY;
+  const o = b.hazard('mord_spike', x, fy, dir * M.slam.waveSpeed * b.speed, 18, 15, 3).setAlpha(0);
+  let t = 0, n = 0;
+  o.setData('tick', (dt: number) => {
+    t -= dt;
+    if (t > 0) return;
+    t = 0.05;
+    const sp = sc.add.image(o.x, fy + 2, n++ % 2 ? 'mord_spike' : 'mord_spike2').setOrigin(0.5, 1).setDepth(11).setFlipX(dir < 0).setScale(1, 0);
+    sc.tweens.add({
+      targets: sp, scaleY: Phaser.Math.FloatBetween(0.8, 1.15), duration: 50, ease: 'Back.out',
+      onComplete: () => sc.tweens.add({ targets: sp, y: fy + 28, delay: 30, duration: 100, ease: 'Quad.in', onComplete: () => sp.destroy() }),
+    });
+    if (n % 2) sc.debris(o.x, fy - 4, 1);
+    if (n % 3 === 0) { sc.puffs(o.x, fy, 1); sfx.crack(); }
+  });
+}
+/** Épée fantôme qui rase le sol : étincelles de frottement + traînée. */
+function ghostBlade(b: Boss) {
+  const sc = b.scene, dir = b.dir;
+  const o = b.hazard('mord_ghost', b.x + dir * 56, b.floorY - 1, dir * M.blades.speed * b.speed, 30, 8, 3.5).setBlendMode(ADD);
+  let t = 0;
+  o.setData('tick', (dt: number) => {
+    t -= dt;
+    if (t > 0) return;
+    t = 0.04;
+    sc.sparks(o.x - dir * 22, b.floorY - 2, 0xffb040, 2);
+    const g = sc.add.image(o.x, o.y, 'mord_ghost').setOrigin(0.5, 1).setFlipX(dir < 0).setBlendMode(ADD).setAlpha(0.35).setDepth(14);
+    sc.tweens.add({ targets: g, alpha: 0, duration: 160, onComplete: () => g.destroy() });
+  });
 }
 
 // ---------------------------------------------------------------- patterns
 
 function* slash(b: Boss, tele = M.slash.tele, recover = M.slash.recover, last = true) {
-  const p = b.parts, s = M.slash;
+  const p = b.parts, s = M.slash, sc = b.scene;
   b.face();
   b.eyes('tele'); sfx.warn();
   const tt = b.tele(tele);
   let tx = b.clampX(b.player.x + b.dir * s.overshoot);
   if ((tx - b.x) * b.dir < s.minDist) tx = b.clampX(b.x + b.dir * s.minDist);
   tx = b.clampX(Phaser.Math.Clamp(tx, b.x - s.maxDist, b.x + s.maxDist));
-  // Télégraphe : épée levée en arrière, accroupi, trajet au sol en rouge.
-  b.tw(p.sword, { angle: -70 }, tt * 0.6, 'Back.out');
-  b.tw(p.body, { scaleY: 0.95 }, tt * 0.6);
-  const line = b.temp(b.scene.add.rectangle(Math.min(b.x, tx), b.floorY - 3, Math.abs(tx - b.x), 3, COL.danger, 0.7).setOrigin(0, 0).setDepth(4));
+  // Anticipation : il se ramasse, recule d'un pas, épée armée loin derrière ; trajet en rouge au sol.
+  b.tw(p.rig, { angle: -9, scaleX: 1.06, scaleY: 0.92 }, tt * 0.7);
+  b.tw(p.sword, { angle: -85 }, tt * 0.7, 'Back.out');
+  b.tw(b.root, { x: b.clampX(b.x - b.dir * 8) }, tt * 0.7);
+  const line = b.temp(sc.add.rectangle(Math.min(b.x, tx), b.floorY - 3, Math.abs(tx - b.x), 3, COL.danger, 0.7).setOrigin(0, 0).setDepth(6));
   b.tw(line, { alpha: 0.15, repeat: -1, yoyo: true }, 0.12, 'Linear');
-  yield tt;
-  // Actif : ruée + taille en arc.
+  yield tt * 0.55;
+  glint(b, -85);
+  yield tt * 0.45;
+  // Ruée + taille : traînée pleine, images rémanentes.
   line.destroy();
   const d = b.t(s.dash);
-  b.tw(b.root, { x: tx }, d, 'Cubic.out');
-  b.tw(p.sword, { angle: 110 }, d * 0.6);
-  b.tw(p.body, { scaleY: 1 }, 0.08);
-  const arc = b.temp(b.scene.add.image(30, -34, 'mord_arc').setBlendMode(Phaser.BlendModes.ADD));
-  b.root.add(arc);
-  b.tw(arc, { alpha: 0 }, d + 0.1, 'Quad.in');
+  b.tw(b.root, { x: tx }, d, 'Expo.out');
+  b.tw(p.rig, { angle: 12, scaleX: 1.1, scaleY: 0.96 }, d * 0.5);
+  b.tw(p.sword, { angle: 125 }, d * 0.45, 'Quad.in');
+  smearFx(b);
+  ghostTrail(b);
+  sc.time.delayedCall(d * 400, () => b.state === 'pattern' && ghostTrail(b));
+  sc.puffs(b.x, b.floorY, 3);
   b.hitbox = () => new Phaser.Geom.Rectangle(b.dir > 0 ? b.x - 10 : b.x - s.reach, b.floorY - s.height, s.reach + 10, s.height);
   sfx.whoosh();
   yield d;
   b.hitbox = null;
-  if (!last) { yield b.t(recover); return; }
-  // Récupération : épée plantée, yeux éteints = fenêtre pour frapper.
+  // La lame mord le sol.
+  impact(b, b.x + b.dir * 62, b.floorY, 1);
+  b.tw(p.sword, { angle: 132 }, 0.12, 'Back.out');
+  sfx.thud();
+  if (!last) { b.tw(p.rig, { angle: 4, scaleX: 1, scaleY: 1 }, 0.12); yield b.t(recover); return; }
+  // Récupération : penché, essoufflé, yeux éteints.
   b.eyes('off');
+  b.tw(p.rig, { angle: 7, scaleX: 1, scaleY: 0.95 }, 0.2);
   yield b.t(recover);
-  b.eyes('on'); b.def.rest(b, 0.25);
+  b.eyes('on'); b.def.rest(b, 0.3);
 }
 
 function* slam(b: Boss, double = false) {
   const p = b.parts, s = M.slam, sc = b.scene;
-  b.eyes('tele'); sfx.warn();
+  b.eyes('tele'); sfx.warn(); sfx.rumble();
   const tt = b.tele(s.tele);
-  b.tw(p.body, { scaleY: 0.88 }, tt * 0.8);
-  b.tw(p.head, { y: REST.headY + 8 }, tt * 0.8);
-  b.tw(p.sword, { angle: -15 }, tt * 0.8);
+  // Anticipation : accroupi très bas, gravillons qui tremblent.
+  b.tw(p.rig, { scaleX: 1.12, scaleY: 0.82, angle: 5 }, tt * 0.8, 'Quad.in');
+  b.tw(p.head, { y: REST.headY + 6 }, tt * 0.8);
+  b.tw(p.sword, { angle: -20 }, tt * 0.8, 'Back.out');
+  for (let i = 0; i < 3; i++) sc.time.delayedCall(i * tt * 250, () => b.state === 'pattern' && sc.debris(b.x, b.floorY - 2, 2));
   yield tt;
   // Bond hors de l'écran.
   sfx.leap();
-  b.tw(p.body, { scaleY: 1.06 }, 0.1);
+  b.tw(p.rig, { scaleX: 0.85, scaleY: 1.2, angle: 0 }, 0.12, 'Back.out');
   b.tw(p.head, { y: REST.headY }, 0.1);
-  b.tw(b.root, { y: -60 }, b.t(s.rise), 'Quad.out');
+  sc.puffs(b.x - 16, b.floorY, 4); sc.puffs(b.x + 16, b.floorY, 4); sc.debris(b.x, b.floorY, 6);
+  ring(b, b.x, b.floorY - 3, 1.4);
+  b.tw(b.root, { y: -80 }, b.t(s.rise), 'Quad.out');
   yield b.t(s.rise);
   // Repère au sol sous le joueur.
   const tx = b.clampX(b.player.x);
   b.root.x = tx; b.face();
   const mark = b.temp(sc.add.image(tx, b.floorY + 1, 'mord_mark').setDepth(6).setScale(1.3, 1.2));
-  const halo = b.temp(sc.add.image(tx, b.floorY - 4, 'glowR').setDepth(6).setBlendMode(Phaser.BlendModes.ADD).setScale(2, 0.8));
-  const col = b.temp(sc.add.rectangle(tx, 0, 36, b.floorY, COL.danger, 0.22).setOrigin(0.5, 0).setDepth(3));
+  const halo = b.temp(sc.add.image(tx, b.floorY - 4, 'glowR').setDepth(6).setBlendMode(ADD).setScale(2, 0.8));
+  const col = b.temp(sc.add.rectangle(tx, 0, 36, b.floorY, COL.danger, 0.18).setOrigin(0.5, 0).setDepth(6));
   b.tw([mark, halo], { alpha: 0.55, repeat: -1, yoyo: true }, 0.12, 'Linear');
-  b.tw(col, { alpha: 0.08, repeat: -1, yoyo: true }, 0.12, 'Linear');
+  b.tw(col, { alpha: 0.06, repeat: -1, yoyo: true }, 0.12, 'Linear');
   sfx.warn();
   yield b.tele(s.mark);
-  // Chute + impact + ondes rasantes.
+  // Chute (étiré) puis impact (écrasé).
+  b.tw(p.rig, { scaleX: 0.9, scaleY: 1.15 }, b.t(s.fall));
   b.tw(b.root, { y: b.floorY }, b.t(s.fall), 'Quad.in');
   yield b.t(s.fall);
   mark.destroy(); halo.destroy(); col.destroy();
-  b.tw(p.body, { scaleY: 0.85, yoyo: true }, 0.06);
+  b.tw(p.rig, { scaleX: 1.25, scaleY: 0.75 }, 0.06);
   b.tw(p.sword, { angle: 150 }, 0.08);
   b.hitbox = () => new Phaser.Geom.Rectangle(tx - 34, b.floorY - 90, 68, 90);
   const boom = () => {
-    sfx.slam(); sc.cameras.main.shake(220, 0.014);
-    for (const k of [-1, 1]) {
-      sc.dust(tx + k * 24, b.floorY);
-      b.hazard('mord_wave', tx + k * 26, b.floorY, k * s.waveSpeed * b.speed, 16, 11, 3);
-    }
+    sfx.slam();
+    impact(b, tx, b.floorY, 2);
+    ring(b, tx, b.floorY - 4, 2.4);
+    for (const k of [-1, 1]) spikeWave(b, tx + k * 26, k);
   };
   boom();
   yield 0.1;
   b.hitbox = null;
-  if (double) { yield Math.max(0.7, b.t(s.doubleGap)); boom(); }
-  b.eyes('off');
-  yield b.t(s.recover);
-  b.eyes('on'); b.def.rest(b, 0.25);
-}
-
-function* blades(b: Boss) {
-  const p = b.parts, s = M.blades;
-  b.eyes('tele'); sfx.warn();
-  const tt = b.tele(s.tele);
-  b.tw(p.sword, { angle: -10 }, tt * 0.7, 'Back.out');
-  const glint = b.temp(b.scene.add.image(6, -110, 'glowR').setBlendMode(Phaser.BlendModes.ADD).setScale(1.1)); // pointe de l'épée levée
-  b.root.add(glint);
-  b.tw(glint, { scale: 1.7, alpha: 0.7, repeat: -1, yoyo: true }, 0.1, 'Linear');
-  yield tt;
-  glint.destroy();
-  for (let i = 0; i < 3; i++) {
-    b.tw(p.sword, { angle: 105 }, 0.1, 'Quad.in');
-    yield 0.1;
-    sfx.blade();
-    const o = b.hazard('mord_blade', b.x + b.dir * 44, b.floorY - 1, b.dir * s.speed * b.speed, 24, 7, 3.5);
-    o.setBlendMode(Phaser.BlendModes.ADD);
-    if (i < 2) {
-      const gap = Math.max(0.7, b.t(s.gap));
-      b.tw(p.sword, { angle: -10 }, gap * 0.5, 'Back.out');
-      yield gap - 0.1;
-    }
+  b.tw(p.rig, { scaleX: 1, scaleY: 0.94, angle: 6 }, 0.25);
+  if (double) {
+    const gap = Math.max(0.7, b.t(s.doubleGap));
+    b.tw(p.sword, { angle: 40 }, gap * 0.6, 'Back.out');
+    yield gap - 0.08;
+    b.tw(p.sword, { angle: 150 }, 0.08, 'Quad.in');
+    yield 0.08;
+    boom();
   }
   b.eyes('off');
   yield b.t(s.recover);
-  b.eyes('on'); b.def.rest(b, 0.25);
+  b.eyes('on'); b.def.rest(b, 0.3);
+}
+
+function* blades(b: Boss) {
+  const p = b.parts, s = M.blades, sc = b.scene;
+  b.eyes('tele'); sfx.warn();
+  const tt = b.tele(s.tele);
+  b.tw(p.sword, { angle: -10 }, tt * 0.6, 'Back.out');
+  b.tw(p.rig, { angle: -7, scaleY: 0.97 }, tt * 0.6);
+  yield tt * 0.5;
+  glint(b, -10);
+  yield tt * 0.5;
+  for (let i = 0; i < 3; i++) {
+    // Coup de taille vers le sol : l'épée fantôme part en raclant.
+    b.tw(p.sword, { angle: 108 }, 0.09, 'Quad.in');
+    b.tw(p.rig, { angle: 10, scaleY: 1 }, 0.09);
+    smearFx(b);
+    yield 0.09;
+    const gx = b.x + b.dir * 62;
+    sc.sparks(gx, b.floorY - 2, 0xffb040, 8); sc.puffs(gx, b.floorY, 2); sc.cameras.main.shake(80, 0.005);
+    sfx.blade(); sfx.scrape();
+    ghostBlade(b);
+    if (i < 2) {
+      const gap = Math.max(0.7, b.t(s.gap));
+      b.tw(p.sword, { angle: -10 }, gap * 0.5, 'Back.out');
+      b.tw(p.rig, { angle: -7 }, gap * 0.5);
+      yield gap - 0.09;
+    }
+  }
+  b.eyes('off');
+  b.tw(p.rig, { angle: 6, scaleY: 0.95 }, 0.2);
+  yield b.t(s.recover);
+  b.eyes('on'); b.def.rest(b, 0.3);
 }
 
 function* combo(b: Boss) {
@@ -258,25 +397,57 @@ export const MORDREC: BossDef = {
     const sword = sc.add.image(18, -44, 'mord_sword').setOrigin(0.5, 70 / 84);
     const headImg = sc.add.image(0, 0, 'mord_head').setOrigin(0.5, 1);
     const eyes = sc.add.image(4, -12, 'mord_eyes');
-    const glow = sc.add.image(4, -12, 'glowW').setBlendMode(Phaser.BlendModes.ADD).setScale(0.6);
+    const glow = sc.add.image(4, -12, 'glowW').setBlendMode(ADD).setScale(0.6);
     const head = sc.add.container(2, REST.headY, [headImg, glow, eyes]);
-    b.root.add([body, head, sword]);
-    b.parts = { body, sword, head, headImg, eyes, glow };
+    // rig : inclinaison / écrasement autour des pieds ; root : position + orientation.
+    const rig = sc.add.container(0, 0, [body, head, sword]);
+    b.root.add(rig);
+    b.parts = { rig, body, sword, head, headImg, eyes, glow };
     b.flashParts = [body, headImg, sword];
     this.rest(b, 0);
     sc.tweens.add({ targets: headImg, y: 1, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
   },
   rest(b, sec) {
     const p = b.parts;
-    if (sec <= 0) {
-      p.sword.angle = REST.sword; p.body.scaleY = 1; p.head.y = REST.headY;
-      return;
+    const pose: [object, object][] = [[p.sword, { angle: REST.sword }], [p.head, { y: REST.headY, x: 2, angle: 0 }], [p.rig, { angle: 0, scaleX: 1, scaleY: 1, x: 0, y: 0 }], [p.body, { scaleY: 1 }]];
+    for (const [t, props] of pose) {
+      if (sec <= 0) Object.assign(t, props);
+      // Tweens non enregistrés : ils doivent survivre à la fin du pattern.
+      else b.scene.tweens.add({ targets: t, ...props, duration: sec * 1000, ease: 'Quad.out' });
     }
-    // Tweens non enregistrés : ils doivent survivre à la fin du pattern.
-    const tw = (t: object, props: object) => b.scene.tweens.add({ targets: t, ...props, duration: sec * 1000, ease: 'Quad.out' });
-    tw(p.sword, { angle: REST.sword });
-    tw(p.body, { scaleY: 1 });
-    tw(p.head, { y: REST.headY });
+  },
+  step(b) {
+    const sc = b.scene;
+    sc.tweens.add({ targets: b.parts.rig, y: { from: 2, to: 0 }, scaleY: { from: 0.97, to: 1 }, duration: 200, ease: 'Quad.out' });
+    sc.puffs(b.x - b.dir * 8, b.floorY, 1);
+    sfx.step();
+  },
+  roar(b) {
+    const sc = b.scene, p = b.parts;
+    sc.tweens.add({ targets: p.rig, angle: -12, scaleY: 1.06, duration: 200, ease: 'Back.out' });
+    sc.tweens.add({ targets: p.head, y: REST.headY - 4, duration: 200 });
+    sc.tweens.add({ targets: p.sword, angle: -30, duration: 250, ease: 'Back.out' });
+    for (let i = 0; i < 3; i++) sc.time.delayedCall(i * 220, () => ring(b, b.x, b.y - 60, 3 + i));
+    sc.puffs(b.x - 20, b.floorY, 5); sc.puffs(b.x + 20, b.floorY, 5); sc.debris(b.x, b.floorY, 8);
+    sc.time.delayedCall(800, () => this.rest(b, 0.25));
+  },
+  death(b) {
+    const sc = b.scene, p = b.parts, x = b.x, y = b.y;
+    sc.time.addEvent({
+      delay: 110, repeat: 7,
+      callback: () => { sc.sparks(x + Phaser.Math.Between(-20, 20), y - Phaser.Math.Between(10, 80), 0xd8d0ff, 8); sc.debris(x, y - 40, 3); sfx.clank(); },
+    });
+    // L'armure se disloque : heaume qui saute, épée qui tombe à plat, corps qui s'affaisse.
+    sc.tweens.chain({ targets: p.head, tweens: [
+      { y: REST.headY - 26, angle: -40, duration: 350, ease: 'Quad.out' },
+      { y: -8, x: -34, angle: -100, duration: 450, ease: 'Bounce.out' },
+    ] });
+    sc.tweens.chain({ targets: p.sword, tweens: [{ angle: 60, duration: 300, ease: 'Quad.in' }, { angle: 92, y: -4, duration: 400, ease: 'Bounce.out' }] });
+    sc.tweens.add({ targets: p.body, scaleY: 0.62, duration: 900, delay: 200, ease: 'Bounce.out' });
+    sc.time.delayedCall(1700, () => {
+      sc.puffs(x, y, 10); sc.debris(x, y - 20, 12); sc.flashScreen(0.2);
+      sc.tweens.add({ targets: b.root, alpha: 0, duration: 600 });
+    });
   },
   patterns: [
     { name: 'slash', weight: 3, phase: 0, run: (b) => slash(b) },

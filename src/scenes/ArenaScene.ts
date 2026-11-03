@@ -22,6 +22,8 @@ export class ArenaScene extends Phaser.Scene {
   private hitstopEnd = 0;
   private sparkFx!: Phaser.GameObjects.Particles.ParticleEmitter;
   private dustFx!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private debrisFx!: Phaser.GameObjects.Particles.ParticleEmitter;
+  private puffFx!: Phaser.GameObjects.Particles.ParticleEmitter;
 
   create(_data?: { retry?: boolean }) {
     this.tweens.timeScale = 1; this.time.timeScale = 1;
@@ -62,6 +64,15 @@ export class ArenaScene extends Phaser.Scene {
       tint: 0x8088a8, alpha: { start: 0.7, end: 0 }, emitting: false,
     }).setDepth(9);
 
+    // Débris de pierre (gravité) et nuages de poussière pour les impacts lourds.
+    this.debrisFx = this.add.particles(0, 0, 'rock', {
+      speed: { min: 80, max: 230 }, angle: { min: 200, max: 340 }, gravityY: 700, lifespan: { min: 500, max: 900 },
+      rotate: { start: 0, end: 540 }, scale: { start: 1, end: 0.5 }, tint: [0x5a6386, 0x7a86ac, 0x3d4566, 0x8a7a6a], emitting: false,
+    }).setDepth(12);
+    this.puffFx = this.add.particles(0, 0, 'puff', {
+      speedX: { min: -50, max: 50 }, speedY: { min: -30, max: -5 }, lifespan: { min: 400, max: 700 },
+      scale: { start: 0.5, end: 1.6 }, alpha: { start: 0.55, end: 0 }, tint: [0x8088a8, 0x6a7090, 0xa8a0b8], emitting: false,
+    }).setDepth(8);
     this.hud = new Hud(this, this.player);
     // Sortie du plein écran (Échap du navigateur) → pause.
     const onFs = () => { if (!document.fullscreenElement && this.scene.isActive()) this.openPause(); };
@@ -104,6 +115,13 @@ export class ArenaScene extends Phaser.Scene {
   }
 
   dust(x: number, y: number) { this.dustFx.explode(5, x, y); }
+  debris(x: number, y: number, n: number) { this.debrisFx.explode(n, x, y); }
+  puffs(x: number, y: number, n: number) { this.puffFx.explode(n, x, y); }
+  /** Flash blanc plein écran (impact lourd). */
+  flashScreen(a = 0.3) {
+    const r = this.add.rectangle(0, 0, W, H, 0xfff4e8, a).setOrigin(0).setDepth(150).setScrollFactor(0);
+    this.tweens.add({ targets: r, alpha: 0, duration: 140, onComplete: () => r.destroy() });
+  }
 
   spawnSpell(x: number, y: number, dir: number) {
     const img = this.add.image(x, y, 'moon').setFlipX(dir < 0).setDepth(12);

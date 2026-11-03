@@ -16,6 +16,10 @@ export interface BossDef {
   build(b: Boss): void;
   /** Remet les pièces en pose de repos (durée en s, 0 = immédiat). */
   rest(b: Boss, sec: number): void;
+  /** Optionnels : pas lourd en marchant, rugissement de phase 2, mort. */
+  step?(b: Boss): void;
+  roar?(b: Boss): void;
+  death?(b: Boss): void;
   patterns: PatternDef[];
 }
 type Obj = Phaser.GameObjects.Image | Phaser.GameObjects.Container;
@@ -35,6 +39,7 @@ export class Boss implements Target {
   private history: string[] = [];
   private temps: Phaser.GameObjects.GameObject[] = [];
   private tws: Phaser.Tweens.Tween[] = [];
+  private stepT = 0;
 
   constructor(public scene: ArenaScene, public def: BossDef, x: number, public floorY: number) {
     this.hp = this.maxHp = def.hp;
@@ -91,7 +96,11 @@ export class Boss implements Target {
     if (this.state === 'idle') {
       this.face();
       const dx = this.player.x - this.x;
-      if (Math.abs(dx) > BOSS.walkRange) this.root.x = this.clampX(this.x + Math.sign(dx) * BOSS.walkSpeed * this.speed * dt);
+      if (Math.abs(dx) > BOSS.walkRange) {
+        this.root.x = this.clampX(this.x + Math.sign(dx) * BOSS.walkSpeed * this.speed * dt);
+        this.stepT -= dt;
+        if (this.stepT <= 0) { this.stepT = 0.4; this.def.step?.(this); }
+      }
       this.waitT -= dt;
       if (this.waitT <= 0) this.next();
     } else if (this.state === 'pattern' && this.gen) {
@@ -143,6 +152,7 @@ export class Boss implements Target {
     this.hp = Math.max(0, this.hp - dmg);
     for (const p of this.flashParts) p.setTintFill(0xffffff);
     this.scene.time.delayedCall(60, () => { for (const p of this.flashParts) p.clearTint(); });
+    if (this.parts.rig) this.scene.tweens.add({ targets: this.parts.rig, x: { from: -3, to: 0 }, duration: 110, ease: 'Quad.out' });
     sfx.clank();
     if (this.hp <= 0) this.die();
     else if (this.phase === 1 && this.hp <= this.maxHp / 2) this.toPhase2();
@@ -155,7 +165,8 @@ export class Boss implements Target {
     sfx.roar();
     this.scene.cameras.main.shake(BOSS.p2Invuln * 800, 0.01);
     this.scene.sparks(this.x, this.y - this.def.hurt.h * 0.8, 0xd8d0ff, 24);
-    this.scene.tweens.add({ targets: this.root, x: this.x + 2, duration: 40, yoyo: true, repeat: 10 });
+    if (this.def.roar) this.def.roar(this);
+    else this.scene.tweens.add({ targets: this.root, x: this.x + 2, duration: 40, yoyo: true, repeat: 10 });
     this.scene.time.delayedCall(BOSS.p2Invuln * 1000, () => {
       if (this.state !== 'phase') return;
       this.eyes('on'); this.state = 'idle'; this.waitT = BOSS.pauseMin;
@@ -169,6 +180,7 @@ export class Boss implements Target {
     this.scene.hazards.clear(true, true);
     sfx.bossDeath();
     this.scene.cameras.main.shake(600, 0.012);
+    if (this.def.death) return this.def.death(this);
     const h = this.def.hurt.h;
     this.scene.time.addEvent({
       delay: 120, repeat: 8,

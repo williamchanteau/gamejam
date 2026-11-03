@@ -63,6 +63,7 @@ export class BossScene extends ArenaScene {
     this.camX += (this.camTarget() - this.camX) * Math.min(1, dt * BOSS.camLerp);
     this.cameras.main.setScroll(Math.round(this.camX), 0);
     for (const o of [...this.hazards.getChildren()] as Phaser.Physics.Arcade.Image[]) {
+      (o.getData('tick') as ((dt: number) => void) | undefined)?.(dt);
       const life = o.getData('life') - dt;
       o.setData('life', life);
       if (life <= 0 || o.x < -40 || o.x > this.worldW + 40) o.destroy();
