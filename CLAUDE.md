@@ -1,4 +1,4 @@
-# Jeu de jam (Oddward) — boss rush dark fantasy / Halloween
+# ASHENBORN — jeu de jam (Oddward), boss rush dark fantasy / Halloween
 Dépôt avant jeudi 5 nov. 7h. Consigne : BOSS obligatoires, focus combats de boss (barre de vie nommée, salles de boss). Sinon disqualifié.
 
 ## Règles de travail
@@ -13,16 +13,16 @@ Dépôt avant jeudi 5 nov. 7h. Consigne : BOSS obligatoires, focus combats de bo
 - Textes en français (police bitmap maison, MAJUSCULES). Ne citer aucun autre jeu. 60 fps PC modeste.
 
 ## Stack
-Phaser 3.90 + TS + Vite 6, Arcade. 320×180, zoom entier, pixelArt, roundPixels. Aucun fichier image/son : textures générées par code, SFX WebAudio.
+Phaser 3.90 + TS + Vite 6, Arcade. 480×270 (distances ×1,5 vs 320×180 d'origine), zoom entier, pixelArt, roundPixels. Sol floorY 234, plateformes 84 px à y 177 (x 108/372). Joueur sprite 24×36, hitbox 12×27. Aucun fichier image/son : textures générées par code, SFX WebAudio.
 src/: config.ts (TOUTES les valeurs réglables), input.ts, scenes/, entities/Player.ts, entities/Boss.ts, patterns/, bosses/ (1 fichier de données par boss), art/, audio/sfx.ts, ui/.
 `scene.restart()` ne relance pas les initialiseurs de champs : tout réinitialiser dans create().
 
 ## Contrôles (AZERTY, via e.key)
-Q/D ou ←/→ · Saut Z/↑/Espace · Attaque J/W · Dash K/X · Sort L/C · Pause Échap. Pas de manette.
+Q/D ou ←/→ · Saut Z/↑/Espace · Descendre d'une plateforme S/↓ · Attaque J/W · Dash K/X · Sort L/C · Pause Échap. Menus : ↑↓/Z/S, valider Entrée/Espace/J, souris. Une touche peut porter plusieurs actions (input.ts) → `input.reset()` à chaque ouverture/fermeture de menu. Pas de manette.
 DEV seulement : F1 boss à 1 PV, F2 invincible (gate `import.meta.env.DEV`).
 
 ## Joueur
-Vif, saut variable, coyote 0,1 s, buffer 0,1 s, double saut via flag (off). Dash = esquive : i-frames tout le dash (~0,22 s), ~56 px, cd ~0,55 s, direction tenue sinon face, 1 dash aérien rechargé au sol, images rémanentes. Combo 3 coups, +1 mana par coup touché. Mana pleine → "Éclat lunaire" (croissant perforant). 5 PV, invu 1,2 s, recul, hit-stop 70 ms.
+Vif, saut variable, coyote 0,1 s, buffer 0,1 s, double saut via flag (off). Dash = esquive : i-frames tout le dash (~0,22 s), ~84 px, cd ~0,55 s, direction tenue sinon face, 1 dash aérien rechargé au sol, images rémanentes. Combo 3 coups, +1 mana par coup touché. Mana pleine → "Éclat lunaire" (croissant perforant). 5 PV, invu 1,2 s, recul, hit-stop 70 ms.
 
 ## Boss (data-driven)
 Boss générique unique. Pattern = télégraphe → actif → récupération (boss ouvert, yeux éteints). Télégraphe ≥ 0,6 s (P1) / ≥ 0,45 s (P2), couleur danger. Sélection pondérée, jamais 3× le même, pause ≥ 0,4 s. À 50 % PV : 1 s invu + rugissement + tremblement, nouveaux patterns, vitesse ×1,15. Barre de vie nommée EN BAS. Arène 1 écran : sol + 2 plateformes traversables. Intro 2 s (nom).
@@ -34,4 +34,4 @@ Hi-bit, contour 1 px joueur/boss. Cyan lune = joueur/sorts. Rouge/magenta = DANG
 Boss grands (⅓–½ écran), pièces séparées animées par tweens, yeux lumineux. Juice : hit-stop, shake léger, particules, flash blanc.
 
 ## Étapes
-0 setup ✔ · 1 salle de test + joueur + HUD ✔ · 2 Boss + Mordrec + salle 1 + mort/retry · 3 Corvina + salle 2 + escalier/fondu + victoire · plus tard : titre, tuto, son d'ambiance, polish, build final.
+0 setup ✔ · 1 salle de test + joueur + HUD ✔ · 1b 480×270 + art détaillé + menu titre (JOUER/TUTO/OPTIONS stub/QUITTER) + pause (reprendre/recommencer/menu) + tuto = salle de test avec panneaux ✔ (JOUER → salle de test en attendant l'étape 2 : à rebrancher sur l'arène 1) · 2 Boss + Mordrec + salle 1 + mort/retry · 3 Corvina + salle 2 + escalier/fondu + victoire · plus tard : options (à discuter avec l'utilisateur), son d'ambiance, polish, build final.

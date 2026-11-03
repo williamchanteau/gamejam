@@ -61,5 +61,7 @@ export const sfx = {
   manaFull: () => { tone(880, 880, 0.08, 'triangle', 0.15); tone(1320, 1320, 0.14, 'triangle', 0.15, 0.09); },
   warn: () => tone(330, 340, 0.15, 'sawtooth', 0.06),
   shoot: () => tone(300, 150, 0.15, 'square', 0.08),
+  tick: () => tone(660, 700, 0.04, 'square', 0.05),
+  select: () => { tone(440, 880, 0.12, 'triangle', 0.15); tone(660, 1320, 0.16, 'triangle', 0.1, 0.06); },
   death: () => { tone(300, 40, 0.7, 'sawtooth', 0.25); noise(0.5, 0.3, 300); },
 };

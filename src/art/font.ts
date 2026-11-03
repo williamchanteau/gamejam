@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 
 // Police 3×5 : chaque chiffre = une ligne, bits 4/2/1 = pixel gauche/milieu/droite.
-const G: Record<string, string> = {
+export const G: Record<string, string> = {
   A: '25755', B: '65656', C: '34443', D: '65556', E: '74647', F: '74644', G: '34553', H: '55755',
   I: '72227', J: '11152', K: '55655', L: '44447', M: '57755', N: '65555', O: '25552', P: '65644',
   Q: '25563', R: '65655', S: '34216', T: '72222', U: '55557', V: '55552', W: '55775', X: '55255',

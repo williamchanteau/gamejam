@@ -3,6 +3,7 @@ import { makeFont } from '../art/font';
 import { makePlayerArt } from '../art/player';
 import { makeFxArt } from '../art/fx';
 import { makeRoomArt } from '../art/room';
+import { makeTitleArt } from '../art/title';
 
 // Génère toutes les textures par code, puis lance le jeu.
 export class BootScene extends Phaser.Scene {
@@ -12,6 +13,7 @@ export class BootScene extends Phaser.Scene {
     makePlayerArt(this);
     makeFxArt(this);
     makeRoomArt(this);
-    this.scene.start('Test');
+    makeTitleArt(this);
+    this.scene.start('Menu');
   }
 }

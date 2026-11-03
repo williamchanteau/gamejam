@@ -38,6 +38,7 @@ export function makeFxArt(scene: Phaser.Scene) {
     crescent(c, 20, 22, 20, 4, 19, '#ffffff', '#ffffff');
   });
   glowTex(scene, 'glowC', 48, '127,246,255');
+  canvasTex(scene, 'cursor', 12, 13, (c) => crescent(c, 5.5, 6.5, 5, 2.5, 4.5, '#d8fbff', '#7ff6ff'), '#06050c');
   // Orbe de danger (rouge réservé au danger).
   canvasTex(scene, 'orb', 15, 15, (c) => sphere(c, 15, ['#ffe6ee', '#ff6a90', '#ff2a5a', '#a0103c']));
   glowTex(scene, 'glowR', 48, '255,42,90');

@@ -1,32 +1,32 @@
 import { unlockAudio } from './audio/sfx';
 
 export type Action =
-  | 'left' | 'right' | 'down' | 'jump' | 'attack' | 'dash' | 'spell' | 'pause' | 'debug1' | 'debug2';
+  | 'left' | 'right' | 'down' | 'up' | 'jump' | 'attack' | 'dash' | 'spell' | 'ok' | 'pause' | 'debug1' | 'debug2';
 
-// Liaison par lettre affichée (e.key), donc AZERTY natif.
-const MAP: Record<string, Action> = {
-  q: 'left', arrowleft: 'left',
-  d: 'right', arrowright: 'right',
-  s: 'down', arrowdown: 'down',
-  z: 'jump', arrowup: 'jump', ' ': 'jump',
-  j: 'attack', w: 'attack',
-  k: 'dash', x: 'dash',
-  l: 'spell', c: 'spell',
-  escape: 'pause',
-  f1: 'debug1', f2: 'debug2',
+// Liaison par lettre affichée (e.key), donc AZERTY natif. Une touche peut porter plusieurs actions (jeu + menus).
+const MAP: Record<string, Action[]> = {
+  q: ['left'], arrowleft: ['left'],
+  d: ['right'], arrowright: ['right'],
+  s: ['down'], arrowdown: ['down'],
+  z: ['jump', 'up'], arrowup: ['jump', 'up'], ' ': ['jump', 'ok'],
+  j: ['attack', 'ok'], w: ['attack', 'ok'], enter: ['ok'],
+  k: ['dash'], x: ['dash'],
+  l: ['spell'], c: ['spell'],
+  escape: ['pause'],
+  f1: ['debug1'], f2: ['debug2'],
 };
 
-const held = new Map<string, Action>();
+const held = new Map<string, Action[]>();
 const pressedAt: Partial<Record<Action, number>> = {};
 
 addEventListener('keydown', (e) => {
   unlockAudio();
-  const a = MAP[e.key.toLowerCase()];
-  if (!a) return;
+  const acts = MAP[e.key.toLowerCase()];
+  if (!acts) return;
   e.preventDefault();
   if (e.repeat) return;
-  held.set(e.key.toLowerCase(), a);
-  pressedAt[a] = performance.now();
+  held.set(e.key.toLowerCase(), acts);
+  for (const a of acts) pressedAt[a] = performance.now();
 });
 addEventListener('keyup', (e) => held.delete(e.key.toLowerCase()));
 addEventListener('blur', () => held.clear());
@@ -34,7 +34,7 @@ addEventListener('pointerdown', unlockAudio);
 
 export const input = {
   isDown(a: Action) {
-    for (const v of held.values()) if (v === a) return true;
+    for (const v of held.values()) if (v.includes(a)) return true;
     return false;
   },
   /** Vrai si `a` a été pressé dans les `win` dernières secondes ; consomme l'appui. */
