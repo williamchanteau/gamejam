@@ -12,7 +12,7 @@ const MAP: Record<string, Action[]> = {
   j: ['attack', 'ok'], w: ['attack', 'ok'], enter: ['ok'],
   k: ['dash'], x: ['dash'],
   l: ['spell'], c: ['spell'],
-  escape: ['pause'],
+  escape: ['pause'], p: ['pause'],
   f1: ['debug1'], f2: ['debug2'],
 };
 
@@ -21,6 +21,7 @@ const pressedAt: Partial<Record<Action, number>> = {};
 
 addEventListener('keydown', (e) => {
   unlockAudio();
+  firstFullscreen();
   const acts = MAP[e.key.toLowerCase()];
   if (!acts) return;
   e.preventDefault();
@@ -30,7 +31,17 @@ addEventListener('keydown', (e) => {
 });
 addEventListener('keyup', (e) => held.delete(e.key.toLowerCase()));
 addEventListener('blur', () => held.clear());
-addEventListener('pointerdown', unlockAudio);
+addEventListener('pointerdown', () => { unlockAudio(); firstFullscreen(); });
+
+/** Plein écran (doit être appelé depuis un geste utilisateur). Échap verrouillé si possible. */
+export function goFullscreen() {
+  if (document.fullscreenElement || !document.documentElement.requestFullscreen) return;
+  document.documentElement.requestFullscreen()
+    .then(() => (navigator as unknown as { keyboard?: { lock?: (k: string[]) => Promise<void> } }).keyboard?.lock?.(['Escape']))
+    .catch(() => {});
+}
+let fsTried = false;
+function firstFullscreen() { if (!fsTried) { fsTried = true; goFullscreen(); } }
 
 export const input = {
   isDown(a: Action) {

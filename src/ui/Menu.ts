@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { COL } from '../config';
 import { txt } from '../art/font';
-import { input } from '../input';
+import { input, goFullscreen } from '../input';
 import { sfx } from '../audio/sfx';
 
 export type Item = { label: string; act: () => void };
@@ -36,6 +36,7 @@ export class Menu {
 
   confirm() {
     sfx.select();
+    goFullscreen();
     input.reset();
     this.items[this.i].act();
   }

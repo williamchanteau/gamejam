@@ -13,17 +13,17 @@ export class BossBar {
 
   constructor(private scene: Phaser.Scene, private boss: Boss) {
     const w = this.w, x = (W - w) / 2, y = H - 11;
-    scene.add.rectangle(x - 3, y - 3, w + 6, 10, 0x06050c).setOrigin(0).setDepth(100);
-    scene.add.rectangle(x - 2, y - 2, w + 4, 8, 0x3d4463).setOrigin(0).setDepth(100);
-    scene.add.rectangle(x, y, w, 4, 0x14121f).setOrigin(0).setDepth(100);
-    this.trail = scene.add.rectangle(x, y, 0, 4, 0xf0ecff).setOrigin(0).setDepth(101);
-    this.fill = scene.add.rectangle(x, y, 0, 4, 0xa8a0d8).setOrigin(0).setDepth(102);
-    scene.add.rectangle(x, y, w, 1, 0xffffff, 0.25).setOrigin(0).setDepth(103);
-    scene.add.rectangle(x + w / 2, y - 2, 1, 8, 0x06050c).setOrigin(0).setDepth(103); // repère 50 %
-    for (const ex of [x - 6, x + w + 5]) scene.add.rectangle(ex, y + 2, 5, 5, 0x7a86ac).setAngle(45).setDepth(103);
+    scene.add.rectangle(x - 3, y - 3, w + 6, 10, 0x06050c).setOrigin(0).setDepth(100).setScrollFactor(0);
+    scene.add.rectangle(x - 2, y - 2, w + 4, 8, 0x3d4463).setOrigin(0).setDepth(100).setScrollFactor(0);
+    scene.add.rectangle(x, y, w, 4, 0x14121f).setOrigin(0).setDepth(100).setScrollFactor(0);
+    this.trail = scene.add.rectangle(x, y, 0, 4, 0xf0ecff).setOrigin(0).setDepth(101).setScrollFactor(0);
+    this.fill = scene.add.rectangle(x, y, 0, 4, 0xa8a0d8).setOrigin(0).setDepth(102).setScrollFactor(0);
+    scene.add.rectangle(x, y, w, 1, 0xffffff, 0.25).setOrigin(0).setDepth(103).setScrollFactor(0);
+    scene.add.rectangle(x + w / 2, y - 2, 1, 8, 0x06050c).setOrigin(0).setDepth(103).setScrollFactor(0); // repère 50 %
+    for (const ex of [x - 6, x + w + 5]) scene.add.rectangle(ex, y + 2, 5, 5, 0x7a86ac).setAngle(45).setDepth(103).setScrollFactor(0);
     const name = `${boss.def.name}, ${boss.def.title}`;
-    const bg = scene.add.rectangle(W / 2, y - 14, name.length * 6 + 8, 11, 0x06050c, 0.7).setDepth(100);
-    txt(scene, W / 2, bg.y - 7, name, COL.ui).setOrigin(0.5, 0).setDepth(101);
+    const bg = scene.add.rectangle(W / 2, y - 14, name.length * 6 + 8, 11, 0x06050c, 0.7).setDepth(100).setScrollFactor(0);
+    txt(scene, W / 2, bg.y - 7, name, COL.ui).setOrigin(0.5, 0).setDepth(101).setScrollFactor(0);
   }
 
   /** Remplit la barre (animée pendant l'intro, immédiate au retry). */

@@ -15,10 +15,18 @@ export const ARENA = {
     { x: 108, y: 177, w: 84 },
     { x: 372, y: 177, w: 84 },
   ],
+  // Arène de boss : 2 écrans de large, caméra qui suit.
+  bossW: 960,
+  bossPlatforms: [
+    { x: 170, y: 177, w: 84 },
+    { x: 340, y: 135, w: 72 },
+    { x: 620, y: 135, w: 72 },
+    { x: 790, y: 177, w: 84 },
+  ],
 };
 
 export const PLAYER = {
-  hp: 5,
+  hp: 3,
   runSpeed: 172,
   accelGround: 2400,
   accelAir: 1650,
@@ -78,8 +86,11 @@ export const BOSS = {
   p2Invuln: 1, // durée du rugissement à 50 % PV
   introTime: 2,
   retryDelay: 0.5, // délai avant la 1re attaque après un retry (intro sautée)
-  walkSpeed: 45,
+  walkSpeed: 70,
   walkRange: 150, // marche vers le joueur s'il est plus loin que ça
+  farRange: 300, // au-delà : seulement les patterns « far » (bond, projectiles)
+  camEdge: 100, // le joueur reste à ≥ 100 px des bords de l'écran
+  camLerp: 6,
   victoryTime: 4,
 };
 

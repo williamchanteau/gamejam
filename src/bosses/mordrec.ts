@@ -6,11 +6,11 @@ import type { Boss, BossDef } from '../entities/Boss';
 
 // Réglages de Mordrec (durées en s avant ×vitesse de phase 2, distances en px).
 const M = {
-  hp: 80,
-  slash: { tele: 0.65, dash: 0.28, minDist: 70, overshoot: 50, recover: 0.75, reach: 64, height: 54 },
-  slam: { tele: 0.6, rise: 0.35, mark: 0.7, fall: 0.16, recover: 0.85, waveSpeed: 210, doubleGap: 0.8 },
-  blades: { tele: 0.65, gap: 0.75, speed: 230, recover: 0.6 },
-  combo: { teles: [0.55, 0.45, 0.8], recover: 0.95 },
+  hp: 140,
+  slash: { tele: 0.65, dash: 0.28, minDist: 70, maxDist: 250, overshoot: 50, recover: 0.5, reach: 64, height: 54 },
+  slam: { tele: 0.6, rise: 0.35, mark: 0.7, fall: 0.16, recover: 0.6, waveSpeed: 210, doubleGap: 0.8 },
+  blades: { tele: 0.65, gap: 0.75, speed: 230, recover: 0.45 },
+  combo: { teles: [0.55, 0.45, 0.8], recover: 0.7 },
 };
 // Pose de repos : épée plantée en avant.
 const REST = { sword: 128, headY: -64 };
@@ -139,6 +139,7 @@ function* slash(b: Boss, tele = M.slash.tele, recover = M.slash.recover, last = 
   const tt = b.tele(tele);
   let tx = b.clampX(b.player.x + b.dir * s.overshoot);
   if ((tx - b.x) * b.dir < s.minDist) tx = b.clampX(b.x + b.dir * s.minDist);
+  tx = b.clampX(Phaser.Math.Clamp(tx, b.x - s.maxDist, b.x + s.maxDist));
   // Télégraphe : épée levée en arrière, accroupi, trajet au sol en rouge.
   b.tw(p.sword, { angle: -70 }, tt * 0.6, 'Back.out');
   b.tw(p.body, { scaleY: 0.95 }, tt * 0.6);
@@ -279,9 +280,9 @@ export const MORDREC: BossDef = {
   },
   patterns: [
     { name: 'slash', weight: 3, phase: 0, run: (b) => slash(b) },
-    { name: 'slam', weight: 2, phase: 0, run: (b) => slam(b) },
-    { name: 'blades', weight: 2, phase: 0, run: blades },
+    { name: 'slam', weight: 2, phase: 0, run: (b) => slam(b), far: true },
+    { name: 'blades', weight: 2, phase: 0, run: blades, far: true },
     { name: 'combo', weight: 3, phase: 2, run: combo },
-    { name: 'slam2', weight: 2, phase: 2, run: (b) => slam(b, true) },
+    { name: 'slam2', weight: 2, phase: 2, run: (b) => slam(b, true), far: true },
   ],
 };

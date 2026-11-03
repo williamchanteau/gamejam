@@ -11,15 +11,15 @@ export class Hud {
   private god: Phaser.GameObjects.BitmapText;
 
   constructor(private scene: Phaser.Scene, private player: Player) {
-    for (let i = 0; i < PLAYER.hp; i++) this.hearts.push(scene.add.image(5 + i * 11, 5, 'hp_full').setOrigin(0).setDepth(100));
-    scene.add.rectangle(6, 17, 66, 8, 0x06050c).setOrigin(0).setDepth(100);
-    scene.add.rectangle(7, 18, 64, 6, 0x1b1f33).setOrigin(0).setDepth(100);
-    this.fill = scene.add.rectangle(7, 18, 0, 6, COL.moon).setOrigin(0).setDepth(101);
-    this.hint = txt(scene, 6, 25, 'L/C : ÉCLAT LUNAIRE', COL.moonLight).setDepth(101);
-    this.god = txt(scene, 6, 37, 'INVINCIBLE (F2)', COL.uiDim).setDepth(101);
-    scene.add.rectangle(W, 0, 300, 39, 0x06050c, 0.7).setOrigin(1, 0).setDepth(99);
-    txt(scene, W - 4, 1, 'Q/D ou ←/→ : BOUGER · Z/↑/ESPACE : SAUTER\nS/↓ : DESCENDRE · J/W : ATTAQUER\nK/X : DASH (ESQUIVE) · L/C : SORT · ÉCHAP : PAUSE', COL.uiDim)
-      .setOrigin(1, 0).setRightAlign().setDepth(100);
+    for (let i = 0; i < PLAYER.hp; i++) this.hearts.push(scene.add.image(5 + i * 11, 5, 'hp_full').setOrigin(0).setDepth(100).setScrollFactor(0));
+    scene.add.rectangle(6, 17, 66, 8, 0x06050c).setOrigin(0).setDepth(100).setScrollFactor(0);
+    scene.add.rectangle(7, 18, 64, 6, 0x1b1f33).setOrigin(0).setDepth(100).setScrollFactor(0);
+    this.fill = scene.add.rectangle(7, 18, 0, 6, COL.moon).setOrigin(0).setDepth(101).setScrollFactor(0);
+    this.hint = txt(scene, 6, 25, 'L/C : ÉCLAT LUNAIRE', COL.moonLight).setDepth(101).setScrollFactor(0);
+    this.god = txt(scene, 6, 37, 'INVINCIBLE (F2)', COL.uiDim).setDepth(101).setScrollFactor(0);
+    scene.add.rectangle(W, 0, 300, 39, 0x06050c, 0.7).setOrigin(1, 0).setDepth(99).setScrollFactor(0);
+    txt(scene, W - 4, 1, 'Q/D ou ←/→ : BOUGER · Z/↑/ESPACE : SAUTER\nS/↓ : DESCENDRE · J/W : ATTAQUER\nK/X : DASH (ESQUIVE) · L/C : SORT · ÉCHAP/P : PAUSE', COL.uiDim)
+      .setOrigin(1, 0).setRightAlign().setDepth(100).setScrollFactor(0);
   }
 
   update() {

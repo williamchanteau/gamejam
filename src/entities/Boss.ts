@@ -1,12 +1,12 @@
 import Phaser from 'phaser';
-import { BOSS, W, COL } from '../config';
+import { BOSS, COL } from '../config';
 import { sfx } from '../audio/sfx';
 import type { Target } from './types';
 import type { ArenaScene } from '../scenes/ArenaScene';
 
 /** Un pattern est une coroutine : chaque `yield` = secondes à attendre (déjà mises à l'échelle). */
 export type PatternFn = (b: Boss) => Generator<number, void, unknown>;
-export interface PatternDef { name: string; weight: number; phase: 0 | 1 | 2; run: PatternFn }
+export interface PatternDef { name: string; weight: number; phase: 0 | 1 | 2; run: PatternFn; far?: boolean }
 export interface BossDef {
   name: string;
   title: string;
@@ -84,7 +84,7 @@ export class Boss implements Target {
     e.setVisible(mode !== 'off').setTint(col);
     g.setVisible(mode !== 'off').setTint(col).setAlpha(mode === 'tele' ? 0.9 : 0.55);
   }
-  clampX(x: number) { return Phaser.Math.Clamp(x, 40, W - 40); }
+  clampX(x: number) { return Phaser.Math.Clamp(x, 40, this.scene.worldW - 40); }
 
   update(dt: number) {
     if (this.hitbox && this.alive() && Phaser.Geom.Rectangle.Overlaps(this.hitbox(), this.player.rect())) this.player.hurt(this.x);
@@ -106,7 +106,9 @@ export class Boss implements Target {
 
   private next() {
     const h = this.history;
-    const ok = this.def.patterns.filter((p) => (p.phase === 0 || p.phase === this.phase) && !(h[0] === p.name && h[1] === p.name));
+    const far = Math.abs(this.player.x - this.x) > BOSS.farRange;
+    let ok = this.def.patterns.filter((p) => (p.phase === 0 || p.phase === this.phase) && !(h[0] === p.name && h[1] === p.name));
+    if (far && ok.some((p) => p.far)) ok = ok.filter((p) => p.far);
     let r = Math.random() * ok.reduce((s, p) => s + p.weight, 0);
     const p = ok.find((q) => (r -= q.weight) < 0) ?? ok[0];
     h.unshift(p.name); h.length = Math.min(h.length, 2);

@@ -3,18 +3,21 @@ import { W, H, ARENA } from '../config';
 import { canvasTex, mapTex } from './pixel';
 import { hash, stoneBlocks, stainedWindow, column, inArch } from './room';
 
-/** Largeur des couches de parallaxe (marge de 60 px de chaque côté). */
-export const LW = W + 120;
-const FY = ARENA.floorY;
+const FY = ARENA.floorY, WW = ARENA.bossW;
+/** Facteurs de parallaxe des couches (0 = fond, 3 = premier plan) ; les accessoires au sol sont à 1. */
+export const NAVE_F = [0.3, 0.55, 0.8, 1, 1.2];
+/** Largeur nécessaire d'une couche de facteur f pour couvrir toute l'arène. */
+export const layerW = (f: number) => Math.ceil(W + f * (WW - W)) + 8;
 type Ctx = CanvasRenderingContext2D;
 const px = (c: Ctx, col: string, x: number, y: number, w = 1, h = 1) => { c.fillStyle = col; c.fillRect(x, y, w, h); };
 
-/** Coordonnées des éléments animés, en repère couche (x de 0 à LW). */
+const COLS = (w: number) => { const r: number[] = []; for (let x = 70; x < w; x += 160) r.push(x); return r; };
+/** Coordonnées des éléments animés, en repère de leur couche. */
 export const NAVE = {
-  torches: [230, 370],
-  candles: [[52, FY - 12], [88, FY - 12], [512, FY - 12], [548, FY - 12], [214, FY - 12], [386, FY - 12]],
-  pumpkins: [[120, FY - 1], [480, FY - 1]],
-  lanterns: [[130, 74], [478, 58]],
+  torches: COLS(layerW(0.8)).filter((_, i) => i % 2 === 1), // couche 2
+  candles: [60, 250, 470, 700, 900].map((x) => [x, FY - 2]), // accessoires (monde)
+  pumpkins: [[140, FY - 1], [560, FY - 1], [830, FY - 1]],
+  lanterns: [[130, 74], [478, 58], [860, 70]], // couche premier plan
 };
 
 /** Rosace : rayons + pétales + anneaux plombés. */
@@ -39,44 +42,46 @@ function candle(c: Ctx, x: number, y: number, h: number) {
 export function makeNaveArt(scene: Phaser.Scene) {
   const glass = ['#14204a', '#1c2c55', '#223563', '#2a4580', '#35558f', '#5a7ec0'];
   // Couche 0 : mur du fond, arcades lointaines, fenêtres hautes.
-  canvasTex(scene, 'nave0', LW, H, (c) => {
+  const w0 = layerW(NAVE_F[0]), w1 = layerW(NAVE_F[1]), w2 = layerW(NAVE_F[2]), w3 = layerW(NAVE_F[4]);
+  canvasTex(scene, 'nave0', w0, H, (c) => {
     for (let y = 0; y < H; y++) {
       const t = y / H, d = (y % 2) * 0.5;
       c.fillStyle = `rgb(${26 - 15 * t + d | 0},${22 - 12 * t + d | 0},${48 - 28 * t + d | 0})`;
-      c.fillRect(0, y, LW, 1);
+      c.fillRect(0, y, w0, 1);
     }
     c.globalAlpha = 0.3;
-    stoneBlocks(c, LW, H, 28, 14, ['#0b0a14', '#141226', '#191730', '#221f3c', ''], 11);
+    stoneBlocks(c, w0, H, 28, 14, ['#0b0a14', '#141226', '#191730', '#221f3c', ''], 11);
     c.globalAlpha = 1;
-    for (let ax = 40; ax < LW; ax += 80) {
+    for (let ax = 40; ax < w0; ax += 80) {
       for (let y = 96; y < FY; y++)
         for (let x = ax - 30; x <= ax + 30; x++)
           if (inArch(x, y, ax, 130, 24)) px(c, y > FY - 30 ? '#0c0a18' : '#0e0c1c', x, y);
           else if (inArch(x, y, ax, 130, 27)) px(c, '#1d1a33', x, y);
       stainedWindow(c, ax, 20, 66, 7, ['#101830', '#14204a', '#1c2c55', '#223563', '#2a3a70', '#35558f']);
     }
-    for (let x = 0; x < LW; x++) { // nervures de voûte
+    for (let x = 0; x < w0; x++) { // nervures de voûte
       const k = (x % 80) / 80, y = Math.round(10 * Math.sin(k * Math.PI));
       px(c, '#262243', x, y + 2, 1, 2);
     }
   });
   // Couche 1 : grands vitraux bleus + rosace + rayons de lune.
-  canvasTex(scene, 'nave1', LW, H, (c) => {
-    for (const cx of [150, 450]) stainedWindow(c, cx, 40, 186, 26, glass);
-    rose(c, LW / 2, 74, 38, glass);
+  canvasTex(scene, 'nave1', w1, H, (c) => {
+    const L = w1, wins = [Math.round(L * 0.17), Math.round(L * 0.83)];
+    for (const cx of wins) stainedWindow(c, cx, 40, 186, 26, glass);
+    rose(c, L / 2, 74, 38, glass);
     for (let y = 124; y < FY; y++) // porte en ogive sous la rosace
-      for (let x = LW / 2 - 30; x <= LW / 2 + 30; x++)
-        if (inArch(x, y, LW / 2, 156, 24)) px(c, (x - LW / 2 + 24) % 8 === 0 ? '#0a0812' : '#120f1e', x, y);
-        else if (inArch(x, y, LW / 2, 156, 28)) px(c, x < LW / 2 ? '#2a2744' : '#3a3858', x, y);
+      for (let x = L / 2 - 30; x <= L / 2 + 30; x++)
+        if (inArch(x, y, L / 2, 156, 24)) px(c, (x - L / 2 + 24) % 8 === 0 ? '#0a0812' : '#120f1e', x, y);
+        else if (inArch(x, y, L / 2, 156, 28)) px(c, x < L / 2 ? '#2a2744' : '#3a3858', x, y);
     c.fillStyle = 'rgba(127,170,255,0.06)';
-    for (const [cx, w] of [[150, 20], [450, 20], [LW / 2, 30]]) {
+    for (const [cx, w] of [[wins[0], 20], [wins[1], 20], [L / 2, 30]]) {
       c.beginPath(); c.moveTo(cx - w, 70); c.lineTo(cx + w, 70); c.lineTo(cx + w + 70, FY); c.lineTo(cx - w + 10, FY); c.fill();
     }
-    for (let y = FY - 44; y < FY; y++) { c.fillStyle = `rgba(60,70,110,${((y - FY + 44) / 44) * 0.2})`; c.fillRect(0, y, LW, 1); }
+    for (let y = FY - 44; y < FY; y++) { c.fillStyle = `rgba(60,70,110,${((y - FY + 44) / 44) * 0.2})`; c.fillRect(0, y, L, 1); }
   });
   // Couche 2 : colonnes, arcs, bannières, bougies, citrouilles, toiles.
-  canvasTex(scene, 'nave2', LW, H, (c) => {
-    const cols = [70, 230, 370, 530];
+  canvasTex(scene, 'nave2', w2, H, (c) => {
+    const cols = COLS(w2);
     for (let i = 0; i < cols.length - 1; i++) { // arcs entre colonnes
       const a = cols[i], b = cols[i + 1], mid = (a + b) / 2, hw = (b - a) / 2;
       for (let x = a; x <= b; x++) {
@@ -85,7 +90,7 @@ export function makeNaveArt(scene: Phaser.Scene) {
       }
     }
     for (const cx of cols) column(c, cx, 0, FY, 12);
-    for (const cx of [230, 370]) { // bannières en lambeaux
+    for (const cx of cols.filter((_, i) => i % 2 === 0)) { // bannières en lambeaux
       for (let y = 30; y < 92; y++)
         for (let x = cx - 9; x < cx + 9; x++) {
           if (y > 84 && (x * 3 + y) % 4 < y - 84) continue;
@@ -97,7 +102,18 @@ export function makeNaveArt(scene: Phaser.Scene) {
         if (d <= 6 && d2 > 5) px(c, '#9aa6c8', cx + x, 56 + y);
       }
     }
-    for (const [x, y] of NAVE.candles) { px(c, '#2e2b45', x - 6, y, 14, 3); px(c, '#45425e', x - 6, y, 14, 1); candle(c, x - 4, y, 7); candle(c, x, y, 10); candle(c, x + 4, y, 5); }
+    c.fillStyle = 'rgba(200,207,232,0.22)'; // toiles aux arcs
+    for (const [sx, dir] of cols.flatMap((x) => [[x + 12, 1], [x - 12, -1]])) {
+      for (let i = 0; i < 4; i++) for (let k = 0; k < 22; k++) c.fillRect(Math.round(sx + dir * k * Math.cos(i * 0.45)), Math.round(14 + k * Math.sin(i * 0.45 + 0.1)), 1, 1);
+      for (const r of [7, 13, 19]) for (let a = 0; a < 1.5; a += 0.09) c.fillRect(Math.round(sx + dir * r * Math.cos(a)), Math.round(14 + r * Math.sin(a) * 0.9), 1, 1);
+    }
+  });
+  // Accessoires posés au sol (facteur 1, largeur du monde).
+  canvasTex(scene, 'nave_props', WW, H, (c) => {
+    for (const [x, y] of NAVE.candles) { // chandelier de fer + 3 bougies
+      px(c, '#1a1828', x - 1, y - 16, 2, 16); px(c, '#1a1828', x - 5, y - 1, 10, 1); px(c, '#2a2838', x - 8, y - 17, 17, 2); px(c, '#45425e', x - 8, y - 17, 17, 1);
+      candle(c, x - 6, y - 17, 7); candle(c, x - 1, y - 17, 10); candle(c, x + 4, y - 17, 5);
+    }
     for (const [x, y] of NAVE.pumpkins) {
       for (let yy = 0; yy < 12; yy++)
         for (let xx = -9; xx <= 9; xx++) {
@@ -110,14 +126,9 @@ export function makeNaveArt(scene: Phaser.Scene) {
       px(c, '#fff0b0', x - 4, y - 8, 1, 1); px(c, '#fff0b0', x + 3, y - 8, 1, 1);
       for (let xx = -4; xx < 5; xx += 3) px(c, '#9a3f12', x + xx, y - 5, 1, 1);
     }
-    c.fillStyle = 'rgba(200,207,232,0.22)'; // toiles aux arcs
-    for (const [sx, dir] of [[82, 1], [218, -1], [382, 1], [518, -1]]) {
-      for (let i = 0; i < 4; i++) for (let k = 0; k < 22; k++) c.fillRect(Math.round(sx + dir * k * Math.cos(i * 0.45)), Math.round(14 + k * Math.sin(i * 0.45 + 0.1)), 1, 1);
-      for (const r of [7, 13, 19]) for (let a = 0; a < 1.5; a += 0.09) c.fillRect(Math.round(sx + dir * r * Math.cos(a)), Math.round(14 + r * Math.sin(a) * 0.9), 1, 1);
-    }
   });
-  // Couche 3 (premier plan) : chaînes + lanternes suspendues, coins sombres.
-  canvasTex(scene, 'nave3', LW, H, (c) => {
+  // Couche premier plan : chaînes + lanternes suspendues.
+  canvasTex(scene, 'nave3', w3, H, (c) => {
     for (const [x, y] of NAVE.lanterns) {
       for (let yy = 0; yy < y - 8; yy += 4) { px(c, '#06050c', x - 1, yy, 3, 3); px(c, '#1a1828', x, yy + 1, 1, 1); }
       px(c, '#06050c', x - 5, y - 8, 11, 2); px(c, '#06050c', x - 4, y - 6, 9, 12); px(c, '#06050c', x - 5, y + 6, 11, 2);

@@ -135,7 +135,8 @@ export function makeRoomArt(scene: Phaser.Scene) {
     px(c, '#525a7c', 0, 1, 48, 1);
     for (let y = 18; y < fh; y++) { c.fillStyle = `rgba(6,5,12,${(y - 18) / (fh - 18) * 0.6})`; c.fillRect(0, y, 48, 1); }
   });
-  for (const p of ARENA.platforms) {
+  for (const p of [...ARENA.platforms, ...ARENA.bossPlatforms]) {
+    if (scene.textures.exists('plat' + p.w)) continue;
     canvasTex(scene, 'plat' + p.w, p.w, 8, (c) => {
       stoneBlocks(c, p.w, 8, 14, 8, ['#1f2236', '#2c3150', '#3d4463', '#545c80', '#7a86ac'], p.x);
       px(c, '#1f2236', 0, 7, p.w, 1);

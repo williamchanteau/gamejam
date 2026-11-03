@@ -14,6 +14,10 @@ export class ArenaScene extends Phaser.Scene {
   targets!: Target[];
   hazards!: Phaser.Physics.Arcade.Group;
   floorY = ARENA.floorY;
+  /** Largeur du monde et plateformes (surchargées par les salles de boss). */
+  worldW = W;
+  plats: { x: number; y: number; w: number }[] = ARENA.platforms;
+  spawnX = 48;
   private spells!: Spell[];
   private hitstopEnd = 0;
   private sparkFx!: Phaser.GameObjects.Particles.ParticleEmitter;
@@ -26,20 +30,21 @@ export class ArenaScene extends Phaser.Scene {
     this.targets = [];
     this.spells = [];
     this.hitstopEnd = 0;
-    this.physics.world.setBounds(0, 0, W, H);
+    this.physics.world.setBounds(0, 0, this.worldW, H);
+    this.cameras.main.setBounds(0, 0, this.worldW, H).setScroll(0, 0);
     this.buildBackground();
 
-    this.add.tileSprite(0, this.floorY, W, H - this.floorY, 'floor').setOrigin(0).setDepth(5);
-    const floor = this.add.zone(W / 2, (this.floorY + H) / 2, W, H - this.floorY);
+    this.add.tileSprite(0, this.floorY, this.worldW, H - this.floorY, 'floor').setOrigin(0).setDepth(5);
+    const floor = this.add.zone(this.worldW / 2, (this.floorY + H) / 2, this.worldW, H - this.floorY);
     this.physics.add.existing(floor, true);
-    const plats = ARENA.platforms.map((p) => {
+    const plats = this.plats.map((p) => {
       const img = this.physics.add.staticImage(p.x, p.y + 4, 'plat' + p.w).setDepth(5);
       const c = (img.body as Phaser.Physics.Arcade.StaticBody).checkCollision;
       c.down = c.left = c.right = false;
       return img;
     });
 
-    this.player = new Player(this, 48, this.floorY);
+    this.player = new Player(this, this.spawnX, this.floorY);
     this.physics.add.collider(this.player.zone, floor);
     this.physics.add.collider(this.player.zone, plats, undefined, () => !this.player.canDrop);
     this.hazards = this.physics.add.group({ allowGravity: false });
@@ -58,6 +63,10 @@ export class ArenaScene extends Phaser.Scene {
     }).setDepth(9);
 
     this.hud = new Hud(this, this.player);
+    // Sortie du plein écran (Échap du navigateur) → pause.
+    const onFs = () => { if (!document.fullscreenElement && this.scene.isActive()) this.openPause(); };
+    document.addEventListener('fullscreenchange', onFs);
+    this.events.once('shutdown', () => document.removeEventListener('fullscreenchange', onFs));
   }
 
   /** À surcharger : décor de la salle. */
@@ -66,12 +75,7 @@ export class ArenaScene extends Phaser.Scene {
   tick(_dt: number) {}
 
   update(_t: number, deltaMs: number) {
-    if (input.take('pause')) {
-      input.reset();
-      this.scene.launch('Pause', { from: this.scene.key });
-      this.scene.pause();
-      return;
-    }
+    if (input.take('pause')) return this.openPause();
     const world = this.physics.world;
     // Hit-stop : physique, tweens et timers gelés ensemble (une seule horloge).
     if (performance.now() < this.hitstopEnd) {
@@ -84,6 +88,12 @@ export class ArenaScene extends Phaser.Scene {
     this.updateSpells(dt);
     this.tick(dt);
     this.hud.update();
+  }
+
+  openPause() {
+    input.reset();
+    this.scene.launch('Pause', { from: this.scene.key });
+    this.scene.pause();
   }
 
   hitstop(sec: number) { this.hitstopEnd = Math.max(this.hitstopEnd, performance.now() + sec * 1000); }
@@ -116,7 +126,7 @@ export class ArenaScene extends Phaser.Scene {
         this.hitstop(0.06);
         this.cameras.main.shake(120, 0.008);
       }
-      if (s.life <= 0 || s.img.x < -30 || s.img.x > W + 30) { s.img.destroy(); s.glow.destroy(); }
+      if (s.life <= 0 || s.img.x < -30 || s.img.x > this.worldW + 30) { s.img.destroy(); s.glow.destroy(); }
     }
     this.spells = this.spells.filter((s) => s.img.active);
   }
