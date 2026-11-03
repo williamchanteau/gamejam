@@ -18,6 +18,8 @@ export class ArenaScene extends Phaser.Scene {
   worldW = W;
   plats: { x: number; y: number; w: number }[] = ARENA.platforms;
   spawnX = 48;
+  /** Jeu figé (cinématique) : joueur et salle à l'arrêt. */
+  frozen = false;
   private spells!: Spell[];
   private hitstopEnd = 0;
   private sparkFx!: Phaser.GameObjects.Particles.ParticleEmitter;
@@ -27,6 +29,7 @@ export class ArenaScene extends Phaser.Scene {
 
   create(_data?: { retry?: boolean }) {
     this.tweens.timeScale = 1; this.time.timeScale = 1;
+    this.frozen = false;
     // Tout réinitialiser ici : restart() ne relance pas les initialiseurs de champs.
     input.reset();
     this.targets = [];
@@ -95,6 +98,7 @@ export class ArenaScene extends Phaser.Scene {
     }
     if (world.isPaused) { world.resume(); this.tweens.timeScale = 1; this.time.timeScale = 1; }
     const dt = Math.min(deltaMs / 1000, 1 / 30);
+    if (this.frozen) { this.player.body.setVelocityX(0); this.hud.update(); return; }
     this.player.update(dt);
     this.updateSpells(dt);
     this.tick(dt);

@@ -20,6 +20,8 @@ export interface BossDef {
   step?(b: Boss): void;
   roar?(b: Boss): void;
   death?(b: Boss): void;
+  /** Portrait pour l'annonceur : conteneur, origine aux pieds. */
+  portrait?(s: Phaser.Scene): Phaser.GameObjects.Container;
   patterns: PatternDef[];
 }
 type Obj = Phaser.GameObjects.Image | Phaser.GameObjects.Container;

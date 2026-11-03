@@ -8,6 +8,7 @@ import { input } from '../input';
 import { sfx } from '../audio/sfx';
 import { MORDREC } from '../bosses/mordrec';
 import { buildNave, type Room } from './rooms';
+import { announce } from '../ui/Announcer';
 
 /** Salle de boss : intro 2 s (sautée au retry), barre nommée, victoire. */
 export class BossScene extends ArenaScene {
@@ -16,6 +17,7 @@ export class BossScene extends ArenaScene {
   private won = false;
   private def: BossDef = MORDREC;
   private room!: Room;
+  private label = 'REZ-DE-CHAUSSÉE · LA NEF';
   private camX = 0;
   worldW = ARENA.bossW;
   plats = ARENA.bossPlatforms;
@@ -37,21 +39,11 @@ export class BossScene extends ArenaScene {
       this.bar.fillUp(0);
       this.boss.start(BOSS.retryDelay);
     } else {
-      this.intro();
-      this.bar.fillUp(BOSS.introTime * 0.8);
-      this.time.delayedCall(BOSS.introTime * 1000, () => this.boss.start(BOSS.pauseMin));
+      this.frozen = true;
+      this.bar.fillUp(1.6);
+      this.time.delayedCall(450, () => { this.boss.eyes('tele'); sfx.warn(); });
+      announce(this, this.def, this.label, () => { this.frozen = false; this.boss.start(BOSS.pauseMin); });
     }
-  }
-
-  private intro() {
-    const band = this.add.rectangle(0, 78, W, 46, 0x06050c, 0.75).setOrigin(0).setDepth(95).setScrollFactor(0);
-    const n = txt(this, W / 2, 80, this.def.name, COL.moonLight).setOrigin(0.5, 0).setScale(3).setDepth(96).setScrollFactor(0);
-    const t = txt(this, W / 2, 108, this.def.title, COL.ui).setOrigin(0.5, 0).setDepth(96).setScrollFactor(0);
-    const all = [band, n, t];
-    for (const o of all) o.setAlpha(0);
-    this.tweens.add({ targets: all, alpha: 1, duration: 300 });
-    this.tweens.add({ targets: all, alpha: 0, delay: BOSS.introTime * 1000 - 400, duration: 400, onComplete: () => all.forEach((o) => o.destroy()) });
-    this.time.delayedCall(500, () => { this.boss.eyes('on'); sfx.warn(); });
   }
 
   tick(dt: number) {

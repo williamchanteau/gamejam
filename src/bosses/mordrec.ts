@@ -449,6 +449,14 @@ export const MORDREC: BossDef = {
       sc.tweens.add({ targets: b.root, alpha: 0, duration: 600 });
     });
   },
+  portrait(sc) {
+    const head = sc.add.container(2, REST.headY, [
+      sc.add.image(0, 0, 'mord_head').setOrigin(0.5, 1),
+      sc.add.image(4, -12, 'glowR').setBlendMode(ADD).setScale(0.5),
+      sc.add.image(4, -12, 'mord_eyes').setTint(COL.danger),
+    ]);
+    return sc.add.container(0, 0, [sc.add.image(0, 0, 'mord_body').setOrigin(0.5, 1), head, sc.add.image(18, -44, 'mord_sword').setOrigin(0.5, 70 / 84).setAngle(-25)]);
+  },
   patterns: [
     { name: 'slash', weight: 3, phase: 0, run: (b) => slash(b) },
     { name: 'slam', weight: 2, phase: 0, run: (b) => slam(b), far: true },
