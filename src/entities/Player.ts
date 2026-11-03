@@ -21,7 +21,7 @@ export class Player {
   private jumpHeld = false; private wasGrounded = true; private lastVy = 0;
   private combo = 0; private comboT = 0; private swingHits = new Set<Target>(); private animT = 0;
   private dropUntil = 0; private squashTw?: Phaser.Tweens.Tween;
-  private capeF = 0; private capeV = 0; private capePh = 0;
+  private capeH = 0; private capeHv = 0; private capeY = 0; private capeYv = 0; private capePh = 0;
 
   constructor(private scene: ArenaScene, x: number, y: number) {
     this.zone = scene.add.zone(x, y - BH / 2, BW, BH);
@@ -245,13 +245,14 @@ export class Player {
       else if (!this.grounded) k = b.velocity.y < -30 ? 'jump' : 'fall';
       else if (Math.abs(b.velocity.x) > 22) { this.animT += dt * 10 * Math.abs(b.velocity.x) / C.runSpeed; k = 'run' + (Math.floor(this.animT) % 4); }
       else { this.animT += dt * 1.6; k = 'idle' + (Math.floor(this.animT) % 2); }
-      // Cape : ressort amorti vers un niveau tiré de la vitesse (elle continue de flotter à l'arrêt).
-      const sp = Math.abs(b.velocity.x) / C.runSpeed, vy = b.velocity.y;
-      const tgt = Math.max(-1, Math.min(4, sp * CAPE.perSpeed + vy * (vy > 0 ? CAPE.perFall : CAPE.perRise)));
-      this.capeV += ((tgt - this.capeF) * CAPE.stiff - this.capeV * CAPE.damp) * dt;
-      this.capeF += this.capeV * dt;
+      // Cape : 2 ressorts amortis (vent horizontal = vitesse, vertical = vy en l'air) → elle traîne, pend
+      // en montée, gonfle en chute, file à l'horizontale en dash et retombe avec inertie.
+      const sp = Math.abs(b.velocity.x) / C.runSpeed, vy = this.grounded ? 0 : b.velocity.y;
+      const th = Math.min(5, sp * CAPE.perSpeed), tv = Math.max(-2, Math.min(2, vy * CAPE.perV));
+      this.capeHv += ((th - this.capeH) * CAPE.stiff - this.capeHv * CAPE.damp) * dt; this.capeH += this.capeHv * dt;
+      this.capeYv += ((tv - this.capeY) * CAPE.stiff - this.capeYv * CAPE.damp) * dt; this.capeY += this.capeYv * dt;
       this.capePh += dt * (CAPE.phIdle + Math.min(1.5, sp) * CAPE.phRun);
-      s.setTexture(capeTex(k, this.capeF, this.capePh));
+      s.setTexture(capeTex(k, this.capeH, this.capeY, this.capePh));
       s.setAlpha(this.invuln > 0 && Math.floor(this.invuln * 16) % 2 ? 0.35 : 1);
     }
   }

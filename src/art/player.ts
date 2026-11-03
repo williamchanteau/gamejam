@@ -42,24 +42,34 @@ function px(c: CanvasRenderingContext2D, col: string, x: number, y: number, w = 
   c.fillStyle = col; c.fillRect(x, y, w, h);
 }
 
-// Cape au vent : textures précalculées par niveau (-1 plaquée en montée … 4 à pleine vitesse / chute)
-// et phase d'ondulation ; le joueur choisit via capeTex(). Marge OX de chaque côté (corps centré, flipX).
-const OX = 8, TW = 24 + OX * 2;
-const CAPE_POSES = ['idle0', 'idle1', 'run0', 'run1', 'run2', 'run3', 'jump', 'fall'];
-const CAPE_LV = [-1, 0, 1, 2, 3, 4], CAPE_PH = 4;
-/** Réglages du ressort de cape (niveau visé = vitesse × perSpeed + vy × perFall/perRise). */
-export const CAPE = { perSpeed: 3, perFall: 0.006, perRise: 0.004, stiff: 70, damp: 7, phIdle: 1.6, phRun: 9 };
-type Cape = { flare: number; lift: number; ph: number; hem: number; amp: number };
+// Cape au vent : textures précalculées par vent horizontal h (-1 plaquée … 3 course … 5 dash),
+// vent vertical v (en l'air : -2 montée = pend vers le bas … 2 chute = gonfle vers le haut) et phase
+// d'ondulation ; le joueur choisit via capeTex(). Marge OX de chaque côté (corps centré, flipX).
+const OX = 10, TW = 24 + OX * 2;
+const CAPE_POSES = ['idle0', 'idle1', 'run0', 'run1', 'run2', 'run3', 'jump', 'fall', 'dash'], AIR = ['jump', 'fall'];
+const CAPE_H = [-1, 0, 1, 2, 3, 4, 5], CAPE_V = [-2, -1, 0, 1, 2], CAPE_PH = 4;
+/** Réglages des ressorts de cape (h visé = vitesse/runSpeed × perSpeed, v visé = vy × perV en l'air). */
+export const CAPE = { perSpeed: 3, perV: 0.005, stiff: 70, damp: 7, phIdle: 1.6, phRun: 9 };
+type Cape = { flare: number; lift: number; ph: number; hem: number; amp: number; rows: number; sq: number };
+const clamp = (x: number, a: number, b: number) => Math.max(a, Math.min(b, Math.round(x)));
 
-export function capeTex(k: string, f: number, ph: number) {
+export function capeTex(k: string, h: number, v: number, ph: number) {
   if (!CAPE_POSES.includes(k)) return 'p_' + k;
-  const lv = Math.max(-1, Math.min(4, Math.round(f)));
-  return `p_${k}_${lv}_${Math.floor(ph) % CAPE_PH}`;
+  return `p_${k}_${clamp(h, -1, 5)}_${AIR.includes(k) ? clamp(v, -2, 2) : 0}_${Math.floor(ph) % CAPE_PH}`;
+}
+
+function capeOf(h: number, v: number, ph: number): Cape {
+  const u = Math.max(0, h), up = Math.max(0, -v), dn = Math.max(0, v);
+  return {
+    // lift ≤ 1,9 : au-delà, deux pixels voisins d'une rangée s'écartent (cape en filaments).
+    flare: h - up * 0.75 + dn * 0.6, lift: Math.min(1.9, u * 0.35 + dn * 0.5), ph: (ph * Math.PI) / 2, hem: ph,
+    amp: 0.8 + u * 0.35 + dn * 0.4, rows: 21 + Math.round(up * 1.5), sq: 1 - dn * 0.12, // chute : remonte
+  };
 }
 
 function drawPlayer(c: CanvasRenderingContext2D, p: Pose, cape?: Cape) {
   c.save(); c.translate(OX, 0);
-  const cp = cape ?? { flare: p.flare, lift: 0, ph: p.hem * 2, hem: p.hem, amp: 0.8 }, minX = cape ? 1 - OX : 1;
+  const cp = cape ?? { flare: p.flare, lift: 0, ph: p.hem * 2, hem: p.hem, amp: 0.8, rows: 21, sq: 1 }, minX = cape ? 1 - OX : 1;
   // Jambes + bottes.
   for (const [x, y, h] of p.legs) {
     px(c, '#1a1830', x, y, 3, h);
@@ -73,7 +83,7 @@ function drawPlayer(c: CanvasRenderingContext2D, p: Pose, cape?: Cape) {
   px(c, '#241c30', 9 + L, 22, 8, 2);
   px(c, '#9aa6c8', 14 + L, 22, 2, 2);
   // Grande cape : accrochée aux épaules, s'évase vers l'arrière, doublure sarcelle, bas en lambeaux.
-  const rows = 21;
+  const rows = cp.rows;
   for (let i = 0; i < rows; i++) {
     const t = i / (rows - 1);
     const front = Math.round(14 - t * 4 + L * (1 - t));
@@ -89,7 +99,7 @@ function drawPlayer(c: CanvasRenderingContext2D, p: Pose, cape?: Cape) {
       else if (Math.abs(u - 0.35 - t * 0.1) < 0.08 && i > 3) col = P.d; // plis
       else if (Math.abs(u - 0.68) < 0.07 && i > 7) col = P.m;
       else if (u < 0.2) col = P.m;
-      px(c, col, x, 12 + i - Math.round(cp.lift * t * Math.max(0, front - x) * 0.5)); // l'arrière se soulève
+      px(c, col, x, 12 + Math.round(i * cp.sq) - Math.round(cp.lift * t * Math.max(0, front - x) * 0.5)); // l'arrière se soulève
     }
   }
   // Pèlerine (petite cape d'épaules) par-dessus.
@@ -110,8 +120,6 @@ function drawPlayer(c: CanvasRenderingContext2D, p: Pose, cape?: Cape) {
 
 export function makePlayerArt(scene: Phaser.Scene) {
   for (const k in POSES) canvasTex(scene, 'p_' + k, TW, 36, (c) => drawPlayer(c, POSES[k]), OUTLINE);
-  for (const k of CAPE_POSES) for (const lv of CAPE_LV) for (let h = 0; h < CAPE_PH; h++) {
-    const u = Math.max(0, lv), cape = { flare: lv, lift: u * 0.35, ph: (h * Math.PI) / 2, hem: h, amp: 0.8 + u * 0.35 };
-    canvasTex(scene, `p_${k}_${lv}_${h}`, TW, 36, (c) => drawPlayer(c, POSES[k], cape), OUTLINE);
-  }
+  for (const k of CAPE_POSES) for (const h of CAPE_H) for (const v of AIR.includes(k) ? CAPE_V : [0])
+    for (let ph = 0; ph < CAPE_PH; ph++) canvasTex(scene, `p_${k}_${h}_${v}_${ph}`, TW, 36, (c) => drawPlayer(c, POSES[k], capeOf(h, v, ph)), OUTLINE);
 }
