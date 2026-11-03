@@ -13,7 +13,7 @@ export class Menu {
   private texts: Phaser.GameObjects.BitmapText[];
   private cursor: Phaser.GameObjects.Image;
 
-  constructor(private scene: Phaser.Scene, x: number, y: number, private items: Item[], private scale = 2, gap = 20) {
+  constructor(private scene: Phaser.Scene, x: number, y: number, private items: Item[], private scale = 2, gap = 24) {
     this.texts = items.map((it, k) => {
       const t = txt(scene, x, y + k * gap, it.label).setOrigin(0.5, 0).setScale(scale).setDepth(50).setInteractive({ useHandCursor: true });
       t.on('pointerover', () => this.enabled && this.select(k));

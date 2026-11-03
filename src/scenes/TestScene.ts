@@ -56,22 +56,22 @@ export class TestScene extends ArenaScene {
 
   create() {
     super.create();
-    this.dummy = new Dummy(this, 405, this.floorY);
+    this.dummy = new Dummy(this, 452, this.floorY);
     this.targets.push(this.dummy);
     this.torches = [168, 312].map((x) => ({
       img: this.add.image(x, 118, 'torch0').setDepth(2),
       glow: this.add.image(x, 112, 'glowO').setBlendMode(Phaser.BlendModes.ADD).setScale(1.6).setAlpha(0.5).setDepth(2),
     }));
-    this.panel(62, 'S/↓ : DESCENDRE\nD\'UNE PLATEFORME');
-    this.panel(186, 'J/W : COMBO 3 COUPS\nCHAQUE COUP : +1 MANA');
-    this.panel(310, 'MANA PLEINE : L/C\nK/X : DASH = ESQUIVE');
-    txt(this, W / 2, ARENA.floorY + 16, "SALLE D'ENTRAÎNEMENT · FRAPPE L'ÉPOUVANTAIL, ESQUIVE SES ORBES · ÉCHAP : MENU", COL.ui)
+    this.panel(74, 'S/↓ : DESCENDRE\nD\'UNE PLATEFORME');
+    this.panel(220, 'J/W : COMBO 3 COUPS\nCHAQUE COUP : +1 MANA');
+    this.panel(366, 'MANA PLEINE : L/C\nK/X : DASH = ESQUIVE');
+    txt(this, W / 2, ARENA.floorY + 16, "ENTRAÎNEMENT · FRAPPE L'ÉPOUVANTAIL · ESQUIVE SES ORBES · ÉCHAP : MENU", COL.ui)
       .setOrigin(0.5, 0).setDepth(6);
   }
 
   /** Plaque de pierre avec consigne, accrochée au mur. */
   private panel(cx: number, text: string) {
-    const w = 112, h = 26, x = cx - w / 2, y = 190;
+    const w = 140, h = 30, x = cx - w / 2, y = 188;
     const g = this.add.graphics().setDepth(3);
     g.fillStyle(0x06050c).fillRect(x - 1, y - 1, w + 2, h + 2);
     g.fillStyle(0x161428).fillRect(x, y, w, h);
@@ -79,7 +79,7 @@ export class TestScene extends ArenaScene {
     g.fillStyle(0x0d0b18).fillRect(x, y + h - 1, w, 1).fillRect(x + w - 1, y, 1, h);
     g.fillStyle(0x7a86ac);
     for (const [rx, ry] of [[2, 2], [w - 3, 2], [2, h - 3], [w - 3, h - 3]]) g.fillRect(x + rx, y + ry, 1, 1);
-    txt(this, cx, y + 1, text, COL.ui).setOrigin(0.5, 0).setCenterAlign().setDepth(4);
+    txt(this, cx, y + 2, text, COL.ui).setOrigin(0.5, 0).setCenterAlign().setDepth(4);
   }
 
   tick(dt: number) {

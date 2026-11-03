@@ -49,39 +49,45 @@ function drawPlayer(c: CanvasRenderingContext2D, p: Pose) {
     px(c, '#2c2848', x, y + h - 3, 3, 3);
     px(c, '#4a4570', x + 2, y + h - 3, 1, 1);
   }
-  // Cape : trapèze qui s'évase, plis, liseré clair côté lune, ourlet effiloché.
-  const rows = 19;
+  // Tunique + ceinture (visibles devant, la cape flotte derrière).
+  const L = p.lean;
+  px(c, '#221e38', 9 + L, 13, 8, 17);
+  px(c, '#2e2848', 14 + L, 14, 3, 15);
+  px(c, '#241c30', 9 + L, 22, 8, 2);
+  px(c, '#9aa6c8', 14 + L, 22, 2, 2);
+  // Grande cape : accrochée aux épaules, s'évase vers l'arrière, doublure sarcelle, bas en lambeaux.
+  const rows = 21;
   for (let i = 0; i < rows; i++) {
-    const w = 10 + Math.round((i * (6 + p.flare)) / (rows - 1));
-    const left = 11 - Math.ceil(w / 2) + Math.round(p.lean * (1 - i / (rows - 1)));
-    const right = left + w - 1;
-    for (let x = left; x <= right; x++) {
-      if (i === rows - 1 && (x + p.hem) % 3 === 0) continue;
-      const u = (x - left) / (w - 1);
+    const t = i / (rows - 1);
+    const front = Math.round(14 - t * 4 + L * (1 - t));
+    const back = Math.max(1, Math.round(8 - t * (6 + p.flare * 1.5) + Math.sin(i * 0.6 + p.hem * 2) * 0.8 * t));
+    for (let x = back; x <= front; x++) {
+      if (i >= rows - 3 && ((x * 3 + p.hem * 2) % 5) < i - (rows - 4)) continue; // lambeaux en V
+      const u = (x - back) / Math.max(1, front - back);
       let col = P.c;
-      if (x === left) col = P.d;
-      else if (u < 0.25) col = P.m;
-      else if (x === right) col = P.l;
-      else if (x === right - 1) col = P.s;
-      if (i >= 4 && x === left + Math.floor(w * 0.4)) col = P.d; // pli
-      if (i >= 9 && x === left + Math.floor(w * 0.68)) col = P.m;
-      if (i < 3 && x > left && x < right) col = i === 0 ? P.s : col === P.m ? P.c : P.s; // épaules
-      if (i >= rows - 2) col = col === P.l ? P.s : P.m;
-      px(c, col, x, 12 + i, 1, 1);
+      if (x === back) col = P.d;
+      else if (x <= back + 1 && t > 0.35) col = t > 0.6 ? '#2f6a7a' : '#1f4a5a'; // doublure
+      else if (x === front) col = P.l;
+      else if (x === front - 1) col = P.s;
+      else if (Math.abs(u - 0.35 - t * 0.1) < 0.08 && i > 3) col = P.d; // plis
+      else if (Math.abs(u - 0.68) < 0.07 && i > 7) col = P.m;
+      else if (u < 0.2) col = P.m;
+      px(c, col, x, 12 + i);
     }
   }
-  // Ceinture + boucle argentée sur le devant.
-  const bx = 13 + p.lean;
-  px(c, '#241c30', bx - 1, 22, 5, 2);
-  px(c, '#9aa6c8', bx + 1, 22, 2, 2);
+  // Pèlerine (petite cape d'épaules) par-dessus.
+  for (let i = 0; i < 5; i++) {
+    const l = 6 - Math.floor(i / 2) + L, r = 16 + L;
+    for (let x = l; x <= r; x++) px(c, i === 4 ? P.d : x === r ? P.l : x === l ? P.d : i === 0 ? P.s : P.c, x, 12 + i);
+  }
   if (p.arm) {
     // Bras tendu + lame courte.
-    px(c, P.c, 15 + p.lean, 16, 4, 3);
-    px(c, P.s, 15 + p.lean, 16, 4, 1);
-    px(c, P.h, 19 + p.lean, 16, 2, 3);
-    px(c, '#a6fcff', 21 + p.lean, 15, 1, 3);
+    px(c, P.c, 15 + L, 16, 4, 3);
+    px(c, P.s, 15 + L, 16, 4, 1);
+    px(c, P.h, 19 + L, 16, 2, 3);
+    px(c, '#a6fcff', 21 + L, 15, 1, 3);
   }
-  drawMap(c, HOOD, P, 4 + p.lean, 1 + p.bob);
+  drawMap(c, HOOD, P, 4 + L, 1 + p.bob);
 }
 
 export function makePlayerArt(scene: Phaser.Scene) {

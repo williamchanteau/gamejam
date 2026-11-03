@@ -1,28 +1,28 @@
 import Phaser from 'phaser';
 import { W, H } from '../config';
 import { canvasTex, addOutline } from './pixel';
-import { G } from './font';
+import { glyphRow } from './font';
 import { hash } from './room';
 
 type Ctx = CanvasRenderingContext2D;
 const px = (c: Ctx, col: string, x: number, y: number, w = 1, h = 1) => { c.fillStyle = col; c.fillRect(x, y, w, h); };
 
-/** Logo : police 3×5 agrandie, dégradé cendre/lune, biseau, braise dessous. */
+/** Logo : police 5×7 agrandie, dégradé cendre/lune, biseau, braise dessous. */
 function makeLogo(scene: Phaser.Scene, key: string, text: string, S: number) {
-  const cols = text.length * 4 - 1, w = cols * S + 4, h = 5 * S + 6;
+  const cols = text.length * 6 - 1, w = cols * S + 4, h = 7 * S + 6;
   const on = (gx: number, gy: number) => {
-    const ch = Math.floor(gx / 4), b = gx % 4;
-    if (gx < 0 || gy < 0 || gy > 4 || ch >= text.length || b === 3) return false;
-    return (+G[text[ch]][gy] & (4 >> b)) > 0;
+    const ch = Math.floor(gx / 6), b = gx % 6;
+    if (gx < 0 || gy < 0 || gy > 6 || ch >= text.length || b === 5) return false;
+    return (glyphRow(text[ch], gy) & (16 >> b)) > 0;
   };
   const grad = ['#ffffff', '#ece6ff', '#cfcdf2', '#aeb0e0', '#8a8ec8', '#6a6eaa'];
   canvasTex(scene, key, w, h, (c) => {
-    for (let gy = 0; gy < 5; gy++)
+    for (let gy = 0; gy < 7; gy++)
       for (let gx = 0; gx < cols; gx++) {
         if (!on(gx, gy)) continue;
         const x0 = 2 + gx * S, y0 = 2 + gy * S;
         for (let y = 0; y < S; y++) {
-          const t = (gy * S + y) / (5 * S);
+          const t = (gy * S + y) / (7 * S);
           px(c, grad[Math.min(grad.length - 1, Math.floor(t * grad.length))], x0, y0 + y, S, 1);
         }
         if (!on(gx, gy - 1)) px(c, '#ffffff', x0, y0, S, 1);
@@ -35,7 +35,7 @@ function makeLogo(scene: Phaser.Scene, key: string, text: string, S: number) {
 }
 
 export function makeTitleArt(scene: Phaser.Scene) {
-  makeLogo(scene, 'logo', 'ASHENBORN', 6);
+  makeLogo(scene, 'logo', 'ASHENBORN', 4);
   canvasTex(scene, 'bg_title', W, H, (c) => {
     // Ciel tramé + étoiles.
     for (let y = 0; y < H; y++) {
