@@ -103,15 +103,17 @@ export class BossScene extends ArenaScene {
     });
   }
 
-  /** Montée : le joueur s'engouffre dans l'escalier, fondu, écran d'étage. */
+  /** Montée : le joueur gravit les premières marches et s'enfonce dans l'ombre de la tour, fondu, écran d'étage. */
   private climb() {
     this.climbing = true;
     this.frozen = true;
-    const p = this.player.spr;
-    this.tweens.add({ targets: p, x: STAIRS.x + 18, y: p.y - 24, alpha: 0, duration: 500, ease: 'Quad.in' });
-    this.tweens.add({ targets: this.player.scarf, alpha: 0, duration: 300 });
-    this.time.delayedCall(350, () => {
-      this.cameras.main.fadeOut(350, 6, 5, 12);
+    const p = this.player, spr = p.spr;
+    p.walkTo(STAIRS.x + 16, spr.y - 30, 700, {
+      to: { alpha: 0, scale: 0.88 },
+      each: (k) => { const c = Math.round(255 - k * 180); spr.setTint(Phaser.Display.Color.GetColor(c, c * 0.85, c * 0.75)); },
+    });
+    this.time.delayedCall(450, () => {
+      this.cameras.main.fadeOut(400, 6, 5, 12);
       this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Transit', { floor: this.floor + 1 }));
     });
   }

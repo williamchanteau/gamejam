@@ -16,7 +16,6 @@ export class OutsideScene extends ArenaScene {
   private doors: Phaser.GameObjects.Image[] = [];
   private flick: { o: Phaser.GameObjects.Image; a: number; s: number }[] = [];
   private torches: Phaser.GameObjects.Image[] = [];
-  private flickT = 0;
 
   constructor() { super('Outside'); }
 
@@ -43,7 +42,11 @@ export class OutsideScene extends ArenaScene {
     this.spawnX = data?.fromTuto ? PORTAL.x + 16 : 190; // avant super.create (le joueur y est construit)
     super.create(data);
     this.entering = false;
-    this.flickT = 0;
+    // Flammes sur l'horloge de la scène : elles vacillent aussi pendant les cinématiques (salle figée).
+    this.time.addEvent({ delay: 110, loop: true, callback: () => {
+      for (const t of this.torches) t.setTexture(Math.random() < 0.5 ? 'torch0' : 'torch1');
+      for (const f of this.flick) f.o.setAlpha(f.a * (0.8 + Math.random() * 0.4)).setScale(f.s * (0.95 + Math.random() * 0.1));
+    } });
     this.doors = [
       this.add.image(DOOR.x - 22, this.floorY, 'door').setOrigin(0, 1).setDepth(3),
       this.add.image(DOOR.x + 22, this.floorY, 'door').setOrigin(1, 1).setDepth(3).setFlipX(true),
@@ -60,40 +63,55 @@ export class OutsideScene extends ArenaScene {
     else {
       const t = txt(this, 130, 60, 'LE CHÂTEAU', COL.ui).setOrigin(0.5, 0).setScale(2).setDepth(20).setAlpha(0);
       this.tweens.add({ targets: t, alpha: 1, duration: 600, yoyo: true, hold: 1400 });
+      this.cameras.main.fadeIn(300);
     }
-    this.cameras.main.fadeIn(300);
   }
 
-  tick(dt: number) {
-    this.flickT -= dt;
-    if (this.flickT <= 0) {
-      this.flickT = 0.08 + Math.random() * 0.08;
-      for (const t of this.torches) t.setTexture(Math.random() < 0.5 ? 'torch0' : 'torch1');
-      for (const f of this.flick) f.o.setAlpha(f.a * (0.8 + Math.random() * 0.4)).setScale(f.s * (0.95 + Math.random() * 0.1));
-    }
-    this.portal.update(dt);
+  tick() {
     if (this.entering) return;
     if (this.player.x > DOOR.x - 30) this.enter();
     else if (this.player.x < PORTAL.x + 6) { this.entering = true; this.portal.swallow(() => this.scene.start('Test')); }
   }
 
+  /** Les battants pivotent vers l'intérieur, la lumière se déverse, le joueur entre dans l'ombre, la porte se referme. */
   private enter() {
     this.entering = true;
     this.frozen = true;
-    this.player.safe = true;
-    sfx.rumble();
-    // Les battants s'ouvrent, la lumière chaude se déverse, le joueur entre.
-    this.tweens.add({ targets: this.doors, scaleX: 0.15, duration: 450, ease: 'Quad.inOut' });
-    const light = this.add.image(DOOR.x, this.floorY - 20, 'glowO').setBlendMode(Phaser.BlendModes.ADD).setScale(0.5).setAlpha(0).setDepth(4);
-    this.tweens.add({ targets: light, scale: 2.4, alpha: 0.8, duration: 450 });
-    this.time.delayedCall(350, () => {
-      const p = this.player.spr;
-      this.tweens.add({ targets: p, x: DOOR.x, alpha: 0, duration: 450, ease: 'Quad.in' });
-      this.tweens.add({ targets: this.player.scarf, alpha: 0, duration: 300 });
+    const p = this.player, spr = p.spr, fy = this.floorY;
+    p.safe = true;
+    spr.setTexture('p_idle0').setFlipX(false);
+    sfx.rumble(); sfx.scrape();
+    const swing = (open: boolean, ms: number, delay = 0) => this.tweens.addCounter({
+      from: open ? 0 : 1, to: open ? 1 : 0, duration: ms, delay, ease: open ? 'Sine.inOut' : 'Quad.in',
+      onUpdate: (tw) => {
+        const k = tw.getValue() ?? 0, sh = Math.round(255 - k * 150);
+        for (const d of this.doors) d.setScale(1 - k * 0.86, 1).setTint(Phaser.Display.Color.GetColor(sh, sh * 0.92, sh * 0.85));
+      },
     });
-    this.time.delayedCall(800, () => {
-      this.cameras.main.fadeOut(350, 6, 5, 12);
-      this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Boss1'));
-    });
+    swing(true, 520);
+    // Lumière chaude : halo dans l'embrasure + éventail au sol vers le joueur.
+    const light = this.add.image(DOOR.x, fy - 20, 'glowO').setBlendMode(Phaser.BlendModes.ADD).setScale(0.5).setAlpha(0).setDepth(4);
+    const fan = this.add.graphics().setBlendMode(Phaser.BlendModes.ADD).setDepth(6).setAlpha(0);
+    fan.fillStyle(0xff9a40, 0.35).fillPoints([{ x: DOOR.x - 20, y: fy }, { x: DOOR.x + 20, y: fy }, { x: DOOR.x + 34, y: fy + 14 }, { x: DOOR.x - 52, y: fy + 14 }] as Phaser.Math.Vector2[], true);
+    this.tweens.add({ targets: light, scale: 2.4, alpha: 0.8, duration: 520 });
+    this.tweens.add({ targets: fan, alpha: 1, duration: 520 });
+    // Il marche jusqu'au seuil, puis s'enfonce dans la profondeur (rapetisse, s'assombrit, disparaît).
+    this.time.delayedCall(380, () => p.walkTo(DOOR.x, spr.y, Math.abs(DOOR.x - spr.x) * 11, {}, () =>
+      p.walkTo(DOOR.x, spr.y - 4, 520, {
+        to: { scale: 0.78, alpha: 0 },
+        each: (k) => { const c = Math.round(255 - k * 190); spr.setTint(Phaser.Display.Color.GetColor(c, c * 0.85, c * 0.75)); },
+      }, () => {
+        swing(false, 260);
+        this.tweens.add({ targets: [light, fan], alpha: 0, duration: 260 });
+        this.time.delayedCall(260, () => {
+          sfx.thud(); sfx.clank();
+          this.cameras.main.shake(140, 0.005);
+          this.puffs(DOOR.x, fy, 4);
+        });
+        this.time.delayedCall(640, () => {
+          this.cameras.main.fadeOut(380, 6, 5, 12);
+          this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Boss1'));
+        });
+      })));
   }
 }

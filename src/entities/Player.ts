@@ -258,7 +258,21 @@ export class Player {
     });
   }
 
-  private land() {
+  /** Cinématique (salle figée) : le sprite avance jusqu'à (x, y) en courant ; `to` = autres propriétés (alpha, scale…), `each(p)` à chaque frame. */
+  walkTo(x: number, y: number, ms: number, o: { to?: object; each?: (p: number) => void; ease?: string } = {}, done?: () => void) {
+    const s = this.spr, sc = this.scene, t0 = sc.time.now;
+    if (Math.abs(x - s.x) > 1) { this.facing = Math.sign(x - s.x); s.setFlipX(this.facing < 0); }
+    sc.tweens.add({
+      targets: s, x, y, ...o.to, duration: ms, ease: o.ease ?? 'Linear', onComplete: () => done?.(),
+      onUpdate: (tw: Phaser.Tweens.Tween) => {
+        const f = ((sc.time.now - t0) / 1000) * 9;
+        s.setTexture(capeTex('run' + (Math.floor(f) % 4), 2, 0, f));
+        o.each?.(tw.progress);
+      },
+    });
+  }
+
+  land() {
     this.squash(1.3, 0.75, 120);
     this.scene.dust(this.x, this.y + BH / 2);
     sfx.land();

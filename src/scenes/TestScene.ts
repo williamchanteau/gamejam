@@ -68,7 +68,7 @@ export class TestScene extends ArenaScene {
     // Portail de retour au château, au bord gauche.
     this.portal = new Portal(this, 18, this.floorY);
     if (!data?.retry) this.portal.spit();
-    this.cameras.main.fadeIn(300);
+    else this.cameras.main.fadeIn(300);
     this.dummy = new Dummy(this, 452, this.floorY);
     this.targets.push(this.dummy);
     this.torches = [168, 312].map((x) => ({
@@ -117,7 +117,6 @@ export class TestScene extends ArenaScene {
   tick(dt: number) {
     if (this.layout !== getLayout()) { this.scene.restart({ retry: true }); return; } // panneaux à réécrire
     this.dummy.update(dt);
-    this.portal.update(dt);
     if (!this.leaving && this.player.x < 24 && input.isDown('left')) { // pas de sortie sur un recul
       this.leaving = true;
       this.portal.swallow(() => this.scene.start('Outside', { fromTuto: true }));
