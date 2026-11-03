@@ -35,6 +35,7 @@ export class ViewerScene extends ArenaScene {
   private anim!: Anim;
   private acc = 0; private vt = 0; private tweenMs = 0; private eye = 'off'; private camInit = false;
   private rec: Seg['k'][] = [];
+  private teles: typeof V.teles = [];
   private keys = new Set<string>();
 
   constructor() { super('Viewer'); }
@@ -60,7 +61,7 @@ export class ViewerScene extends ArenaScene {
     for (const o of this.children.list as unknown as { scrollFactorX: number; setVisible(v: boolean): void }[]) if (o.scrollFactorX === 0) o.setVisible(false);
     this.cameras.main.removeBounds();
     this.dbg = this.add.graphics().setDepth(1000);
-    this.boss = null; this.endT = -1; this.acc = 0; this.vt = 0; this.rec = []; this.camInit = false;
+    this.boss = null; this.endT = -1; this.acc = 0; this.vt = 0; this.rec = []; this.teles = []; this.camInit = false;
     this.player.god = true;
     const e = ENTITIES[V.ent];
     this.anim = animsOf(e)[V.anim] ?? animsOf(e)[0];
@@ -69,6 +70,8 @@ export class ViewerScene extends ArenaScene {
       const eyes = b.eyes.bind(b);
       this.eye = 'off';
       b.eyes = (m) => { this.eye = m; eyes(m); };
+      const tele = b.tele.bind(b);
+      b.tele = (x) => { const got = tele(x); this.teles.push({ f: V.frame, req: x / b.speed, got }); return got; };
       if (V.phase === 2 && !this.anim.p1) { b.phase = 2; b.speed = BOSS.p2Speed; }
     }
     for (let i = 0; i < 3; i++) this.step(false); // posé au sol avant l'animation
@@ -79,6 +82,7 @@ export class ViewerScene extends ArenaScene {
       // Pré-simulation : durée totale + frise télégraphe / actif / récupération.
       while (V.frame < MAX && !this.anim.done(this, V.frame * STEP)) this.step(true);
       V.total = V.frame;
+      V.teles = this.teles;
       V.segs = [];
       this.rec.forEach((k, i) => { const s = V.segs[V.segs.length - 1]; if (s?.k === k) s.n++; else V.segs.push({ k, from: i, n: 1 }); });
       silent = false;
@@ -111,8 +115,9 @@ export class ViewerScene extends ArenaScene {
     w.postUpdate();
     if (!count) return;
     V.frame++;
-    const b = this.boss;
-    this.rec.push(!b ? 'n' : b.hitbox || this.hazards.countActive(true) > 0 ? 'a' : this.eye === 'tele' ? 't' : this.eye === 'off' ? 'r' : 'n');
+    // Télégraphe = fenêtre réellement accordée par b.tele() (pas la couleur des yeux).
+    const b = this.boss, i = V.frame - 1, tele = this.teles.some((t) => i >= t.f && i < t.f + Math.round(t.got * 60));
+    this.rec.push(!b ? 'n' : b.hitbox || this.hazards.countActive(true) > 0 ? 'a' : tele ? 't' : this.eye === 'off' ? 'r' : 'n');
   }
 
   /** Touche maintenue simulée (passe par le vrai module input). */

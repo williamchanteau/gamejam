@@ -75,11 +75,15 @@ export function renderPanel() {
   $('segs').innerHTML = V.segs.filter((s) => s.n > 1).map((s) => `<span style="color:${COLS[s.k]}">■</span> ${NAMES[s.k]} ${fmt(s.n)} s`).join('<br>');
   // Télégraphe trop court : seulement ceux suivis d'une phase active.
   const min = V.phase === 2 ? BOSS.teleMinP2 : BOSS.teleMinP1, warn: string[] = [];
-  if (anim?.pattern)
+  const sec = (x: number) => x.toFixed(2).replace('.', ',');
+  if (anim?.pattern) {
+    for (const t of V.teles) if (t.req < min - 1e-6) warn.push(`⚠ TÉLÉGRAPHE DEMANDÉ ${sec(t.req)} s < ${sec(min)} s (P${V.phase}) — RALLONGÉ PAR LE MOTEUR`);
+    // Télégraphe mesuré trop court (pattern qui n'utiliserait pas b.tele()).
     V.segs.forEach((s, i) => {
       if (s.k === 't' && V.segs[i + 1]?.k === 'a' && s.n < Math.round(min * 60) - 1)
-        warn.push(`⚠ TÉLÉGRAPHE ${fmt(s.n)} s < ${min.toFixed(2).replace('.', ',')} s (PHASE ${V.phase})`);
+        warn.push(`⚠ TÉLÉGRAPHE MESURÉ ${fmt(s.n)} s < ${sec(min)} s (P${V.phase})`);
     });
+  }
   $('warn').innerHTML = warn.join('<br>');
 }
 

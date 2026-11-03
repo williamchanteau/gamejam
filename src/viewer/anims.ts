@@ -15,6 +15,8 @@ export type Seg = { k: 't' | 'a' | 'r' | 'n'; from: number; n: number };
 export const V = {
   ent: 0, anim: 0, phase: 1 as 1 | 2, speed: 1, zoom: 2, loop: true, paused: false, follow: true, arena: false, sound: false,
   show: { hit: true, hurt: true, pivot: false }, frame: 0, total: 0, segs: [] as Seg[],
+  /** Appels à b.tele() : image, durée demandée (÷ vitesse), durée obtenue (bornée au minimum). */
+  teles: [] as { f: number; req: number; got: number }[],
 };
 
 type PP = { swing(i: number): void; dash(d: number): void; jump(v: number): void; die(): void; state: string; stateT: number; combo: number };
