@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { BossScene } from './BossScene';
-import { NOCTIS, NIGHT, lampPos } from '../bosses/noctis';
+import { NOCTIS, NIGHT } from '../bosses/noctis';
 import { W, H } from '../config';
 import { sfx } from '../audio/sfx';
 
@@ -70,8 +70,6 @@ export class DarkBossScene extends BossScene {
     // Un masque percé laisse voir le joueur et les zones éclairées, HUD au-dessus.
     const holes = [ { x: this.player.x, y: this.player.rect().centerY, r: 58, color: 0x8fe8ff } ];
     const flicker = (x: number) => 1 + Math.sin(this.time.now * 0.009 + x) * 0.045 + Math.sin(this.time.now * 0.023 + x * 2) * 0.025;
-    // La lanterne de Noctis : flamme spectrale qui le révèle dans le noir.
-    if (this.boss.state !== 'dead') { const lp = lampPos(this.boss); holes.push({ x: lp.x, y: lp.y, r: 56 * flicker(lp.x), color: 0xb89cff }); }
     for (const l of this.lanterns) {
       this.ink.lineStyle(1, 0x756851).lineBetween(l.x, 30, l.x, l.y - 13);
       this.ink.fillStyle(0x73604a).fillRect(l.x - 9, l.y - 13, 18, 26);
@@ -101,7 +99,7 @@ export class DarkBossScene extends BossScene {
         this.aura.fillStyle(0xffb43c, 0.18 * flicker(l.x)).fillEllipse(l.x, this.floorY + 4, 155, 13);
         // Le corps du boss se révèle lorsqu'il brûle.
         if (Math.abs(this.boss.x - l.x) < NIGHT.fireWidth / 2 + 30) {
-          this.aura.fillStyle(0xffbc55, 0.14).fillTriangle(this.boss.x - 35, this.floorY, this.boss.x, this.floorY - 124, this.boss.x + 35, this.floorY);
+          this.aura.fillStyle(0xffbc55, 0.14).fillTriangle(this.boss.x - 35, this.floorY, this.boss.x, this.floorY - 94, this.boss.x + 35, this.floorY);
         }
       }
     }

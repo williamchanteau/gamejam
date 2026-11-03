@@ -12,8 +12,6 @@ export interface BossDef {
   title: string;
   hp: number;
   fireOnly?: boolean;
-  /** Pause entre patterns (s, avant ×vitesse), sinon BOSS.idlePause. */
-  pause?: [number, number];
   hurt: { w: number; h: number };
   /** Crée les pièces (parts) dans b.root, pose de repos incluse. */
   build(b: Boss): void;
@@ -135,7 +133,7 @@ export class Boss implements Target {
   private endPattern() {
     this.cleanup();
     this.state = 'idle';
-    const [a, b] = this.def.pause ?? BOSS.idlePause;
+    const [a, b] = BOSS.idlePause;
     this.waitT = Math.max(BOSS.pauseMin, this.t(Phaser.Math.FloatBetween(a, b)));
   }
 
