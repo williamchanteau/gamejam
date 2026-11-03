@@ -183,7 +183,7 @@ function* epreuve(b: Boss) {
   L.beginTrial(order);
   yield b.t(0.3);
   for (let i = 0; i < order.length; i++) {
-    L.ignite(order[i], 99); L.charge(order[i], true); L.addTag(order[i], i);
+    L.ignite(order[i], 99); L.addTag(order[i], i);
     sfx.ting(); sc.cameras.main.shake(70, 0.003);
     yield b.tele(E.show);
   }

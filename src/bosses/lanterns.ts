@@ -26,6 +26,7 @@ export interface Lamp {
 interface Trial { order: Lamp[]; next: number; failed: boolean; tags: Phaser.GameObjects.BitmapText[] }
 
 const ROMAN = ['I', 'II', 'III', 'IV'];
+const TAG = 0xffc45c; // cible à frapper, pas un danger : or, jamais rouge
 
 /** La salle noire : lanternes, feux, obscurité percée de lumières. Vit avec le boss (jeu et viewer partagent ce code). */
 export class Lanterns {
@@ -98,7 +99,7 @@ export class Lanterns {
     this.trial = { order, next: 0, failed: false, tags: [] };
   }
   addTag(l: Lamp, i: number) {
-    const t = txt(this.b.scene, l.x, l.y - 18, ROMAN[i], COL.danger).setOrigin(0.5, 0).setScale(2).setDepth(80);
+    const t = txt(this.b.scene, l.x, l.y - 18, ROMAN[i], TAG).setOrigin(0.5, 0).setScale(2).setDepth(80);
     this.trial?.tags.push(t);
     return t;
   }
@@ -115,7 +116,7 @@ export class Lanterns {
       } else {
         // Mauvais ordre : tout se rallume, il faut reprendre à zéro.
         tr.next = 0;
-        tr.order.forEach((o, i) => { o.lit = 99; this.charge(o, true); tr.tags[i]?.setTint(COL.danger); });
+        tr.order.forEach((o, i) => { o.lit = 99; tr.tags[i]?.setTint(TAG); });
         this.b.scene.cameras.main.shake(120, 0.005); sfx.crack();
       }
       return;
