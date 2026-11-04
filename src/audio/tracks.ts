@@ -202,22 +202,28 @@ const library: Track = {
 
 // ── 3. Annonce du boss : le combat part à 3,0 s (EN GARDE ! vient de s'effacer) ───────
 const announce: Track = {
-  bpm: 120, len: 3.6, pats: {}, ch: [],
+  bpm: 120, len: 5, pats: {}, ch: [],
+  // Bourdon + montée de bruit jusqu'au nom.
   once(o, t) {
-    // Bourdon + montée de bruit jusqu'au nom.
-    drone(o, 'tri', 38, t, 2.3, VOL.bass * 1.1, 0.5);
+    drone(o, 'tri', 38, t, 2.7, VOL.bass * 1.1, 0.5);
     drone(o, 'p50', 39, t, 0.72, VOL.pad * 0.7, 0.6);
     riser(o, t, 0.7, VOL.crash * 1.2);
-    // 0,70 s : le nom apparaît. Cloche + ré mineur avec le triton (sol dièse).
-    const a = t + 0.7, b = 1.6;
+  },
+};
+/** Les deux coups de l'annonce, déclenchés par ui/Announcer.ts au moment où ils se voient. */
+export const ANNOUNCE_HITS = {
+  /** Le nom apparaît : cloche + ré mineur avec le triton (sol dièse). */
+  name(o: Out, a: number) {
+    const b = 1.6;
     chipBell(o, 74, a, VOL.bell * 2.2, 2.4);
     drum(o, 'K', a); drum(o, 'C', a, 0.8);
     tone(o, 'p50', 50, a, b, VOL.pad * 1.8, { wet: 0.3 });
     tone(o, 'p25', 65, a, b, VOL.lead * 0.55, { wet: 0.3 });
     tone(o, 'p25', 69, a, b, VOL.lead * 0.55, { wet: 0.3 });
     tone(o, 'p12', 68, a, b, VOL.lead * 0.75, { wet: 0.3, vib: true });
-    // 2,30 s : « EN GARDE ! », accord sec, roulement qui lance le combat ; la queue couvre un éventuel retard.
-    const g = t + 2.3;
+  },
+  /** « EN GARDE ! » : accord sec, roulement qui lance le combat ; la queue couvre un éventuel retard. */
+  garde(o: Out, g: number) {
     drum(o, 'K', g); drum(o, 'C', g, 0.6);
     for (const m of [50, 62, 69, 77]) tone(o, m === 50 ? 'tri' : 'p25', m, g, 1.3, m === 50 ? VOL.bass : VOL.lead * 0.5, { pluck: true });
     [0.29, 0.43, 0.56].forEach((d, i) => drum(o, 'S', g + d, 0.55 + i * 0.2));

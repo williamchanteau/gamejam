@@ -1,7 +1,7 @@
 import { AUDIO } from '../config';
 import { ac, now, gain, musBus, musVerb, musLP, type Out } from './core';
 import { VOL, tone, chipBell, drum, type Duty, type DrumKind } from './chip';
-import { TRACKS, type Track, type Ch } from './tracks';
+import { TRACKS, ANNOUNCE_HITS, type Track, type Ch } from './tracks';
 
 // Séquenceur chiptune : écrit les pas un peu en avance sur l'horloge audio (donc boucles sans coupure, hors boucle de jeu).
 // Une seule piste vivante à la fois ; l'ancienne s'éteint par son propre gain.
@@ -159,7 +159,7 @@ function tick() {
   }
   if (r?.end && r.end < t + ahead) {
     if (r.then) { const n = r.then, at = Math.max(r.end, t + 0.02); fadeOut(r, 0.3); cur = start(n, 0.02, at); }
-    else if (r.end < t) { fadeOut(r, 2); cur = null; }
+    else if (r.end < t) { fadeOut(r, 1); cur = null; }
   }
 }
 setInterval(tick, 40);
@@ -193,6 +193,10 @@ export const music = {
     fadeOut(cur, 0.3);
     cur = start(name, 0.02, now() + 0.02, 0, then);
     tick();
+  },
+  /** Coup de l'annonce du boss, tiré par l'image (ui/Announcer.ts). */
+  hit(which: keyof typeof ANNOUNCE_HITS) {
+    if (running() && cur?.name === 'announce') ANNOUNCE_HITS[which](cur.o, now() + 0.005);
   },
   /** Phase du boss : couches en plus à la mesure suivante, avec un fill sur la fin de celle-ci. */
   setPhase(n: number) {

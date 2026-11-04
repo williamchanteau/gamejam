@@ -11,7 +11,8 @@ let master: GainNode, musOut: GainNode, musVerbOut: GainNode, sfxVerb: GainNode;
 export type VolKey = 'master' | 'music' | 'sfx';
 export const vol: Record<VolKey, number> = { master: 10, music: 10, sfx: 10 };
 try {
-  const s = JSON.parse(localStorage.getItem('ashenborn.vol') ?? 'null');
+  // Clé changée avec la balance : d'anciens crans (effets à 30 %) s'y ajouteraient et rendraient les effets inaudibles.
+  const s = JSON.parse(localStorage.getItem('ashenborn.vol2') ?? 'null');
   if (s) for (const k of Object.keys(vol) as VolKey[]) if (typeof s[k] === 'number') vol[k] = Math.max(0, Math.min(10, Math.round(s[k])));
 } catch { /* file:// ou stockage bloqué */ }
 const curve = (n: number) => (n / 10) ** 2; // perçu à peu près linéaire
@@ -19,12 +20,13 @@ function applyVol(at?: number) {
   if (!ac) return;
   const set = (g: GainNode, x: number) => (at === undefined ? (g.gain.value = x) : g.gain.setTargetAtTime(x, at, 0.03));
   set(master, AUDIO.volume * curve(vol.master));
-  set(musOut, curve(vol.music)); set(musVerbOut, curve(vol.music));
-  set(sfxBus, curve(vol.sfx)); set(sfxVerb, curve(vol.sfx));
+  const mu = AUDIO.balMusic * curve(vol.music), fx = AUDIO.balSfx * curve(vol.sfx);
+  set(musOut, mu); set(musVerbOut, mu);
+  set(sfxBus, fx); set(sfxVerb, fx);
 }
 export function setVol(k: VolKey, n: number) {
   vol[k] = Math.max(0, Math.min(10, n));
-  try { localStorage.setItem('ashenborn.vol', JSON.stringify(vol)); } catch { /* ignoré */ }
+  try { localStorage.setItem('ashenborn.vol2', JSON.stringify(vol)); } catch { /* ignoré */ }
   applyVol(ac?.currentTime);
 }
 export const onReady = (f: () => void) => ready.push(f);

@@ -41,6 +41,7 @@ export class MusicScene extends Phaser.Scene {
     if (input.take('ok')) {
       const n = names[this.i], tr = music.track(n);
       if (tr.loop === undefined && !tr.jump) music.stinger(n); else music.play(n, 0.3, true);
+      if (n === 'announce') { this.time.delayedCall(700, () => music.hit('name')); this.time.delayedCall(2300, () => music.hit('garde')); }
     }
     this.rows.forEach((r, k) => r.setTint(k === this.i ? 0xffffff : COL.uiDim));
     const s = music.info();

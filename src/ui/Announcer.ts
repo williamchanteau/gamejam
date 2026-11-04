@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { W, H, COL } from '../config';
 import { txt } from '../art/font';
 import { sfx } from '../audio/sfx';
+import { music } from '../audio/music';
 import type { BossDef } from '../entities/Boss';
 
 const D = 200; // profondeur : au-dessus de tout
@@ -68,6 +69,7 @@ export function announce(s: Phaser.Scene, def: BossDef, label: string, onDone: (
       tw({ targets: t, scale: sc, alpha: 1, duration: 90, ease: 'Back.out' });
       tw({ targets: sh, alpha: 0.8, duration: 90 });
       sfx.clank();
+      if (i === 0) music.hit('name'); // cloche sur la 1re lettre, déclenchée par l'image : calée même si le PC rame
       if (i === name.length - 1) s.time.delayedCall(90, () => s.cameras.main.shake(120, 0.008));
     });
     s.time.delayedCall(1100 + i * 70, () => t.setTint(i % 2 ? 0xffe0c0 : 0xffffff));
@@ -94,6 +96,7 @@ export function announce(s: Phaser.Scene, def: BossDef, label: string, onDone: (
     tw({ targets: go, alpha: 0, scale: 5, delay: 500, duration: 200, onComplete: () => go.destroy() });
     s.cameras.main.shake(100, 0.006);
     sfx.slam();
+    music.hit('garde');
     onDone();
   });
 }

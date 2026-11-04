@@ -84,6 +84,7 @@ export class BurgerScene extends BossScene {
 
   protected intro(data?: { retry?: boolean }) {
     if (!this.dining) return super.intro(data);
+    music.stop(0.4); // silence dès l'arrivée : son premier cri surprend, la musique revient avec l'annonce
     seat(this.boss);
   }
 
@@ -192,7 +193,6 @@ export class BurgerScene extends BossScene {
   /** La salle tremble, le cri, puis la caméra longe la table jusqu'au roi. */
   private rage() {
     const cam = this.cameras.main, p = this.player, spr = p.spr;
-    music.stop(0.5);
     this.time.delayedCall(250, () => {
       sfx.rumble();
       cam.shake(1500, 0.011);

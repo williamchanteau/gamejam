@@ -1,3 +1,4 @@
+import { AUDIO } from '../config';
 import { ac, now, fx, level, env, route, osc, noise, filt, gain, lfo, mtof, rnd, v } from './core';
 import { pluck, bell, glass, choir, brass, bow, voice } from './inst';
 import { tone } from './chip';
@@ -34,17 +35,19 @@ function impact(at: number, vol: number) {
 /** Ne joue que si l'audio est débloqué ; t = maintenant. */
 function go<A extends unknown[]>(f: (t: number, ...a: A) => void, k = 1) { return (...a: A) => { if (ac) level(k, () => f(now() + 0.004, ...a)); }; }
 
+const AMB = 1 / AUDIO.balSfx;
 /** Pluie et vent en continu (bus des bruitages, pas de la musique). Rend de quoi l'arrêter. */
 export function stormSound() {
   if (!ac) return null;
   const t = now(), end = t + 3600, m = gain(0), o = fx();
   m.gain.setValueAtTime(0, t); m.gain.linearRampToValueAtTime(1, t + 0.8);
   m.connect(o.d);
-  const hiss = gain(0.05), body = gain(0.075), wind = gain(0.05), wf = filt('bandpass', 420, 1.1, wind);
+  // L'orage tient lieu de musique dans cette scène : il garde son niveau quelle que soit la balance des effets (AMB).
+  const hiss = gain(0.024 * AMB), body = gain(0.034 * AMB), wind = gain(0.024 * AMB), wf = filt('bandpass', 420, 1.1, wind);
   hiss.connect(m); body.connect(m); wind.connect(m);
   const nodes = [
     noise(t, end, filt('highpass', 2800, 0.5, hiss)), noise(t, end, filt('bandpass', 900, 0.6, body), 0.8), noise(t, end, wf, 0.5),
-    lfo(0.09, 220, wf.frequency, t, end).o, lfo(0.13, 0.02, wind.gain, t, end).o,
+    lfo(0.09, 220, wf.frequency, t, end).o, lfo(0.13, 0.01 * AMB, wind.gain, t, end).o,
   ];
   return {
     stop(fade = 0.5) {
@@ -55,7 +58,7 @@ export function stormSound() {
     /** Pause : la pluie passe au loin. */
     duck(on: boolean) { m.gain.setTargetAtTime(on ? 0.25 : 1, now(), 0.08); },
     /** Rafale (0..1) : le vent monte, la pluie frappe plus fort. */
-    gust(x: number) { const at = now(); wind.gain.setTargetAtTime(0.03 + x * 0.09, at, 0.6); body.gain.setTargetAtTime(0.065 + x * 0.03, at, 0.6); },
+    gust(x: number) { const at = now(); wind.gain.setTargetAtTime((0.014 + x * 0.042) * AMB, at, 0.6); body.gain.setTargetAtTime((0.03 + x * 0.014) * AMB, at, 0.6); },
   };
 }
 
@@ -87,8 +90,8 @@ export const sfx = {
   }, 0.8),
   shoot: go((t) => { tn(t, 0.005, 0.14, 0.09, 'sine', v(380), 170, 0.3); nz(t, 0.005, 0.1, 0.08, 'bandpass', 1100, 500, 1, 0.2); }, 1.4),
   /** Menus : petits bips au synthé de la musique (chip.ts). */
-  tick: go((t) => { tone(fx(), 'p25', 86, t, 0.035, 0.05, { pluck: true }); }),
-  select: go((t) => { tone(fx(), 'p25', 74, t, 0.07, 0.09, { pluck: true }); tone(fx(), 'p25', 81, t + 0.06, 0.13, 0.09, { pluck: true, wet: 0.2 }); tone(fx(), 'tri', 50, t, 0.1, 0.2, { pluck: true }); }),
+  tick: go((t) => { tone(fx(), 'p25', 86, t, 0.035, 0.42, { pluck: true }); }),
+  select: go((t) => { tone(fx(), 'p25', 74, t, 0.07, 0.22, { pluck: true }); tone(fx(), 'p25', 81, t + 0.06, 0.13, 0.22, { pluck: true, wet: 0.2 }); tone(fx(), 'tri', 50, t, 0.1, 0.45, { pluck: true }); }),
   /** Rugissement : grondement (souffle grave haché), cors très sombres en quinte, infra. */
   roar: go((t) => {
     const g = env(t, 0.2, 0.2, 0.4, 0.6); route(g, fx(), 0.35);
@@ -122,7 +125,7 @@ export const sfx = {
     nz(t + 0.5, 0.35, 1.9, 0.55, 'lowpass', 220, 60, 0.7, 0.4);
     nz(t + 1.1, 0.4, 1.6, 0.3, 'lowpass', 300, 70, 0.7, 0.4);
     tn(t + 0.02, 0.1, 1.6, 0.32 * (near + 0.3), 'sine', 58, 30, 0.2);
-  }),
+  }, 0.25 * AMB),
   ting: go((t) => metal(t, v(2400, 0.05), 0.035, 0.35, 0.35, GLINT), 1.3),
   crack: go((t) => { nz(t, 0.001, 0.045, 0.3, 'highpass', 1100, 1100, 0.8, 0.15); debris(t + 0.01, 3, 0.08, 0.06); tn(t, 0.001, 0.06, 0.08, 'sine', 120, 60, 0.1); }),
   /** Pointe d'épée qui racle : bruit aigu haché. */

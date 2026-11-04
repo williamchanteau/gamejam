@@ -98,7 +98,8 @@ export const BOSS = {
 };
 
 /** volume = général, music = part de la musique, reverb = envoi vers la réverbération de nef. */
-export const AUDIO = { volume: 0.35, music: 0.2, reverb: 0.26 };
+// Balance : ce que donnent les curseurs d'OPTIONS à fond. Mêmes unités que le curseur (carré du pourcentage) : effets 30 % → 0,09 ; musique 120 % → 1,44.
+export const AUDIO = { volume: 0.35, music: 0.2, reverb: 0.26, balMusic: 1.44, balSfx: 0.09 };
 
 // Couleurs (rouge/magenta réservés au DANGER).
 export const COL = {
