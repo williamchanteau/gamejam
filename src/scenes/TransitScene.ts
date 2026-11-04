@@ -124,11 +124,18 @@ export class TransitScene extends Phaser.Scene {
     list.sort((a, b) => a.s - b.s);
     for (const { i, s } of list) {
       const g = s < 0 ? g0 : g1, a = i * DT, b = a + DT, m = a + DT / 2, z = i * rise, f = 0.5 + 0.5 * (s + 1) / 2;
-      // Tranche extérieure (limon) : visible côté avant.
-      if (s > -0.25) {
-        const top = [this.proj(a, rs, z), this.proj(m, rs, z), this.proj(b, rs, z)];
-        g.fillStyle(shade([36, 33, 58], f)).fillPoints([...top, ...top.slice().reverse().map((q) => ({ x: q.x, y: q.y + rise + 8 }))], true);
-        g.fillStyle(shade([20, 18, 32], f)).fillPoints(top.map((q) => ({ x: q.x, y: q.y + rise + 7 })).concat(top.slice().reverse().map((q) => ({ x: q.x, y: q.y + rise + 8 }))), true);
+      // Dessous de la marche (hélice) : visible côté droit, où l'escalier monte vers nous (sinon des lamelles flottent).
+      const zu = (q: number) => z - 8 - rise * (1 - (q - a) / DT);
+      if (Math.cos(m) > 0) g.fillStyle(shade([28, 26, 44], f)).fillPoints([this.proj(a, rc, zu(a)), this.proj(m, rc, zu(m)), this.proj(b, rc, zu(b)), this.proj(b, rs, zu(b)), this.proj(m, rs, zu(m)), this.proj(a, rs, zu(a))], true);
+      // Tranche extérieure (limon) : seulement la partie tournée vers nous (sin > 0), coupée net au bord
+      // de la tour ; dessous en hélice continue d'une marche à l'autre (épaisseur rise+8 → 8).
+      const th = [a, a + DT / 4, m, a + (3 * DT) / 4, b], edge = Math.ceil(a / Math.PI) * Math.PI;
+      if (edge > a && edge < b) th.push(edge);
+      const vis = th.filter((q) => Math.sin(q) >= -1e-6).sort((p, q) => p - q);
+      if (vis.length > 1) {
+        const top = vis.map((q) => this.proj(q, rs, z)), bot = vis.map((q) => this.proj(q, rs, zu(q)));
+        g.fillStyle(shade([36, 33, 58], f)).fillPoints([...top, ...bot.slice().reverse()], true);
+        g.fillStyle(shade([20, 18, 32], f)).fillPoints([...bot.map((q) => ({ x: q.x, y: q.y - 1 })), ...bot.slice().reverse()], true);
       }
       // Contremarche (face qui regarde vers les marches du bas) quand elle est tournée vers nous.
       if (Math.cos(a) < 0) g.fillStyle(shade([46, 43, 69], f)).fillPoints([this.proj(a, rc, z - rise), this.proj(a, rs, z - rise), this.proj(a, rs, z), this.proj(a, rc, z)], true);
