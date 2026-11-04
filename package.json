@@ -7,7 +7,8 @@
     "dev": "bunx --bun vite",
     "build": "bunx --bun vite build",
     "check": "bunx tsc --noEmit",
-    "zip": "bunx --bun vite build && bun scripts/zip.mjs"
+    "zip": "bunx --bun vite build && bun scripts/zip.mjs",
+    "desktop": "bunx --bun vite build && bun scripts/desktop.mjs"
   },
   "dependencies": {
     "phaser": "3.90.0"

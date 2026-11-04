@@ -4,3 +4,5 @@ dist
 .claude/settings.local.json
 .shots
 trailer
+.electron
+exports
