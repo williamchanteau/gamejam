@@ -15,7 +15,7 @@ export const MK = {
   flop: { tele: 0.7, air: 0.75, height: 135, wave: 170, recover: 1.15 },
   charge: { tele: 0.85, speed: 345, recover: 1.5 },
   burp: { tele: 0.8, speed: 215, recover: 0.8 },
-  inhale: { tele: 0.7, time: 2.2, pull: 105, range: 340, heal: 5, every: 4, recover: 0.9 },
+  inhale: { tele: 1.3, time: 2.2, pull: 105, range: 340, heal: 5, every: 4, recover: 0.9 },
   rain: { tele: 0.7, lanes: 7, gap: 72, fall: 0.85, recover: 0.8 },
   crown: { tele: 0.6, time: 1.75, recover: 0.5 },
   split: { tele: 0.8, recover: 1 },
