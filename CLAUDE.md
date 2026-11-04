@@ -9,7 +9,7 @@ Dépôt avant jeudi 5 nov. 7h. Consigne : BOSS obligatoires, focus combats de bo
 ## Rendu (non négociable)
 - `bun run build` → dist/index.html, chemins relatifs, script classique (pas de module, defer) → marche en file://. `bun run zip` → jeu-web.zip.
 - Aucun appel réseau. Anonymat total : aucun nom/crédit/lien/auteur, pas de sourcemaps, pas de chemin utilisateur. `banner: false`.
-- Jurés : titre → combat < 15 s, contrôles affichés à l'écran dans le tuto et OPTIONS seulement (plus de rappel en combat ni d'aide en bas du menu, choix utilisateur), mort → écran « GAME OVER » en rouge (scenes/GameOverScene.ts ; rouge = exception voulue par l'utilisateur à la règle DA, ne pas changer) : DERNIÈRE SAUVEGARDE (floors.ts saveOf) = boss 1 → dehors (OutsideScene, pour pouvoir faire le tuto), boss suivants → la salle rejouée AVEC l'annonceur ; en DIFFICILE toute mort en boss → dehors (RECOMMENCER) ; ou REVENIR À L'ACCUEIL ; dans le tuto, pas de GAME OVER : mort → re-rentre par le portail ; pause > RECOMMENCER saute l'intro, partie ≈ 5 min, difficulté clémente.
+- Jurés : titre → combat < 15 s, contrôles affichés à l'écran, mort → écran « GAME OVER » en rouge (scenes/GameOverScene.ts ; rouge = exception voulue par l'utilisateur à la règle DA, ne pas changer) : DERNIÈRE SAUVEGARDE (floors.ts saveOf) = boss 1 → dehors (OutsideScene, pour pouvoir faire le tuto), boss suivants → la salle rejouée AVEC l'annonceur ; en DIFFICILE toute mort en boss → dehors (RECOMMENCER) ; ou REVENIR À L'ACCUEIL ; dans le tuto, pas de GAME OVER : mort → re-rentre par le portail ; pause > RECOMMENCER saute l'intro, partie ≈ 5 min, difficulté clémente.
 - Textes en français (police bitmap maison, MAJUSCULES). Ne citer aucun autre jeu. 60 fps PC modeste.
 
 ## Stack
@@ -18,7 +18,7 @@ src/: config.ts (TOUTES les valeurs réglables), input.ts, scenes/, entities/Pla
 `scene.restart()` ne relance pas les initialiseurs de champs : tout réinitialiser dans create().
 
 ## Contrôles (un seul schéma, touches PHYSIQUES via e.code)
-←/→ bouger · Saut ↑/Espace · Descendre ↓ · Attaque A · Dash Z · Sort E (AZERTY ; = Q/W/E en QWERTY, même emplacement) · Pause Échap/P. R libre. Menus : ↑↓, valider Entrée/Espace, souris. OPTIONS > CLAVIER AZERTY/QWERTY (localStorage, try/catch) ne change que les lettres affichées (input.keyLabel). Contrôles affichés dans le tuto (panneaux placés : sol, au-dessus des plateformes, suspendu) et OPTIONS, pas de rappel en combat. `input.reset()` à chaque ouverture/fermeture de menu. Pas de manette.
+←/→ bouger · Saut ↑/Espace · Descendre ↓ · Attaque A · Dash Z · Sort E (AZERTY ; = Q/W/E en QWERTY, même emplacement) · Pause Échap/P. R libre. Menus : ↑↓, valider Entrée/Espace, souris. OPTIONS > CLAVIER AZERTY/QWERTY (localStorage, try/catch) ne change que les lettres affichées (input.keyLabel). HUD contrôles en haut à droite sauf dans le tuto (panneaux placés : sol, au-dessus des plateformes, suspendu). `input.reset()` à chaque ouverture/fermeture de menu. Pas de manette.
 DEV seulement : F1 boss à 1 PV, F2 invincible, URL `#Boss1`/`#Test` = démarrage direct sur la scène, `window.game` exposé (gate `import.meta.env.DEV`).
 Test visuel : chrome-headless-shell de ~/.cache/ms-playwright + libs nspr/nss/asound extraites localement (apt-get download + dpkg -x, LD_LIBRARY_PATH), piloté via CDP (WebSocket Node) sur `bun run dev`.
 
@@ -32,7 +32,7 @@ Boss générique unique. Boss.minHp = plancher de PV tant qu'un passage scripté
 - Boss 3 « McKing, le Roi des Burgers » (280 PV ; ÉTAGE 2, la Salle à manger ; code : bosses/mcking.ts, art/mcking.ts, scenes/BurgerScene.ts ; décor : art/dining.ts + rooms.ts buildDining, sans plateformes) : le héros mange au bout de la longue table, le roi est attablé à l'autre bout (grande chaise, plat de burgers, hors champ jusqu'au travelling). Assis : depth 4.9 (derrière table et sol), repasse à 7 pendant le bond d'entrée. Charge dans le mur = étourdi : étoiles en orbite + yeux en spirale (dizzy).
 
 ## DA
-Hi-bit, contour 1 px joueur/boss. Cyan lune = joueur/sorts. Rouge/magenta = DANGER uniquement (jamais PV/HUD/déco). Orange braise = ambiance. Fond #0b0a14 / #1a1630, pierre gris-bleu. Parallaxe 4 couches, torches (halo additif), citrouilles, bougies, chauves-souris, toiles, poussière, vignette. Salle 1 nef vitraux bleus ; salle 2 vitraux pourpres + rosace. HUD EN HAUT à gauche.
+Hi-bit, contour 1 px joueur/boss. Cyan lune = joueur/sorts. Rouge/magenta = DANGER uniquement (jamais PV/HUD/déco). Orange braise = ambiance. Fond #0b0a14 / #1a1630, pierre gris-bleu. Parallaxe 4 couches, torches (halo additif), citrouilles, bougies, chauves-souris, toiles, poussière, vignette. Salle 1 nef vitraux bleus ; salle 2 vitraux pourpres + rosace. HUD + contrôles EN HAUT.
 Boss grands (⅓–½ écran), pièces séparées animées par tweens, yeux lumineux. Juice : hit-stop, shake léger, particules, flash blanc.
 
 ## Parcours

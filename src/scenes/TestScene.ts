@@ -56,6 +56,7 @@ export class TestScene extends ArenaScene {
   private layout = getLayout();
   private portal!: Portal;
   private leaving = false;
+  showControls = false;
   spawnX = 44;
   constructor() { super('Test'); }
 

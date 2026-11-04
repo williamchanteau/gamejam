@@ -170,7 +170,7 @@ Animations : corps articulé, traînées d'épée, débris, poussière, flash, s
 |---|---|---|
 | **Château vu de dehors** | Ressemble à une grosse tour, pas assez « château dark fantasy » | Silhouette large : courtines, plusieurs tours, donjon, porte fortifiée |
 | **Lames spectrales du boss** | Animation jugée pas assez propre | Nouvelle forme et apparition, qui doit rester **basse** (on la saute) |
-| **Rappel des contrôles en combat** | Retiré à la demande de l'utilisateur : contrôles visibles dans le tuto et OPTIONS seulement | À revoir si besoin, le règlement demande les contrôles à l'écran |
+| **Rappel des contrôles en combat** | Affiché en haut à droite (masqué dans le tuto) | À garder ou non partout, le règlement demande les contrôles à l'écran |
 | **Touche R** | Libre | Lui donner une action ? |
 | **Attaque à « 1 coup de moins »** | Appliquée aux lames spectrales (3 → 2) | À confirmer : ou bien l'enchaînement 3 coups de la phase 2 ? |
 | **Barre du boss à 50 %** | Implémentée (or 3 s puis recharge, moitié restante = barre pleine) | À valider en playtest |
