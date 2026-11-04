@@ -97,7 +97,8 @@ export const BOSS = {
   victoryTime: 4,
 };
 
-export const AUDIO = { volume: 0.35 };
+/** volume = général, music = part de la musique, reverb = envoi vers la réverbération de nef. */
+export const AUDIO = { volume: 0.35, music: 0.2, reverb: 0.35 };
 
 // Couleurs (rouge/magenta réservés au DANGER).
 export const COL = {

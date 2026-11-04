@@ -12,6 +12,7 @@ import { TransitScene } from './scenes/TransitScene';
 import { GameOverScene } from './scenes/GameOverScene';
 import { DawnScene } from './scenes/DawnScene';
 import { ThroneScene } from './scenes/ThroneScene';
+import { music } from './audio/music';
 
 const scenes = [BootScene, MenuScene, TestScene, OutsideScene, BossScene, DarkBossScene, BurgerScene, TransitScene, DawnScene, ThroneScene, PauseScene, GameOverScene];
 function start(extra: Phaser.Types.Scenes.SceneType[] = []) {
@@ -29,6 +30,13 @@ const game = new Phaser.Game({
   input: { keyboard: false },
   physics: { default: 'arcade', arcade: { gravity: { x: 0, y: PHYS.gravity } } },
   scene: [...scenes, ...extra],
+});
+// Musique : chaque scène choisit sa piste à sa création ; la pause l'étouffe le temps qu'elle est ouverte.
+game.events.once(Phaser.Core.Events.READY, () => {
+  for (const s of game.scene.scenes) {
+    s.events.on(Phaser.Scenes.Events.CREATE, () => music.scene(s.scene.key));
+    if (s.scene.key === 'Pause') s.events.on(Phaser.Scenes.Events.SHUTDOWN, () => music.duck(false));
+  }
 });
 if (import.meta.env.DEV) (window as unknown as { game: Phaser.Game }).game = game;
 }
