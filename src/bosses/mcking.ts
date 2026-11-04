@@ -5,6 +5,7 @@ import type { Target } from '../entities/types';
 import { COL, PLAYER } from '../config';
 import { sfx } from '../audio/sfx';
 import { txt } from '../art/font';
+import { ARM_LEN, ARM_PIVOT } from '../art/mcking';
 import { shout } from '../ui/Shout';
 
 export const MK = {
@@ -26,8 +27,8 @@ export const MK = {
 type Img = Phaser.GameObjects.Image;
 type Cont = Phaser.GameObjects.Container;
 const Rect = Phaser.Geom.Rectangle;
-const HEAD_Y = -82, CROWN_Y = -37, BELLY_Y = -34, ARM = { f: -7, b: 7 }, EAT_ARM = 122; // bras en travers du torse : la main arrive à la bouche
-const A = (b: Boss) => b.parts as unknown as { rig: Cont; head: Cont; headImg: Img; belly: Img; torso: Img; armF: Cont; armB: Cont; held: Img; crown: Img; legL: Img; legR: Img };
+const HEAD_Y = -82, CROWN_Y = -37, BELLY_Y = -34, SHOULDER_Y = -75, ARM = { f: -7, b: 7 }, EAT_ARM = 122; // bras en travers du torse : la main arrive à la bouche
+const A = (b: Boss) => b.parts as unknown as { rig: Cont; head: Cont; headImg: Img; belly: Img; torso: Img; armF: Cont; armB: Cont; upF: Img; upB: Img; foreF: Cont; foreB: Cont; held: Img; crown: Img; legL: Img; legR: Img };
 const fields = new WeakMap<Boss, Feast>();
 const F = (b: Boss) => fields.get(b)!;
 
@@ -140,6 +141,28 @@ function setHead(b: Boss, m: '' | 'open' | 'chew' = '') {
   const mad = b.phase === 2;
   A(b).headImg.setTexture(m === 'chew' ? 'mck_head_chew' : `mck_head${mad ? '_mad' : ''}${m === 'open' ? '_open' : ''}`);
 }
+/**
+ * Coude : les patterns ne pilotent que l'angle épaule→poing (armF/armB) ; le pli s'en déduit, le poing reste sur l'axe.
+ * Table [angle du bras (négatif = levé côté extérieur), pli (positif = coude rejeté dehors quand le bras est levé)].
+ */
+const BEND = [[-180, 40], [-140, 30], [-100, 6], [-60, -6], [-7, -12], [42, -25], [70, -32], [122, -45], [180, -45]];
+function limb(angle: number, side: 1 | -1) {
+  const a = angle * side;
+  let i = 0;
+  while (i < BEND.length - 2 && a > BEND[i + 1][0]) i++;
+  const [a0, d0] = BEND[i], [a1, d1] = BEND[i + 1];
+  const up = (d0 + ((a - a0) / (a1 - a0)) * (d1 - d0)) * side, r = Phaser.Math.DegToRad(up);
+  const fore = -Phaser.Math.RadToDeg(Math.asin((ARM_LEN.up * Math.sin(r)) / ARM_LEN.fore));
+  return { up, fore, ex: -ARM_LEN.up * Math.sin(r), ey: ARM_LEN.up * Math.cos(r) };
+}
+function syncArms(b: Boss) {
+  const a = A(b);
+  for (const [arm, up, fore, side] of [[a.armF, a.upF, a.foreF, 1], [a.armB, a.upB, a.foreB, -1]] as [Cont, Img, Cont, 1 | -1][]) {
+    const l = limb(arm.angle, side);
+    up.angle = l.up; fore.setPosition(l.ex, l.ey).setAngle(l.fore);
+  }
+}
+
 function arms(b: Boss, f: number, back: number, sec: number, ease = 'Back.out') {
   b.tw(A(b).armF, { angle: f }, sec, ease); b.tw(A(b).armB, { angle: back }, sec, ease);
 }
@@ -525,6 +548,7 @@ export function seat(b: Boss) {
   const a = A(b), f = F(b), sc = b.scene;
   a.rig.y = -38;
   a.armF.angle = -140;
+  syncArms(b);
   a.held.setTexture('burger_b2').setVisible(true);
   b.eyes('off');
   let on = false;
@@ -537,7 +561,7 @@ export function stand(b: Boss) {
   a.held.setVisible(false).setTexture('burger');
   a.headImg.setTexture('mck_head_mad_open');
   sc.tweens.add({ targets: a.rig, y: 0, duration: 340, ease: 'Bounce.out' });
-  sc.tweens.add({ targets: a.armF, angle: ARM.f, duration: 200 });
+  sc.tweens.add({ targets: a.armF, angle: ARM.f, duration: 200, onUpdate: () => syncArms(b) }); // jeu figé : pas de b.update
   sc.time.delayedCall(120, () => { sfx.slam(); sc.cameras.main.shake(320, 0.014); sc.puffs(b.x - 26, b.floorY, 4); sc.puffs(b.x + 26, b.floorY, 4); jiggle(b, 0.2, 420); });
 }
 
@@ -554,24 +578,32 @@ export const MCKING: BossDef = {
     const headImg = sprite('mck_head', 0, 0);
     const crown = sprite('mck_crown', 1, CROWN_Y).setAngle(-5);
     const eyes = sc.add.image(0, -25, 'mck_eyes');
-    const glow = sc.add.image(0, -25, 'glowW').setBlendMode(Phaser.BlendModes.ADD).setScale(0.8);
+    const glow = sc.add.image(0, -25, 'mck_eyes_glow').setBlendMode(Phaser.BlendModes.ADD);
     const head = sc.add.container(2, HEAD_Y, [headImg, glow, eyes, crown]);
-    const armImgF = sprite('mck_arm_f', 0, 0, 0.5, 7 / 50), armImgB = sprite('mck_arm_b', 0, 0, 0.5, 7 / 50).setFlipX(true);
-    const held = sc.add.image(0, 38, 'burger').setVisible(false);
-    const armF = sc.add.container(31, -78, [armImgF, held]), armB = sc.add.container(-31, -78, [armImgB]);
-    const rig = sc.add.container(0, 0, [armB, legL, legR, belly, torso, head, armF]);
+    const print = sc.add.image(0, -67, 'mck_tee_print');
+    const upF = sprite('mck_uparm', 0, 0, 0.5, ARM_PIVOT.up), upB = sprite('mck_uparm', 0, 0, 0.5, ARM_PIVOT.up).setFlipX(true);
+    const foImgF = sprite('mck_forearm_f', 0, 0, 0.5, ARM_PIVOT.fore), foImgB = sprite('mck_forearm_b', 0, 0, 0.5, ARM_PIVOT.fore).setFlipX(true);
+    const held = sc.add.image(0, ARM_LEN.fore, 'burger').setVisible(false);
+    const foreF = sc.add.container(0, ARM_LEN.up, [foImgF, held]), foreB = sc.add.container(0, ARM_LEN.up, [foImgB]);
+    const armF = sc.add.container(31, SHOULDER_Y, [upF, foreF]), armB = sc.add.container(-31, SHOULDER_Y, [upB, foreB]);
+    const rig = sc.add.container(0, 0, [armB, legL, legR, belly, torso, print, head, armF]);
     b.root.add(rig);
-    b.parts = { rig, belly, torso, head, headImg, armF, armB, held, crown, legL, legR, eyes, glow };
-    b.flashParts = [legL, legR, belly, torso, headImg, armImgF, armImgB, crown];
+    b.parts = { rig, belly, torso, head, headImg, armF, armB, upF, upB, foreF, foreB, held, crown, legL, legR, eyes, glow };
+    b.flashParts = [legL, legR, belly, torso, print, headImg, upF, upB, foImgF, foImgB, crown];
+    // Le boss se retourne par miroir : le flocage se retourne aussi, pour rester lisible.
+    const face = b.face.bind(b);
+    b.face = () => { face(); print.scaleX = b.root.scaleX; };
     const f = new Feast(b);
     fields.set(b, f);
     this.rest(b, 0);
+    syncArms(b);
     sc.tweens.add({ targets: belly, y: BELLY_Y + 1, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
     sc.tweens.add({ targets: headImg, y: 1, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+    sc.tweens.add({ targets: [eyes, glow], y: -24, duration: 800, yoyo: true, repeat: -1, ease: 'Sine.inOut' }); // calque collé aux yeux
     // À plat ventre, la zone touchable est couchée ; la salle vit avec le boss.
     const col = b.hurtRects.bind(b), up = b.update.bind(b), hit = b.hit.bind(b);
     b.hurtRects = () => (f.lying ? [new Rect(b.x - 66, b.floorY - 50, 132, 50)] : col());
-    b.update = (dt) => { f.update(dt); up(dt); };
+    b.update = (dt) => { f.update(dt); up(dt); syncArms(b); };
     // Chaque coup fait trembler le ventre ; pendant un repas il compte pour l'interruption.
     b.hit = (dmg, from) => {
       const r = hit(dmg, from);
@@ -650,13 +682,17 @@ export const MCKING: BossDef = {
   /** Portrait à plat (l'annonceur teinte les images directes) : poing levé, burger brandi. ×2 à l'écran. */
   portrait(sc) {
     const k = 2 / 3, im = (key: string, x: number, y: number, ox = 0.5, oy = 1, a = 0) => sc.add.image(x * k, y * k, key).setOrigin(ox, oy).setScale(k).setAngle(a);
+    const arm = (x: number, y: number, a: number, side: 1 | -1, fore: string) => {
+      const l = limb(a, side), r = Phaser.Math.DegToRad(a), ex = x + l.ex * Math.cos(r) - l.ey * Math.sin(r), ey = y + l.ex * Math.sin(r) + l.ey * Math.cos(r);
+      return [im('mck_uparm', x, y, 0.5, ARM_PIVOT.up, a + l.up).setFlipX(side < 0), im(fore, ex, ey, 0.5, ARM_PIVOT.fore, a + l.fore).setFlipX(side < 0)];
+    };
     return sc.add.container(0, 0, [
-      im('mck_arm_b', -45, -78, 0.5, 7 / 50, 9).setFlipX(true),
+      ...arm(-45, SHOULDER_Y, 9, -1, 'mck_forearm_b'),
       im('mck_leg', -29, 1).setFlipX(true), im('mck_leg', 1, 1),
-      im('mck_belly', -14, -34, 0.5, 0.5), im('mck_torso', -14, -46),
+      im('mck_belly', -14, -34, 0.5, 0.5), im('mck_torso', -14, -46), im('mck_tee_print', -14, -67, 0.5, 0.5),
       im('mck_head_mad_open', -12, -82),
       im('mck_crown', -11, -119, 0.5, 1, -8),
-      im('mck_arm_f', 17, -78, 0.5, 7 / 50, -168),
+      ...arm(17, SHOULDER_Y, -168, 1, 'mck_forearm_f'),
       im('burger', 26, -121, 0.5, 0.5),
     ]);
   },

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { glyphRow } from './font';
 import { beam, canvasTex, ell, OUTLINE, poly } from './pixel';
 
 type C = CanvasRenderingContext2D;
@@ -7,22 +8,33 @@ const R = (c: C, col: string, x: number, y: number, w = 1, h = 1) => { c.fillSty
 const rnd = (i: number) => { const v = Math.sin(i * 127.1 + 311.7) * 43758.5453; return v - Math.floor(v); };
 
 const SK = '#eebf9a', SKD = '#d39a78', SKDD = '#ad7558', SKL = '#fbdcc0', PINK = '#e8928c';
-const HAIR = '#3a2a22', HAIRL = '#5c4332', STUB = '#b9977c';
-const TEE = '#7f8498', TEED = '#60657a', TEEL = '#a0a5b8', SLV = '#23222c', SLVL = '#3d3c4a';
+const HAIR = '#3a2a22', HAIRL = '#5c4332', HAIRD = '#2a1d17', STUB = '#b9977c';
+const TEE = '#c9ccd6', TEED = '#9fa3b3', TEEL = '#e6e8ee', SLV = '#23222c', SLVL = '#3d3c4a';
+const INK = '#23222c', RUST = '#c0531c';
 const JN = '#2b3560', JND = '#1c2342', JNL = '#3f4b7e';
 const GOLD = '#ffd36a', GOLDD = '#c8902a', GOLDDD = '#8a5c1c', GOLDL = '#fff0b0';
 const VEL = '#3a1f5a', VELD = '#28143f', VELL = '#54307c';
 const WOOD = '#6a4428', WOODD = '#3f2716', WOODL = '#8f6036';
 const K = '#ff2a5a', KD = '#b0123c', KL = '#ff8aa2';
+/** Bras en 2 segments : longueurs épaule→coude et coude→poing, pivots dans les textures. */
+export const ARM_LEN = { up: 20, fore: 23 }, ARM_PIVOT = { up: 10 / 38, fore: 7 / 40 };
 
 export type Mood = { mad?: boolean; mouth?: 'shut' | 'open' | 'chew' };
 
+const EYES_X = [22, 40], EYE_Y = 19;
+/** Blanc de l'œil, sans la pupille si `hole` (calque allumé par b.eyes). */
+function sclera(c: C, x: number, y: number, col: string, hole = false) {
+  R(c, col, x - 3, y - 2, 7, 3); R(c, col, x - 2, y + 1, 5, 1);
+  if (hole) c.clearRect(x, y - 2, 2, 3);
+}
+
 function head(c: C, m: Mood) {
   const X = 30;
-  // Touffes hirsutes sur les côtés du crâne chauve, mèche longue derrière.
-  poly(c, HAIR, [13, 12, 2, 7, 8, 16, 0, 16, 7, 21, 1, 25, 8, 27, 3, 33, 13, 30]);
-  poly(c, HAIR, [47, 12, 58, 7, 52, 16, 60, 16, 53, 21, 59, 25, 52, 27, 57, 33, 47, 30]);
-  R(c, HAIRL, 5, 17, 3, 1); R(c, HAIRL, 53, 17, 3, 1); R(c, HAIRL, 4, 24, 3, 1); R(c, HAIRL, 54, 24, 3, 1);
+  // Cheveux lisses, raie au milieu : deux pans qui tombent derrière la mâchoire (symétrie autour de 30,5).
+  const sym = (col: string, pts: number[]) => { poly(c, col, pts); poly(c, col, pts.map((v, i) => (i % 2 ? v : 61 - v))); };
+  sym(HAIR, [20, 2, 12, 4, 6, 10, 4, 18, 4, 29, 5, 36, 8, 40, 13, 40, 17, 35, 18, 18]);
+  sym(HAIRD, [13, 30, 8, 30, 9, 39, 13, 40, 16, 36]);
+  sym(HAIRL, [7, 13, 8, 13, 7, 27, 8, 34, 7, 34, 6, 27]);
   // Mâchoire large et crâne.
   ell(c, SKD, X, 29, 21, 13);
   ell(c, SK, X, 19, 19, 18);
@@ -38,16 +50,21 @@ function head(c: C, m: Mood) {
   R(c, SKDD, X - 11, 40, 23, 1);
   // Rougeurs sur les joues.
   for (const [x, y] of [[13, 26], [15, 28], [12, 29], [47, 26], [45, 28], [48, 29]]) R(c, PINK, x, y, 2, 1);
-  // Lunettes rondes (le blanc du verre fait tout le regard).
-  const lx = [X - 8, X + 10], ly = 19;
-  R(c, '#9aa0b4', 8, ly - 1, lx[0] - 12, 1); R(c, '#9aa0b4', lx[1] + 7, ly - 1, 6, 1); // branches
-  for (const x of lx) { ell(c, '#6c7288', x, ly, 8, 8); ell(c, '#f4f8ff', x, ly, 6.5, 6.5); R(c, '#cfdcf0', x - 4, ly - 4, 3, 1); }
-  R(c, '#6c7288', lx[0] + 7, ly - 2, 4, 2);
-  for (const x of lx) R(c, '#14121c', x + 1, ly - (m.mad ? 0 : 1), 2, m.mad ? 2 : 3);
+  // Dessus du crâne : les mèches partent de la raie et glissent le long des tempes.
+  sym(HAIR, [31, 0.5, 20, 1, 13, 5, 9, 12, 9, 24, 12, 25, 14, 15, 20, 9, 30.5, 5]);
+  sym(HAIRL, [27, 2, 20, 3, 14, 7, 12, 12, 13, 12, 16, 8, 21, 5, 27, 3]);
+  // Yeux (les blancs restent ternes : mck_eyes les allume par-dessus, pupilles comprises).
+  for (const x of EYES_X) {
+    R(c, SKD, x - 4, EYE_Y - 4, 9, 1);
+    sclera(c, x, EYE_Y, '#cfc9c2');
+    R(c, '#14121c', x, EYE_Y - 2, 2, 3);
+    R(c, '#5a3424', x - 3, EYE_Y - 3, 7, 1);
+    R(c, SKD, x - 3, EYE_Y + 2, 7, 1);
+  }
   // Sourcils.
-  for (const [i, x] of lx.entries()) {
-    if (m.mad) beam(c, HAIR, x - 7, ly - (i ? 3 : 10), x + 7, ly - (i ? 10 : 3), 2.4);
-    else R(c, HAIR, x - 5, ly - 10, 11, 2);
+  for (const [i, x] of EYES_X.entries()) {
+    if (m.mad) beam(c, HAIR, x - 6, EYE_Y - (i ? 3 : 9), x + 6, EYE_Y - (i ? 9 : 3), 2.4);
+    else R(c, HAIR, x - 5, EYE_Y - 7, 11, 2);
   }
   // Nez.
   ell(c, SKD, X + 2, 28, 3, 2); R(c, SKL, X + 2, 26, 2, 1);
@@ -68,14 +85,13 @@ function head(c: C, m: Mood) {
 
 function torso(c: C) {
   const X = 42;
-  // Empiècements noirs (manches raglan) aux épaules.
-  poly(c, SLV, [7, 16, 24, 2, 60, 2, 77, 16, 77, 30, 64, 24, 20, 24, 7, 30]);
+  // Empiècements noirs (raglan) : ils s'arrêtent à l'épaule, la manche appartient au bras.
+  poly(c, SLV, [11, 17, 24, 2, 60, 2, 73, 17, 72, 22, 64, 24, 20, 24, 12, 22]);
   R(c, SLVL, 26, 3, 32, 1);
-  // Tee-shirt gris, remonté et roulé au-dessus du ventre.
+  // Tee-shirt clair, remonté et roulé au-dessus du ventre.
   poly(c, TEED, [28, 6, 56, 6, 69, 20, 70, 37, 14, 37, 15, 20]);
   poly(c, TEE, [30, 6, 56, 6, 67, 21, 67, 36, 21, 36, 20, 20]);
   poly(c, TEEL, [48, 7, 56, 7, 64, 20, 60, 26, 50, 16]);
-  R(c, TEED, 26, 22, 12, 1); R(c, TEED, 22, 21, 5, 1); R(c, TEED, 47, 22, 13, 1); R(c, TEED, 60, 21, 4, 1); // plis de poitrine
   ell(c, SLV, X, 5, 14, 4.5); ell(c, SKD, X, 3, 10, 3); // col
   for (let x = 13; x < 72; x++) {
     const k = ((x - X) / 29) ** 2, y = 34 + Math.round(k * 3);
@@ -83,6 +99,20 @@ function torso(c: C) {
     if (x % 9 === 0) R(c, TEED, x, y, 1, 3);
   }
 }
+
+/** Flocage du tee-shirt, calque à part : le boss se retourne par miroir, le texte doit rester lisible. */
+function teePrint(c: C) {
+  const line = (t: string, y: number, col: string) => {
+    const x0 = Math.floor((PRINT_W - (t.length * 6 - 1)) / 2);
+    for (const [i, ch] of [...t].entries()) for (let r = 0; r < 7; r++) {
+      const bits = glyphRow(ch, r);
+      for (let k = 0; k < 5; k++) if (bits & (16 >> k)) R(c, col, x0 + i * 6 + k, y + r);
+    }
+  };
+  line('I LOVE', 0, INK);
+  line('RUST <3', 9, RUST);
+}
+const PRINT_W = 43;
 
 function belly(c: C) {
   const X = 38, Y = 27;
@@ -112,18 +142,33 @@ function leg(c: C) {
   R(c, SK, 19, 30, 6, 2); R(c, SKD, 21, 30, 1, 2); R(c, SKD, 23, 30, 1, 2);
 }
 
-function arm(c: C, bracer: boolean) {
+/** Bras 24×38 : épaule (12,10), coude (12,30). La manche est ronde autour de l'épaule : elle tient à tous les angles. */
+function upperArm(c: C) {
   const X = 12;
-  ell(c, SLV, X, 7, 10, 7); R(c, SLV, 2, 7, 20, 10); R(c, SLVL, 15, 4, 5, 1); // manche courte noire
-  R(c, '#14131b', 2, 16, 20, 2);
-  R(c, SK, 5, 18, 14, 19); R(c, SKD, 5, 18, 3, 19); R(c, SKL, 15, 19, 3, 16);
-  for (let i = 0; i < 14; i++) R(c, '#6c4632', 7 + Math.floor(rnd(i + 7) * 10), 19 + Math.floor(rnd(i + 40) * 16), 1, 2); // bras velus
+  poly(c, SK, [5, 20, 19, 20, 18.5, 30, 5.5, 30]); ell(c, SK, X, 30, 6.5, 6.5);
+  poly(c, SKD, [5, 20, 8, 20, 8.5, 34, 6, 33]); poly(c, SKL, [15, 24, 17, 24, 17, 32, 15, 33]);
+  for (let i = 0; i < 5; i++) R(c, '#8a5f46', 8 + Math.floor(rnd(i + 7) * 8), 25 + Math.floor(rnd(i + 40) * 8), 1, 2);
+  ell(c, SLV, X, 10, 8.5, 8.5);
+  poly(c, SLV, [3.5, 10, 20.5, 10, 19.5, 24, 4.5, 24]);
+  R(c, '#14131b', 4, 23, 16, 2);
+  poly(c, SLVL, [14, 4, 17, 6, 19, 10, 18, 10, 16, 7, 14, 5]);
+}
+
+/** Avant-bras 24×40 : coude (12,7), poing (12,30), pouce côté corps. */
+function foreArm(c: C, bracer: boolean) {
+  const X = 12;
+  ell(c, SK, X, 7, 6.5, 6.5);
+  poly(c, SK, [5.5, 7, 18.5, 7, 16.5, 26, 7.5, 26]);
+  poly(c, SKD, [5.5, 7, 8.5, 7, 9.5, 26, 7.5, 26]); poly(c, SKL, [15, 6, 17, 6, 15.5, 22, 14, 22]);
+  for (let i = 0; i < 6; i++) R(c, '#8a5f46', 9 + Math.floor(rnd(i + 17) * 6), 8 + Math.floor(rnd(i + 50) * 8), 1, 2);
   if (bracer) { // brassard de cuir clouté
-    R(c, '#4a3a32', 4, 29, 16, 9); R(c, '#6e5a4c', 4, 29, 16, 1); R(c, '#2e231e', 4, 37, 16, 1);
-    for (const x of [7, 12, 17]) for (const y of [31, 35]) R(c, '#b4b4c0', x, y);
+    poly(c, '#4a3a32', [6.5, 14, 17.5, 14, 16.5, 25, 7.5, 25]);
+    R(c, '#6e5a4c', 7, 14, 10, 1); R(c, '#2e231e', 8, 24, 8, 1);
+    for (const x of [9, 14]) for (const y of [17, 21]) R(c, '#b4b4c0', x, y);
   }
-  ell(c, SKD, X, 42, 8, 6.5); ell(c, SK, X + 1, 41.5, 7, 5.5);
-  R(c, SKD, 8, 45, 1, 2); R(c, SKD, 12, 45, 1, 2); R(c, SKD, 16, 45, 1, 2);
+  ell(c, SKD, X, 30.5, 8, 7.5); ell(c, SK, X + 0.5, 30, 7, 6.5); ell(c, SKL, X + 3, 28, 3, 2.5);
+  for (const x of [9, 12, 15]) R(c, SKDD, x, 34, 1, 3);
+  ell(c, SKD, 5.5, 29, 2.5, 4); ell(c, SK, 6, 28.5, 1.8, 3);
 }
 
 function crown(c: C) {
@@ -228,10 +273,21 @@ export function makeMcKingArt(s: Phaser.Scene) {
   canvasTex(s, 'mck_torso', 84, 42, torso, OUTLINE);
   canvasTex(s, 'mck_belly', 78, 54, belly, OUTLINE);
   canvasTex(s, 'mck_leg', 28, 36, leg, OUTLINE);
-  canvasTex(s, 'mck_arm_f', 24, 50, (c) => arm(c, true), OUTLINE);
-  canvasTex(s, 'mck_arm_b', 24, 50, (c) => arm(c, false), OUTLINE);
+  canvasTex(s, 'mck_tee_print', PRINT_W, 16, teePrint);
+  canvasTex(s, 'mck_uparm', 24, 38, upperArm, OUTLINE);
+  canvasTex(s, 'mck_forearm_f', 24, 40, (c) => foreArm(c, true), OUTLINE);
+  canvasTex(s, 'mck_forearm_b', 24, 40, (c) => foreArm(c, false), OUTLINE);
   canvasTex(s, 'mck_crown', 35, 21, crown, OUTLINE);
-  canvasTex(s, 'mck_eyes', 24, 6, (c) => { R(c, '#fff', 2, 1, 4, 4); R(c, '#fff', 20, 1, 4, 4); });
+  // Aligné sur les yeux de la tête : x tête − 16, y tête − 16.
+  canvasTex(s, 'mck_eyes', 28, 6, (c) => { for (const x of EYES_X) sclera(c, x - 16, EYE_Y - 16, '#fff', true); });
+  // Lueur additive autour de chaque œil (même centre que mck_eyes).
+  canvasTex(s, 'mck_eyes_glow', 52, 22, (c) => {
+    for (const x of EYES_X) {
+      const cx = x - 4, g = c.createRadialGradient(cx, 11, 1, cx, 11, 11);
+      g.addColorStop(0, 'rgba(255,255,255,0.55)'); g.addColorStop(1, 'rgba(255,255,255,0)');
+      c.fillStyle = g; c.fillRect(cx - 11, 0, 22, 22);
+    }
+  });
   // Burgers et morceaux.
   canvasTex(s, 'burger', 26, 21, (c) => { c.translate(1, 1); burger(c); }, OUTLINE);
   canvasTex(s, 'burger_b1', 26, 21, (c) => { c.translate(1, 1); burger(c, 5); }, OUTLINE);
