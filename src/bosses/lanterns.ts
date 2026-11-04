@@ -8,8 +8,8 @@ import type { Boss } from '../entities/Boss';
 export const NIGHT = {
   hp: 260,
   darkAlpha: 0.93, viewerDark: 0.45, // le viewer garde le boss lisible, le jeu est presque noir
-  lanterns: [105, 255, 405, 555, 705, 855], lanternY: 196,
-  litLife: 3.2, exposeR: 92, // portée où une lanterne ou un feu révèle Nycthor (> demi-écart : toujours couvert)
+  lanterns: [255, 480, 705], lanternY: 196, // hors des plateformes (chaînes) ; resserrées pour que l'épreuve (toutes les 3) reste faisable
+  litLife: 3.2, exposeR: 225, // portée où une lanterne ou un feu révèle Nycthor (> 215, boss au bord de l'arène : toujours couvert)
   fallTime: 0.35, fireDamage: 3, fireTick: 0.35, fireLife: 4.5, fireWidth: 132,
   pause: [0.42, 0.6], // entre deux attaques (plus court que la pause générique)
   seenAt: 150, // au-delà, hors de toute lumière, son corps a totalement disparu
@@ -18,7 +18,7 @@ export const NIGHT = {
   moulinet: { dist: 74, tele: 0.7, time: 0.95, centerY: 50, radius: 99, safe: 62, hit: 24, recover: 1.05 },
   lancer: { tele: 0.75, lock: 0.18, speed: 440, hit: 18, height: 12, life: 2.4, recover: 0.85 },
   // at : part des PV totaux où l'épreuve se déclenche (la moitié de la barre de phase 2).
-  trial: { at: 0.25, roar: 0.6, count: 3, lead: 0.1, fly: 0.12, show: 0.12, charge: 5, damage: 14, stun: 2.4, sweepTele: 0.8, sweepHearts: 3, bandH: 40, recover: 1.1 },
+  trial: { at: 0.25, roar: 0.6, count: 3, lead: 0.1, fly: 0.12, show: 0.12, charge: 6.5, damage: 14, stun: 2.4, sweepTele: 0.8, sweepHearts: 3, bandH: 40, recover: 1.1 },
 };
 
 export interface Lamp {
