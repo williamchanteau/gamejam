@@ -3,14 +3,28 @@ import Phaser from 'phaser';
 export const OUTLINE = '#06050c';
 type Ctx = CanvasRenderingContext2D;
 
+/**
+ * Textures en dégradé ou alpha, dont le rendu diffère légèrement entre GPU et CPU : elles restent sur le canvas de Phaser.
+ * Une nouvelle texture de ce genre doit être ajoutée ici pour garder son rendu GPU.
+ */
+const GPU_TEX = new Set(['bg_test', 'din1', 'din2', 'din_props', 'floor', 'glowC', 'glowO', 'glowP', 'glowR', 'glowW', 'ground_out', 'logo_glow', 'mck_eyes_glow', 'nave1', 'nave2', 'nave_props', 'out_bg', 'rain_far', 'rain_mid', 'rain_near', 'storm_fog', 'thr_bg', 'thr_shaft', 'thrust', 'vignette']);
+
 /** Crée une texture canvas, dessine, ajoute un contour 1 px optionnel. */
 export function canvasTex(scene: Phaser.Scene, key: string, w: number, h: number, draw: (c: Ctx) => void, outline?: string) {
   if (scene.textures.exists(key)) scene.textures.remove(key);
-  const tex = scene.textures.createCanvas(key, w, h)!;
+  const tex = GPU_TEX.has(key) ? scene.textures.createCanvas(key, w, h)! : softCanvas(scene, key, w, h);
   const c = tex.getContext();
   draw(c);
   if (outline) addOutline(c, w, h, outline);
   tex.refresh();
+}
+
+/** Canvas dessiné sur le CPU : relire les pixels d'un canvas GPU (contour) ou y empiler des milliers de rectangles fige le démarrage. */
+function softCanvas(scene: Phaser.Scene, key: string, w: number, h: number) {
+  const cv = document.createElement('canvas');
+  cv.width = w; cv.height = h;
+  cv.getContext('2d', { willReadFrequently: true })!.imageSmoothingEnabled = false;
+  return scene.textures.addCanvas(key, cv)!;
 }
 
 export function addOutline(c: Ctx, w: number, h: number, color: string) {
