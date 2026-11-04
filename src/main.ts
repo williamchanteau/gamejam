@@ -38,8 +38,9 @@ game.events.once(Phaser.Core.Events.READY, () => {
     if (s.scene.key === 'Pause') s.events.on(Phaser.Scenes.Events.SHUTDOWN, () => music.duck(false));
   }
 });
-if (import.meta.env.DEV) (window as unknown as { game: Phaser.Game }).game = game;
+if (import.meta.env.DEV) Object.assign(window, { game, music });
 }
-// DEV : /?viewer = visualiseur d'animations (src/viewer/, remplacé par un module vide au build).
+// DEV : /?viewer = visualiseur d'animations, #Musique = juke-box (src/viewer/, remplacé par un module vide au build).
 if (import.meta.env.DEV && location.search.includes('viewer')) import('./viewer/ViewerScene').then((m) => start([m.ViewerScene]));
+else if (import.meta.env.DEV && location.hash === '#Musique') import('./viewer/MusicScene').then((m) => start([m.MusicScene]));
 else start();

@@ -1,4 +1,5 @@
 import { unlockAudio } from './audio/sfx';
+import { music } from './audio/music';
 import { G } from './art/font';
 
 export type Action =
@@ -128,7 +129,11 @@ addEventListener('keydown', (e) => {
     return cb(e.code, nameOf(e.code, e.key));
   }
   const acts = MAP[e.code];
-  if (!acts) return;
+  if (!acts) {
+    // M : la lettre imprimée (e.key), pas l'emplacement : sur AZERTY elle n'est pas en KeyM.
+    if (!e.repeat && e.key.toLowerCase() === 'm') music.mute();
+    return;
+  }
   e.preventDefault();
   if (e.repeat) return;
   held.set(e.code, acts);

@@ -1,226 +1,220 @@
 import { AUDIO } from '../config';
-import { ac, now, gain, mtof, rnd, filt, noise, lfo, musBus, musVerb, musLP, type Out } from './core';
-import { pluck, bell, choir, organ, bow, brass, timp, drum } from './inst';
+import { ac, now, gain, musBus, musVerb, musLP, type Out } from './core';
+import { VOL, tone, chipBell, drum, type Duty, type DrumKind } from './chip';
+import { TRACKS, type Track, type Ch } from './tracks';
 
-// Musique générative : chaque piste écrit une mesure à la fois (un peu en avance), avec rubato et nuances
-// aléatoires. Un même thème (THEME) revient d'une piste à l'autre : harpe au menu, alto en combat, majeur à l'aube.
+// Séquenceur chiptune : écrit les pas un peu en avance sur l'horloge audio (donc boucles sans coupure, hors boucle de jeu).
+// Une seule piste vivante à la fois ; l'ancienne s'éteint par son propre gain.
 
-type St = { phase: number };
-interface Track { bar: number; /** niveau relatif de la piste */ vol?: number; play(o: Out, t: number, i: number, s: St): void; amb?(o: Out, t: number): (at: number) => void }
+const STEPS = 16;
+/** Avance d'écriture (s) ; plus large onglet masqué, où les minuteries ralentissent. */
+const AHEAD = 0.3, AHEAD_HIDDEN = 1.6;
 
-const hum = (s = 0.01) => rnd(-s, s);
-const vel = (x: number) => x * rnd(0.9, 1.08);
-const F = (ms: number[]) => ms.map(mtof);
-
-/** Thème (ré mineur), 8 mesures : [temps, note midi, durée en temps]. */
-const THEME: [number, number, number][][] = [
-  [[0, 69, 1.5], [1.5, 70, 0.5], [2, 69, 1], [3, 65, 1]],
-  [[0, 62, 2], [2.5, 65, 0.5], [3, 67, 1]],
-  [[0, 70, 1.5], [1.5, 69, 0.5], [2, 67, 1], [3, 74, 1]],
-  [[0, 73, 3], [3, 69, 1]],
-  [[0, 74, 1.5], [1.5, 76, 0.5], [2, 77, 1], [3, 76, 0.5], [3.5, 74, 0.5]],
-  [[0, 72, 2], [2, 69, 1], [3, 72, 1]],
-  [[0, 70, 1], [1, 69, 1], [2, 67, 1.5], [3.5, 65, 0.5]],
-  [[0, 64, 1], [1, 61, 1], [2, 69, 2]],
-];
-/** Harmonie du thème : basse, accord du chœur. Dm Bb Gm A | Dm F/C Gm/Bb A. */
-const CH: [number, number[]][] = [
-  [38, [57, 62, 65]], [34, [58, 62, 65]], [43, [58, 62, 67]], [33, [57, 61, 64]],
-  [38, [57, 62, 65]], [36, [57, 60, 65]], [34, [55, 62, 67]], [33, [57, 61, 64]],
-];
-/** Le thème passé en ré majeur (fa, si bémol, do haussés). */
-const MAJ = (m: number) => ([5, 10, 0].includes(m % 12) ? m + 1 : m);
-
-/** Accord brisé lent et clairsemé à la harpe (jamais deux fois pareil). */
-function arp(o: Out, bass: number, ch: number[], t: number, q: number, vol: number, kind: 'harp' | 'lute' = 'harp') {
-  const ns = [bass + 12, ...ch, ch[1] + 12], pos = [0, 0.5, 1, 2, 2.5, 3];
-  pos.forEach((p, j) => pluck(o, mtof(ns[Math.min(j, ns.length - 1)]), t + p * q + hum(), vel(vol * (j ? 0.75 : 1)), kind, 0.45));
+type Ev = { m?: number; d?: DrumKind; len: number } | null;
+const SEMI: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+function midi(tok: string) {
+  const s = /^([A-G])([#b]?)(\d)$/.exec(tok);
+  if (!s) return null;
+  return 12 * (+s[3] + 1) + SEMI[s[1]] + (s[2] === '#' ? 1 : s[2] === 'b' ? -1 : 0);
 }
-
-/** Vent de nuit : bruit filtré dont la couleur et le souffle ondulent lentement. */
-function wind(o: Out, t: number) {
-  const g = gain(0.05), f = filt('bandpass', 520, 0.8, g);
-  g.connect(o.d); g.connect(gain(0.6)).connect(o.w);
-  const ls = [lfo(0.07, 260, f.frequency, t, t + 3600).o, lfo(0.11, 0.03, g.gain, t, t + 3600).o, noise(t, t + 3600, f, 0.7)];
-  return (at: number) => ls.forEach((n) => n.stop(at));
-}
-const TRACKS: Record<string, Track> = {
-  /** Menu : orgue, chœur, cloche lointaine ; le thème à la harpe puis au violoncelle. */
-  menu: {
-    bar: 4.6,
-    play(o, t, i) {
-      const k = i % 8, cyc = Math.floor(i / 8) % 4, [bass, ch] = CH[k], q = this.bar / 4;
-      organ(o, F([bass, bass + 12]), t, this.bar + 0.2, 0.03, 0.6);
-      if (cyc || k > 1) choir(o, F(ch), t + hum(0.05), this.bar + 0.6, 0.02, k % 4 === 3 ? 'a' : 'o');
-      if (k === 0) bell(o, mtof(50), t, 0.05, 6, 0.8);
-      if (cyc % 2) THEME[k].forEach(([b, m]) => pluck(o, mtof(m), t + b * q + hum(0.035), vel(0.1), 'harp', 0.5));
-      else if (cyc === 2) THEME[k].forEach(([b, m, d]) => bow(o, mtof(m - 12), t + b * q + hum(0.02), d * q, 0.045, { a: 0.3, wet: 0.5 }));
-      else arp(o, bass, ch, t, q, 0.06);
-    },
-  },
-  /** Dehors, la nuit : vent, bourdon d'orgue, luth, cloche du château. */
-  night: {
-    vol: 1.5,
-    bar: 4.6,
-    amb: wind,
-    play(o, t, i) {
-      const k = i % 8, [bass, ch] = CH[k], q = this.bar / 4;
-      if (k % 2 === 0) organ(o, F([38, 45]), t, this.bar * 2 + 0.2, 0.016, 0.7);
-      if (i % 16 === 0) bell(o, mtof(50), t + 1, 0.035, 6, 0.9);
-      if (i % 16 >= 8 && k < 4) THEME[k].forEach(([b, m]) => pluck(o, mtof(m - 12), t + b * q + hum(), vel(0.09), 'lute', 0.4));
-      else if (k % 2 === 0) arp(o, bass - 12, ch.map((m) => m - 12), t, q, 0.06, 'lute');
-    },
-  },
-  /** Tuto : ostinato de luth, violoncelle tenu, notes de harpe éparses (ré dorien). */
-  tuto: {
-    vol: 1.4,
-    bar: 3.2,
-    play(o, t, i) {
-      const PR: [number, number[]][] = [[38, [50, 57, 62, 65]], [36, [48, 55, 60, 64]], [34, [46, 53, 58, 62]], [36, [48, 55, 60, 64]]];
-      const [bass, ch] = PR[i % 4], e = this.bar / 8;
-      [0, 1, 2, 3, 2, 1, 2, 1].forEach((n, j) => pluck(o, mtof(ch[n]), t + j * e + hum(0.012), vel(j % 4 ? 0.045 : 0.07), 'lute', 0.3));
-      bow(o, mtof(bass), t, this.bar, 0.035, { a: 0.4, wet: 0.4, vib: 8, bright: 3 });
-    },
-  },
-  /** Ysolde : ostinato de cordes (3+3+2), timbales, chœur, le thème à l'alto ; phase 2 : tambours, cuivres, cloche. */
-  boss1: {
-    vol: 0.6,
-    bar: 2.14,
-    play(o, t, i, s) {
-      const k = i % 4, sec = i % 16, p2 = s.phase > 1, e = this.bar / 8, q = this.bar / 4;
-      const BB = [38, 34, 31, 33][k], ch = CH[k][1];
-      [0, 0, 12, 0, 0, 12, 0, 7].forEach((d, j) => bow(o, mtof(BB + 12 + d), t + j * e + hum(0.006), e * 0.8, [0, 3, 6].includes(j) ? 0.07 : 0.042, { a: 0.012, wet: 0.2, vib: 0, bright: 6 }));
-      bow(o, mtof(BB), t, this.bar, 0.06, { a: 0.05, wet: 0.3, vib: 4, bright: 4 });
-      const tp = mtof(BB < 36 ? BB + 12 : BB);
-      timp(o, tp, t, 0.22); timp(o, tp, t + 3 * e, 0.11);
-      if (k === 3) for (let j = 12; j < 16; j++) timp(o, tp, t + j * e / 2, 0.05 + j * 0.01);
-      choir(o, F(ch), t, this.bar, p2 ? 0.026 : 0.018, 'o', 0.5);
-      if (k % 2 === 0) for (const m of [BB + 12, BB + 19]) brass(o, mtof(m), t, this.bar * 2, 0.03, 0.4, true);
-      if (sec >= 8) THEME[k].forEach(([b, m, d]) => brass(o, mtof(m - 12), t + b * q + hum(0.006), d * q * 0.95, 0.045, 0.4, true));
-      if (p2 && sec >= 4) THEME[k].forEach(([b, m, d]) => bow(o, mtof(m), t + b * q + hum(0.006), d * q * 0.95, 0.045, { a: 0.06, wet: 0.45, vib: 10, bright: 6 }));
-      if (p2) {
-        for (let j = 0; j < 16; j++) if (j % 4 === 0 || j === 10) drum(o, t + j * e / 2, 0.2, 'low'); else if ([2, 6, 7, 11, 14, 15].includes(j)) drum(o, t + j * e / 2, j % 2 ? 0.035 : 0.06, 'tak');
-        for (const m of ch) brass(o, mtof(m - 12), t, e * 1.4, 0.022, 0.4);
-        if (k === 0) bell(o, mtof(74), t, 0.025, 2.5, 0.6);
-      }
-    },
-  },
-  /** Nycthor : 12/8 lent, mi phrygien, cœur qui bat, cloches des lanternes ; phase 2 : ostinato pincé, timbales. */
-  boss2: {
-    vol: 0.75,
-    bar: 2.86,
-    play(o, t, i, s) {
-      const k = i % 4, p2 = s.phase > 1, e = this.bar / 12;
-      const [bass, ch] = ([[40, [59, 64, 67]], [41, [60, 65, 69]], [40, [59, 64, 67]], [38, [57, 62, 65]]] as [number, number[]][])[k];
-      organ(o, F([bass - 12, bass]), t, this.bar + 0.1, 0.035, 0.5);
-      choir(o, F(ch), t, this.bar + 0.3, 0.018, 'u', 0.7);
-      for (const b of p2 ? [0, 3, 6, 9] : [0, 6]) { drum(o, t + b * e, 0.22, 'low'); drum(o, t + (b + 0.7) * e, 0.13, 'low'); }
-      if (k % 2 === 0 || p2) for (const [b, m] of [[0, 76], [3, 79], [5, 77], [8, 71]]) bell(o, mtof(m + (k === 3 ? -2 : 0)), t + b * e + hum(0.012), 0.016, 2.4, 0.6, undefined, 5);
-      if (k === 1) bow(o, mtof(53), t, this.bar, 0.03, { trem: 11, a: 0.4, wet: 0.5 });
-      if (p2) {
-        [0, 7, 12, 13, 12, 7, 0, 7, 12, 13, 15, 13].forEach((d, j) => pluck(o, mtof(bass + 12 + d), t + j * e + hum(0.008), vel(j % 3 ? 0.04 : 0.06), 'lute', 0.3));
-        timp(o, mtof(bass), t, 0.18); timp(o, mtof(bass), t + 6 * e, 0.12);
-      }
-    },
-  },
-  /** McKING : petite marche de banquet pompeuse (fa majeur, 2/4) : tuba, clavecin, bois ; phase 2 : cuivres, caisse claire. */
-  feast: {
-    vol: 0.85,
-    bar: 0.9375,
-    play(o, t, i, s) {
-      const k = i % 8, p2 = s.phase > 1, e = this.bar / 4;
-      const BS = [41, 36, 41, 34, 36, 36, 41, 36][k];
-      const CF = [[65, 69, 72], [64, 67, 70], [65, 69, 72], [62, 65, 70], [65, 69, 72], [64, 67, 70], [65, 69, 72], [64, 67, 70]][k];
-      const MEL = [
-        [[0, 72], [1, 77], [2, 76], [3, 77]], [[0, 79], [1, 76], [2, 72], [3, 70]], [[0, 69], [1, 72], [2, 77], [3, 81]], [[0, 82, 2], [2, 81], [3, 79]],
-        [[0, 77], [1, 81], [2, 79], [3, 77]], [[0, 76], [1, 79], [2, 70], [3, 76]], [[0, 77, 2], [2, 72], [3, 69]], [[0, 67], [1, 64], [2, 65, 2]],
-      ][k];
-      brass(o, mtof(BS), t, e * 1.5, 0.06, 0.15); brass(o, mtof(BS + 7), t + 2 * e, e * 1.5, 0.05, 0.15);
-      for (const at of [1, 3]) for (const m of CF) pluck(o, mtof(m - 12), t + at * e + hum(0.005), 0.03, 'harpsi', 0.15);
-      for (const [b, m, d = 1] of MEL) {
-        pluck(o, mtof(m), t + b * e + hum(0.005), vel(0.075), 'harpsi', 0.2);
-        if (p2) brass(o, mtof(m - 12), t + b * e, d * e * 0.85, 0.03, 0.3);
-      }
-      for (const j of [1, 3]) drum(o, t + j * e + e / 2, 0.05, 'tak');
-      if (k === 0 && i % 16 === 0) timp(o, mtof(41), t, 0.2);
-      if (p2 && k === 7) for (let j = 0; j < 8; j++) drum(o, t + j * e / 2, 0.04 + j * 0.012, 'snare');
-    },
-  },
-  /** Escalier de la tour : orgue sourd, chœur fermé. */
-  tower: {
-    bar: 4,
-    play(o, t, i) {
-      const [bass, ch] = CH[(i % 2) * 2];
-      organ(o, F([bass, bass + 12]), t, this.bar + 0.2, 0.025, 0.7);
-      choir(o, F(ch), t + 0.2, this.bar, 0.014, 'u', 0.8);
-    },
-  },
-  /** Après un boss : ré majeur (tierce picarde) et sol mineur, harpe très calme. */
-  calm: {
-    vol: 1.2,
-    bar: 4.6,
-    play(o, t, i) {
-      const ch = i % 2 ? [50, 58, 62, 67] : [50, 57, 62, 66];
-      organ(o, F([38]), t, this.bar + 0.2, 0.02, 0.7);
-      choir(o, F(ch), t, this.bar + 0.5, 0.016, 'o', 0.8);
-      arp(o, 38, ch.slice(1), t, this.bar / 4, 0.045);
-    },
-  },
-  /** Aube, couronnement : le thème en ré majeur à la harpe, orgue et chœur doux. */
-  dawn: {
-    bar: 3.4,
-    play(o, t, i) {
-      const k = i % 8, q = this.bar / 4;
-      const [bass, ch] = ([[38, [62, 66, 69]], [35, [62, 66, 71]], [31, [62, 67, 71]], [33, [61, 64, 69]], [38, [62, 66, 69]], [37, [61, 66, 69]], [35, [62, 67, 71]], [33, [61, 64, 69]]] as [number, number[]][])[k];
-      organ(o, F([bass, bass + 12]), t, this.bar + 0.2, 0.024, 0.5);
-      choir(o, F(ch), t, this.bar + 0.4, 0.013, 'o', 0.6);
-      if (Math.floor(i / 8) % 2) THEME[k].forEach(([b, m]) => pluck(o, mtof(MAJ(m)), t + b * q + hum(0.03), vel(0.09), 'harp', 0.5));
-      else arp(o, bass, ch, t, q, 0.055);
-      if (i % 16 === 0) bell(o, mtof(62), t, 0.03, 5, 0.8);
-    },
-  },
-};
-
-/** Piste par scène (les scènes absentes gardent la piste en cours). */
-const BY_SCENE: Record<string, string> = { Menu: 'menu', Outside: 'night', Test: 'tuto', Boss1: 'boss1', Boss2: 'boss2', Boss3: 'feast', Transit: 'tower', Dawn: 'dawn', Throne: 'dawn' };
-
-let want = '', fade = 1.5;
-let cur: { name: string; tr: Track; g: GainNode; w: GainNode; next: number; i: number; stop?: (at: number) => void } | null = null;
-const st: St = { phase: 1 };
-
-function swap() {
-  const t = now();
-  if (cur) {
-    const c = cur;
-    for (const n of [c.g, c.w]) { n.gain.cancelScheduledValues(t); n.gain.setValueAtTime(n.gain.value, t); n.gain.linearRampToValueAtTime(0, t + fade); }
-    c.stop?.(t + fade + 0.1);
-    setTimeout(() => { c.g.disconnect(); c.w.disconnect(); }, (fade + 9) * 1000);
+function parsePat(src: string, name: string): Ev[] {
+  const t = src.trim().split(/\s+/), out: Ev[] = new Array(STEPS).fill(null);
+  if (import.meta.env.DEV && t.length !== STEPS) console.error(`pattern ${name} : ${t.length} pas au lieu de ${STEPS}`);
+  for (let i = 0; i < STEPS; i++) {
+    const k = t[i];
+    if (!k || k === '.' || k === '-') continue;
+    let len = 1;
+    while (t[i + len] === '-') len++;
+    const m = midi(k);
+    out[i] = m !== null ? { m, len } : { d: k as DrumKind, len };
   }
-  cur = null;
-  const tr = TRACKS[want];
-  if (!tr) return;
-  const g = gain(0), w = gain(0);
-  g.connect(musBus); w.connect(musVerb);
-  for (const n of [g, w]) { n.gain.setValueAtTime(0, t); n.gain.linearRampToValueAtTime(tr.vol ?? 1, t + 1.2); }
-  cur = { name: want, tr, g, w, next: t + 0.1, i: 0, stop: tr.amb?.({ d: g, w }, t) };
+  return out;
+}
+type Comp = { def: Ch; bars: (Ev[] | null)[] };
+const compiled = new Map<Track, { chs: Comp[]; bars: number }>();
+function compile(tr: Track) {
+  let c = compiled.get(tr);
+  if (c) return c;
+  const cache = new Map<string, Ev[]>();
+  const pat = (n: string) => {
+    if (n === '_') return null;
+    if (!(n in tr.pats)) { if (import.meta.env.DEV) console.error(`pattern inconnu : ${n}`); return null; }
+    let p = cache.get(n);
+    if (!p) cache.set(n, (p = parsePat(tr.pats[n], n)));
+    return p;
+  };
+  const chs = tr.ch.map((def) => ({ def, bars: def.seq.split(' ').flatMap((w) => { const [n, x] = w.split('*'); return Array.from({ length: +(x ?? 1) }, () => pat(n)); }) }));
+  c = { chs, bars: Math.max(...chs.map((x) => x.bars.length)) };
+  compiled.set(tr, c);
+  return c;
 }
 
-/** Planificateur : écrit les mesures qui commencent dans moins de 0,6 s. */
-function tick() {
-  if (!ac || ac.state !== 'running') return;
-  if (want !== (cur?.name ?? '')) swap();
-  if (!cur) return;
-  const t = now();
-  if (cur.next < t) cur.next = t + 0.05; // onglet en arrière-plan : on saute plutôt que d'empiler
-  while (cur.next < t + 0.6) { cur.tr.play({ d: cur.g, w: cur.w }, cur.next, cur.i++, st); cur.next += cur.tr.bar; }
+interface Run {
+  name: string; tr: Track; chs: Comp[]; bars: number; o: Out; g: GainNode; w: GainNode;
+  spb: number; next: number; bar: number; step: number; phase: number;
+  /** Phase 2 demandée : fill sur la fin de la mesure, bascule à la suivante. */
+  toP2: boolean;
+  /** Tout est écrit, reste la queue. */
+  end: number;
+  /** Stinger : piste à enchaîner à la fin. */
+  then: string;
 }
-setInterval(tick, 100);
+
+const SEND = 0.5; // réverb de nef : une pointe seulement, le chiptune reste sec
+let cur: Run | null = null;
+/** Piste en attente du déblocage audio. */
+let want = '';
+/** Changement demandé pour le prochain début de mesure. */
+let pending: { name: string; fade: number } | null = null;
+
+// Étage de coupure (touche M) : indépendant du curseur OPTIONS et de l'étouffement de pause.
+let muted = false;
+try { muted = localStorage.getItem('ashenborn.mute') === '1'; } catch { /* file:// ou stockage bloqué */ }
+let stage: { c: BaseAudioContext; d: GainNode; w: GainNode } | null = null;
+function outStage() {
+  if (stage?.c === ac) return stage;
+  const k = muted ? 0 : 1, d = gain(k), w = gain(k);
+  d.connect(musBus); w.connect(musVerb);
+  return (stage = { c: ac!, d, w });
+}
+
+const running = () => !!ac && ac.state === 'running';
+
+function fadeOut(r: Run | null, sec: number) {
+  if (!r) return;
+  const t = now();
+  for (const n of [r.g, r.w]) { n.gain.cancelScheduledValues(t); n.gain.setValueAtTime(n.gain.value, t); n.gain.linearRampToValueAtTime(0, t + sec); }
+  setTimeout(() => { r.g.disconnect(); r.w.disconnect(); }, (sec + 3) * 1000);
+}
+
+/** Lance une piste maintenant (ou à `at`), en fondu d'entrée `fade`, depuis la mesure `bar`. */
+function start(name: string, fade: number, at = now() + 0.03, bar = 0, then = '') {
+  const tr = TRACKS[name];
+  if (!tr) return null;
+  const s = outStage(), g = gain(0), w = gain(0), k = (tr.vol ?? 1) * VOL.all, { chs, bars } = compile(tr);
+  g.connect(s.d); w.connect(s.w);
+  for (const n of [g, w]) {
+    n.gain.setValueAtTime(fade > 0.02 ? 0 : k, at);
+    if (fade > 0.02) n.gain.linearRampToValueAtTime(k, at + fade);
+  }
+  const spb = 60 / tr.bpm / 4;
+  const r: Run = { name, tr, chs, bars, o: { d: g, w }, g, w, spb, next: at, bar, step: 0, phase: 1, toP2: false, end: 0, then };
+  tr.once?.(r.o, at);
+  return r;
+}
+
+const FILL: [DrumKind, number][] = [['S', 0.5], ['S', 0.6], ['T', 0.75], ['S', 0.8], ['T', 0.9], ['S', 1]];
+
+/** Écrit un pas de la piste à l'instant `at`. */
+function writeStep(r: Run, at: number) {
+  const fillAt = r.toP2 ? r.step - (STEPS - FILL.length) : -1;
+  for (const { def, bars } of r.chs) {
+    if (def.p && def.p !== r.phase) continue;
+    if (def.i === 'drum' && fillAt >= 0) continue;
+    const p = bars[r.bar % bars.length];
+    const e = p?.[r.step];
+    if (!e) continue;
+    if (def.i === 'drum') { drum(r.o, e.d!, at, def.v); continue; }
+    let m = e.m! + (def.tr ?? 0);
+    if (def.max && m > def.max) m -= 12;
+    const dur = e.len * r.spb * (def.gate ?? 1);
+    if (def.i === 'bell') chipBell(r.o, m, at, def.v);
+    else tone(r.o, def.i as Duty | 'tri', m, at, dur, def.v, { wet: def.wet && def.wet * SEND, vib: def.vib, pluck: def.pluck });
+  }
+  if (fillAt >= 0) { const [k, v] = FILL[fillAt]; drum(r.o, k, at, v); }
+}
+
+/** Avance d'un pas ; en début de mesure, applique ce qui attendait la barre de mesure. */
+function advance(r: Run) {
+  r.next += r.spb;
+  if (++r.step < STEPS) return;
+  r.step = 0;
+  r.bar++;
+  if (r.toP2) { r.toP2 = false; r.phase = 2; r.bar = 0; drum(r.o, 'C', r.next); drum(r.o, 'K', r.next); return; }
+  const j = r.tr.jump?.[r.bar];
+  if (j !== undefined) r.bar = j;
+  else if (r.bar >= r.bars) {
+    if (r.tr.loop !== undefined) r.bar = r.tr.loop;
+    else r.end = r.tr.len !== undefined ? r.next - r.bars * STEPS * r.spb + r.tr.len : r.next;
+  }
+}
+
+function tick() {
+  if (!running()) return;
+  if (want) { const w = want; want = ''; cur = start(w, 0.5); }
+  const t = now(), ahead = document.hidden ? AHEAD_HIDDEN : AHEAD;
+  let r = cur;
+  if (!r) return;
+  // Onglet gelé : on reste sur la grille en sautant les pas perdus.
+  while (r.next < t - 0.02 && !r.end) advance(r);
+  while (r && !r.end && r.next < t + ahead) {
+    if (r.step === 0 && pending) {
+      const p = pending; pending = null;
+      fadeOut(r, p.fade);
+      cur = r = start(p.name, p.fade, r.next);
+      if (!r) return;
+    }
+    writeStep(r, r.next);
+    advance(r);
+  }
+  if (r?.end && r.end < t + ahead) {
+    if (r.then) { const n = r.then, at = Math.max(r.end, t + 0.02); fadeOut(r, 0.3); cur = start(n, 0.02, at); }
+    else if (r.end < t) { fadeOut(r, 2); cur = null; }
+  }
+}
+setInterval(tick, 40);
+
+/** Piste de chaque scène ; '' = silence ; absente = garde ce qui joue (combats : gérés par BossScene). */
+const BY_SCENE: Record<string, string> = { Menu: 'menu', Outside: '' };
+const FIGHT: Record<string, string> = { Boss1: 'boss1', Boss2: 'boss2', Boss3: 'boss3' };
 
 export const music = {
-  play(name: string, sec = 1.5) { want = name; fade = sec; },
-  stop(sec = 1.5) { want = ''; fade = sec; },
-  /** Phase du boss : les pistes de combat ajoutent leurs couches à la mesure suivante. */
-  phase(n: number) { st.phase = n; },
+  /** Piste en boucle, en fondu. Sans `now`, attend le début de mesure si l'ancienne a des mesures courtes. */
+  play(name: string, fade = 0.8, immediate = false) {
+    pending = null;
+    if (!running()) { want = name; return; }
+    want = '';
+    if (cur?.name === name && !cur.tr.boss && !immediate) return;
+    if (cur && !immediate && !cur.end && cur.spb * STEPS <= 2) { pending = { name, fade }; return; }
+    fadeOut(cur, cur?.end ? 0.3 : fade);
+    cur = start(name, fade);
+    tick();
+  },
+  stop(fade = 0.8) {
+    want = ''; pending = null;
+    if (running()) fadeOut(cur, fade);
+    cur = null;
+  },
+  /** Morceau non bouclé par-dessus rien : coupe la piste en 0,3 s. `then` s'enchaîne à sa fin. */
+  stinger(name: string, then = '') {
+    pending = null;
+    if (!running()) { want = then; return; }
+    want = '';
+    fadeOut(cur, 0.3);
+    cur = start(name, 0.02, now() + 0.02, 0, then);
+    tick();
+  },
+  /** Phase du boss : couches en plus à la mesure suivante, avec un fill sur la fin de celle-ci. */
+  setPhase(n: number) {
+    if (n === 2 && cur?.tr.boss && cur.phase === 1) cur.toP2 = true;
+  },
+  /** Saute à une mesure, tout de suite (sections d'une cinématique). */
+  cue(bar: number) {
+    if (!running() || !cur) return;
+    const name = cur.name;
+    fadeOut(cur, 0.03);
+    cur = start(name, 0.02, now() + 0.02, bar);
+    tick();
+  },
+  /** Coupe ou remet la musique (touche M). */
+  mute(on = !muted) {
+    muted = on;
+    try { localStorage.setItem('ashenborn.mute', on ? '1' : '0'); } catch { /* ignoré */ }
+    if (!stage || stage.c !== ac) return;
+    for (const n of [stage.d, stage.w]) n.gain.setTargetAtTime(on ? 0 : 1, now(), 0.02);
+  },
+  /** Combat de la salle `key`, tout de suite, depuis la phase 1. */
+  fight(key: string, fade = 0.3) { if (FIGHT[key]) this.play(FIGHT[key], fade, true); },
   /** Pause : musique plus basse et étouffée. */
   duck(on: boolean) {
     if (!ac) return;
@@ -228,14 +222,23 @@ export const music = {
     musBus.gain.setTargetAtTime(AUDIO.music * k, t, 0.08); musVerb.gain.setTargetAtTime(AUDIO.music * k, t, 0.08);
     musLP.frequency.setTargetAtTime(on ? 700 : 18000, t, 0.08);
   },
-  /** Appelé à la création de chaque scène. */
+  /** Appelé à la création de chaque scène (main.ts). */
   scene(key: string) {
     if (key === 'Pause') return this.duck(true);
-    if (key === 'GameOver') return this.stop(0.3);
     if (!(key in BY_SCENE)) return;
-    this.duck(false); st.phase = 1;
-    this.play(BY_SCENE[key]);
+    this.duck(false);
+    const n = BY_SCENE[key];
+    if (!n) return this.stop(1);
+    this.play(n, 0.6, key === 'Menu' && !!cur?.tr.boss);
   },
-  /** DEV : rendu hors ligne d'une piste (pour mesurer les niveaux). */
-  track: (name: string) => TRACKS[name],
+  /** DEV : écrit une piste dans le contexte courant (rendu hors ligne), passage en phase 2 à p2At secondes. */
+  render(name: string, sec: number, p2At = 0) {
+    const r = start(name, 0.02, 0.01);
+    if (!r) return;
+    while (r.next < sec && !r.end) { if (p2At && r.next >= p2At && r.phase === 1) r.toP2 = true; writeStep(r, r.next); advance(r); }
+  },
+  /** Mode debug. */
+  names: () => Object.keys(TRACKS),
+  track: (n: string) => TRACKS[n],
+  info: () => ({ name: cur?.name ?? '', bar: cur?.bar ?? 0, step: cur?.step ?? 0, phase: cur?.phase ?? 0, muted, running: running() }),
 };

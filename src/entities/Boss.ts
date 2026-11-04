@@ -184,7 +184,7 @@ export class Boss implements Target {
     this.abort();
     this.state = 'phase'; this.phase = 2; this.speed = BOSS.p2Speed;
     this.eyes('tele');
-    sfx.roar(); music.phase(2);
+    sfx.roar(); music.setPhase(2);
     this.scene.cameras.main.shake(BOSS.p2Invuln * 800, 0.01);
     this.scene.sparks(this.x, this.y - this.def.hurt.h * 0.8, 0xd8d0ff, 24);
     if (this.def.roar) this.def.roar(this);
@@ -200,7 +200,7 @@ export class Boss implements Target {
     this.state = 'dead';
     this.eyes('off');
     this.scene.hazards.clear(true, true);
-    sfx.bossDeath(); music.play('calm', 2.5);
+    sfx.bossDeath(); music.stop(0.8);
     this.scene.cameras.main.shake(600, 0.012);
     if (this.def.death) return this.def.death(this);
     const h = this.def.hurt.h;

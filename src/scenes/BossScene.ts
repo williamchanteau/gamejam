@@ -6,6 +6,7 @@ import { BossBar } from '../ui/BossBar';
 import { txt } from '../art/font';
 import { input } from '../input';
 import { sfx } from '../audio/sfx';
+import { music } from '../audio/music';
 import { YSOLDE } from '../bosses/ysolde';
 import { buildNave, type Room } from './rooms';
 import { announce } from '../ui/Announcer';
@@ -57,12 +58,14 @@ export class BossScene extends ArenaScene {
     if (data?.retry) {
       this.bar.fillUp(0);
       this.boss.start(BOSS.retryDelay);
+      music.fight(this.scene.key);
     } else {
       this.frozen = true;
       this.bar.fillUp(1.6);
       this.time.delayedCall(450, () => { this.boss.eyes('tele'); sfx.warn(); });
       const f = FLOORS[this.floor];
-      announce(this, this.def, `${f.name} · ${f.place}`, () => this.begin());
+      // Combat sur l'horloge de la scène : une pause pendant l'annonceur le retarde aussi.
+      announce(this, this.def, `${f.name} · ${f.place}`, () => { this.begin(); music.fight(this.scene.key); });
     }
   }
 
