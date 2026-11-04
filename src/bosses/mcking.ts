@@ -6,7 +6,7 @@ import { COL, PLAYER } from '../config';
 import { maxHp } from '../floors';
 import { sfx } from '../audio/sfx';
 import { txt } from '../art/font';
-import { ARM_LEN, ARM_PIVOT } from '../art/mcking';
+import { ARM_LEN, ARM_PIVOT, gustKey, SHOCK } from '../art/mcking';
 import { shout } from '../ui/Shout';
 
 export const MK = {
@@ -31,8 +31,6 @@ type Gfx = Phaser.GameObjects.Graphics;
 const Rect = Phaser.Geom.Rectangle;
 const HEAD_Y = -82, CROWN_Y = -37, BELLY_Y = -34, SHOULDER_Y = -75, ARM = { f: -7, b: 7 }, EAT_ARM = 122; // bras en travers du torse : la main arrive à la bouche
 const A = (b: Boss) => b.parts as unknown as { rig: Cont; head: Cont; headImg: Img; belly: Img; torso: Img; armF: Cont; armB: Cont; upF: Img; upB: Img; foreF: Cont; foreB: Cont; held: Img; crown: Img; legL: Img; legR: Img };
-/** Souffle : air blanc et traîne chaude, du fond vers le front [décalage du rayon, épaisseur, couleur, opacité]. */
-const AIR = [[-16, 8, 0xffb070, 0.22], [-9, 6, 0xffe2b8, 0.42], [-3, 4, 0xfff6e4, 0.7], [0, 2, 0xffffff, 1]];
 const MOUTH = { x: 10, y: -84 };
 /** Tambour du rugissement : bras écarté / poing sur le bide (angles de bras), cadence en ms. */
 const DRUM = { up: -40, hit: 44, at: 190, beats: 5, gap: 145 };
@@ -223,36 +221,31 @@ function quake(b: Boss, ms: number, amp: number, plaster = 0) {
   cam.shake(ms, amp, true);
   for (let i = 0; i < plaster; i++) sc.debris(cam.scrollX + Phaser.Math.Between(20, cam.width - 20), Phaser.Math.Between(10, 40), 1);
 }
-/** Un front de souffle : arc net et sa traîne d'air chaud, trait d'épaisseur constante. */
-function airArc(g: Gfx, cx: number, cy: number, r: number, a0: number, a1: number, alpha: number) {
-  for (const [dr, w, col, k] of AIR) {
-    if (r + dr < 1) continue;
-    g.lineStyle(w, col, alpha * k);
-    g.beginPath(); g.arc(cx, cy, r + dr, a0, a1); g.strokePath();
-  }
+/** Joue une planche d'images à cadence fixe puis la retire ; (ox, oy) = point d'ancrage dans l'image, retourné si dir < 0. */
+function flip(sc: Phaser.Scene, key: string, n: number, x: number, y: number, ox: number, oy: number, depth = 15, ms = 42, dir = 1) {
+  const o = { i: 0 }, img = sc.add.image(x, y, key + 0).setOrigin(dir < 0 ? 1 - ox : ox, oy).setFlipX(dir < 0).setDepth(depth);
+  sc.tweens.add({ targets: o, i: n, duration: n * ms, ease: 'Linear', onUpdate: () => img.setTexture(key + Math.min(n - 1, Math.floor(o.i))), onComplete: () => img.destroy() });
 }
-const airGfx = (sc: Phaser.Scene) => sc.add.graphics().setDepth(15).setBlendMode(Phaser.BlendModes.ADD);
-/** Anneau de souffle, sans danger : un dôme posé au sol, ou un cercle complet en l'air. */
-function shock(sc: Phaser.Scene, x: number, y: number, R: number, dome = false) {
-  const g = airGfx(sc), o = { t: 0 };
-  sc.tweens.add({
-    targets: o, t: 1, duration: 380, ease: 'Quad.out', onComplete: () => g.destroy(),
-    onUpdate: () => { g.clear(); airArc(g, x, y, 6 + R * o.t, dome ? Math.PI : 0, Math.PI * 2, 1 - o.t * o.t); },
-  });
+/** Image de boucle puis de dissolution d'une onde selon le temps qui lui reste. */
+const waveFrame = (t: number, life: number) => (life < 0.1 ? SHOCK.loop + 2 : life < 0.2 ? SHOCK.loop + 1 : life < 0.3 ? SHOCK.loop : Math.floor(t * 14) % SHOCK.loop);
+/** Souffle en l'air, sans danger : éclat puis anneau cassé. */
+function shock(sc: Phaser.Scene, x: number, y: number) {
+  flip(sc, 'mck_sw_star', SHOCK.star, x, y, 0.5, 0.5, 16, 40);
+  flip(sc, 'mck_sw_air', SHOCK.ring, x, y, 0.5, 0.5);
 }
-/** Souffle au sol : un dôme qui s'ouvre, puis un front qui file de chaque côté en soulevant la poussière. Se saute. */
+/** Souffle au sol : éclat bref, anneau à plat (moitié arrière derrière le boss), puis une crête de poussière file de chaque côté. Se saute. */
 function waves(b: Boss, x: number, speed: number) {
   const sc = b.scene, floor = b.floorY;
-  shock(sc, x, floor, 118, true);
+  flip(sc, 'mck_sw_gstar', 2, x, floor + 1, 0.5, 1, 16, 45);
+  flip(sc, 'mck_sw_fb', SHOCK.ring, x, floor + 1, 0.5, 1, 6);
+  flip(sc, 'mck_sw_ff', SHOCK.ring, x, floor + 1, 0.5, 0);
   for (const d of [-1, 1]) {
-    const w = b.hazard('mck_mark', x + d * 22, floor + 1, d * speed, 20, 17, 2.6).setVisible(false), g = airGfx(sc);
-    w.once('destroy', () => g.destroy());
-    let dust = 0;
+    const w = b.hazard('mck_sw_crest0', x + d * 22, floor + 1, d * speed, 20, 17, 2.6);
+    let t = 0, dust = 0;
     w.setData('tick', (dt: number) => {
-      const fx = w.x + d * 10, r = Math.min(28, Math.abs(fx - x));
-      g.clear();
-      airArc(g, fx - d * r, floor, r, d > 0 ? -Math.PI / 2 : Math.PI, d > 0 ? 0 : Math.PI * 1.5, Math.min(1, w.getData('life') / 0.5));
-      if ((dust -= dt) <= 0) { dust = 0.07; sc.puffs(fx, floor, 1); }
+      t += dt;
+      w.setTexture('mck_sw_crest' + waveFrame(t, w.getData('life')));
+      if ((dust -= dt) <= 0) { dust = 0.09; sc.puffs(w.x - d * 8, floor, 1); }
     });
   }
 }
@@ -414,11 +407,13 @@ function* burp(b: Boss) {
   shout(sc, ['BUUURP !'], b.x + dir * 62, b.y - 138, { scale: 1, ms: 650 });
   // Le souffle sort de la bouche et plonge vers son couloir ; il ne blesse qu'une fois arrivé.
   const gas = (bottom: number) => {
-    const mx = b.x + dir * MOUTH.x, my = b.y + MOUTH.y, ground = bottom > b.floorY, g = airGfx(sc), R90 = Math.PI / 2;
-    shock(sc, mx, my, 78); sc.time.delayedCall(70, () => shock(sc, mx, my, 46));
+    const mx = b.x + dir * MOUTH.x, my = b.y + MOUTH.y, ground = bottom > b.floorY, L = Phaser.Math.Linear;
+    flip(sc, 'mck_sw_burp', SHOCK.burp, mx, my, SHOCK.burpX / SHOCK.burpW, 0.5, 16, 42, dir);
+    sc.puffs(mx + dir * 14, my, 6);
     const o = b.hazard('mck_mark', mx, bottom, 0, 13, 34, 2.8).setVisible(false), body = o.body as Phaser.Physics.Arcade.Body;
+    const v = sc.add.image(mx, my, gustKey(ground, SHOCK.gust[0], 0)).setDepth(15).setFlipX(dir < 0).setOrigin(dir < 0 ? 0 : 1, ground ? 1 : 0.5);
     body.enable = false;
-    o.once('destroy', () => g.destroy());
+    o.once('destroy', () => v.destroy());
     let t = 0;
     o.setData('tick', (dt: number) => {
       t += dt;
@@ -426,10 +421,9 @@ function* burp(b: Boss) {
       const s = 1 + Math.min(0.5, t * 0.5), h = 34 * s, p = Phaser.Math.Easing.Quadratic.Out(Math.min(1, t / C.dive));
       if (t >= C.dive) body.enable = true;
       o.setScale(s);
-      const L = Phaser.Math.Linear, r = L(8, ground ? h : h * 0.65, p), cy = L(my, ground ? b.floorY : bottom - h / 2, p);
-      const top = L(-R90 * 0.8, ground ? -R90 : -R90 * 0.55, p), bot = L(R90 * 0.8, ground ? 0 : R90 * 0.55, p);
-      g.clear();
-      airArc(g, o.x + dir * (6 * s - r), cy, r, dir > 0 ? top : Math.PI - bot, dir > 0 ? bot : Math.PI - top, Math.min(1, o.getData('life') / 0.5));
+      const size = SHOCK.gust.find((g) => g >= h + 6) ?? SHOCK.gust[SHOCK.gust.length - 1];
+      v.setTexture(gustKey(ground, size, waveFrame(t, o.getData('life')))).setScale(L(0.4, 1, p));
+      v.setPosition(o.x + dir * 6 * s, L(my, ground ? b.floorY + 1 : bottom - h / 2, p));
     });
   };
   gas(b.floorY + 1);
@@ -535,7 +529,7 @@ function* split(b: Boss) {
   o.setData('tick', (dt: number) => { t += dt; const k = Math.min(1, t / T); o.x = x0 + (tx - x0) * k; o.y = b.y - 150 + (y0 - b.y + 150) * k; o.angle += dt * 400; if (k >= 1) { o.setData('life', 0); pop(); } });
   const pop = () => {
     sfx.splat(); sfx.clank(); sc.flashScreen(0.12); sc.sparks(tx, y0, 0xe8a548, 18); sc.sparks(tx, y0, 0xfff1d0, 10);
-    quake(b, 260, 0.012, 4); shock(sc, tx, y0, 84);
+    quake(b, 260, 0.012, 4); shock(sc, tx, y0);
     b.hazard('bun_top', tx, y0 + 50, dir * 240, 34, 14, 2.6).setOrigin(0.5, 1).setScale(2);
     const m = b.hazard('patty', tx, y0, 0, 40, 10, 0.6).setOrigin(0.5).setScale(2);
     let v = 0;

@@ -207,7 +207,119 @@ function burger(c: C, bite = 0) {
   }
 }
 
+// Ondes de choc : images dessinées au pixel près (3 tons opaques, tramage), jouées à cadence fixe par bosses/mcking.ts.
+const WW = '#ffffff', WC = '#f4e9d6', WD = '#c9b8a0', WS = '#8f8072', TAU = Math.PI * 2;
+const BAYER = [0, 8, 2, 10, 12, 4, 14, 6, 3, 11, 1, 9, 15, 7, 13, 5];
+/** Tramage ordonné : v = 1 garde tout, v = 0 efface tout. */
+const keep = (x: number, y: number, v: number) => v > (BAYER[(x & 3) + (y & 3) * 4] + 0.5) / 16;
+/** Bruit lisse et périodique sur [0, 1[ (n cases). */
+const wob = (u: number, n: number, seed: number) => {
+  const p = (((u % 1) + 1) % 1) * n, i = Math.floor(p), k = p - i, t = k * k * (3 - 2 * k);
+  return rnd(seed + i) * (1 - t) + rnd(seed + ((i + 1) % n)) * t;
+};
+const out3 = (k: number) => 1 - (1 - k) ** 3;
+/** Nombre d'images des planches ; gust = hauteurs dessinées du mur de gaz ; loop/fade = images en boucle puis de dissolution. */
+export const SHOCK = { star: 3, ring: 8, burp: 8, loop: 4, fade: 3, gust: [40, 48, 58], burpW: 150, burpH: 120, burpX: 22 };
+export const gustKey = (ground: boolean, h: number, f: number) => `mck_sw_gust${ground ? 'g' : 'a'}${h}_${f}`;
+
+/** Bande circulaire [r - th, r] : front blanc, s'amincit et s'émiette avec k. span < PI : croissant effilé vers la droite ; sq écrase en hauteur. */
+function band(c: C, W: number, H: number, cx: number, cy: number, r: number, th: number, k: number, seed: number, span = Math.PI, sq = 1) {
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) {
+    const dx = x + 0.5 - cx, dy = (y + 0.5 - cy) / sq, d = Math.hypot(dx, dy);
+    if (d > r + 2 || d < r - th * 1.7) continue;
+    const a = Math.atan2(dy, dx);
+    if (Math.abs(a) > span) continue;
+    const u = a / TAU + 0.5, e = r + 3 * (wob(u, 11, seed) - 0.5) - d;
+    const w = th * (span < 3 ? Math.cos((a / span) * (Math.PI / 2)) ** 0.65 : 0.35 + 1.25 * wob(u, 7, seed + 20));
+    if (e < 0 || e > w || !keep(x, y, 1.4 - k * (0.8 + wob(u, 13, seed + 40)))) continue;
+    R(c, e < w * 0.45 ? WW : e < w * 0.8 ? WC : WD, x, y);
+  }
+}
+/** Poussière en boules [x, y, r], éteinte pour laisser le blanc au seul front : dessous sombre, dessus-avant clair. */
+function cloud(c: C, blobs: number[][]) {
+  for (const [x, y, r] of blobs) ell(c, '#5e5449', x - 0.5, y + 1, r, r);
+  for (const [x, y, r] of blobs) ell(c, WS, x, y, r, r);
+  for (const [x, y, r] of blobs) if (r >= 2) ell(c, WD, x + r * 0.2, y - r * 0.26, r * 0.72, r * 0.68);
+  for (const [x, y, r] of blobs) if (r >= 4) ell(c, WC, x + r * 0.36, y - r * 0.46, r * 0.32, r * 0.28);
+}
+/** Efface par tramage : v(x, y) = 1 garde tout, 0 efface tout. */
+function dissolve(c: C, W: number, H: number, v: (x: number, y: number) => number) {
+  for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) if (!keep(x, y, v(x, y))) c.clearRect(x, y, 1, 1);
+}
+/** Éclat d'impact à pointes irrégulières, sur l'arc [a0, a1], percé au centre si hole > 0. */
+function burst(c: C, cx: number, cy: number, rx: number, ry: number, n: number, seed: number, a0: number, a1: number, hole = 0) {
+  const pts: number[] = [];
+  for (let i = 0; i <= n * 2; i++) {
+    const a = a0 + ((a1 - a0) * i) / (n * 2), q = i % 2 ? 0.3 + 0.14 * rnd(seed + i) : 0.62 + 0.38 * rnd(seed + i);
+    pts.push(cx + Math.cos(a) * rx * q, cy + Math.sin(a) * ry * q);
+  }
+  poly(c, WW, pts);
+  if (!hole) return ell(c, WC, cx, cy, rx * 0.22, ry * 0.22);
+  c.globalCompositeOperation = 'destination-out'; ell(c, '#000', cx, cy, rx * hole, ry * hole); c.globalCompositeOperation = 'source-over';
+}
+/** Rot à la bouche, vers la droite : éclat, 3 croissants qui partent en cône, traits de vitesse. */
+function burpFrame(c: C, i: number) {
+  const { burp: n, burpW: W, burpH: H, burpX: X } = SHOCK, Y = H / 2, k = i / (n - 1);
+  if (i < 2) burst(c, X, Y, 15 + i * 7, 15 + i * 7, 7, 60 + i, 0, TAU);
+  for (let j = 0; j < 3; j++) {
+    const q = (i - 1 - j * 1.1) / (n - 2 - j * 1.1);
+    if (q > 0) band(c, W, H, X, Y, 16 + (88 - j * 22) * out3(q), (8 - j * 1.5) * (1 - q) + 1.4, q, 70 + j, 1);
+  }
+  for (let j = 0; j < 8; j++) {
+    const a = (j / 7 - 0.5) * 2 + (rnd(80 + j) - 0.5) * 0.22, r0 = 18 + (34 + 60 * rnd(90 + j)) * out3(k), L = (1 - k) * (10 + 16 * rnd(95 + j)) + 2;
+    if (i) beam(c, j % 3 ? WC : WW, X + Math.cos(a) * r0, Y + Math.sin(a) * r0, X + Math.cos(a) * (r0 + L), Y + Math.sin(a) * (r0 + L), 1);
+  }
+}
+/** Crête de poussière qui file vers la droite (40×26, hitbox x 10..30, haut 17) : boules qui bouillonnent, front blanc effilé, queue tramée. */
+function crest(c: C, f: number, fade = 0) {
+  const W = 40, H = 26, ph = f / SHOCK.loop, blobs = [[6, 23.5, 2.6], [11.5, 22.5, 4], [17, 21, 5.5], [19.5, 14.5, 3.8], [23, 19.5, 7], [25, 12.5, 5.2]];
+  cloud(c, blobs.map(([x, y, r], i) => { const q = Math.sin(TAU * (ph + i * 0.37)); return [x + q * 0.6, y - q * 0.7, r * (1 + 0.13 * q)]; }));
+  band(c, W, H, 13, H, 19, 4.5, 0, 400 + f * 13, Math.PI / 2);
+  dissolve(c, W, H, (x) => Math.min((x / 6) * 1.4, 1.25 - fade * 1.05));
+  for (let j = 0; j < 3; j++) {
+    const q = (ph + j / 3) % 1, x = Math.round(26 - q * 16), y = Math.round(9 - 5 * Math.sin(q * Math.PI) + j);
+    if (keep(x, y, 1.3 - q - fade)) R(c, q < 0.45 ? WW : WC, x, y, q < 0.3 ? 2 : 1, 1);
+  }
+}
+/** Mur de gaz qui file vers la droite : 3 croissants imbriqués et traînées ; au sol il monte du plancher dans la poussière, en l'air il s'effile des deux côtés. */
+function gust(c: C, W: number, H: number, ground: boolean, f: number, fade = 0) {
+  const ph = f / SHOCK.loop, Rw = H * 0.46, Rh = ground ? H : H / 2, cy = ground ? H : H / 2, cx = W - 1 - Rw, sq = Rh / Rw, seed = 430 + f * 17;
+  const blobs: number[][] = [];
+  if (ground) for (let j = 0; j < 4; j++) { const q = Math.sin(TAU * (ph + j * 0.31)), r = H * (0.2 - j * 0.03) * (1 + 0.14 * q); blobs.push([W - 5 - r * 0.6 - j * H * 0.15, H - r * 0.7 + q * 0.6, r]); }
+  cloud(c, blobs);
+  band(c, W, H, cx, cy, Rw, H * 0.2, 0, seed, Math.PI / 2, sq);
+  band(c, W, H, cx, cy, Rw - H * 0.25 - Math.sin(TAU * ph), H * 0.085, 0.5, seed + 3, Math.PI / 2, sq);
+  band(c, W, H, cx, cy, Rw - H * 0.39 + Math.sin(TAU * ph), H * 0.055, 0.85, seed + 6, Math.PI / 2, sq);
+  for (let j = 0; j < 6; j++) {
+    const q = (ph + j * 0.29) % 1, y = Math.floor(H * (ground ? 0.2 + j * 0.11 : 0.18 + j * 0.13)), L = Math.round(W * (0.12 + 0.14 * rnd(450 + j))), x = Math.round(W * (0.62 - 0.5 * q) - L);
+    if (x >= 0) R(c, q < 0.5 ? WC : WD, x, y, L, 1);
+  }
+  dissolve(c, W, H, (x) => Math.min((x / (W * 0.3)) * 1.5, 1.25 - fade * 1.05));
+}
+function makeShockArt(s: Phaser.Scene) {
+  const { star, ring, burp, loop, fade } = SHOCK, FLOOR_R = 165, FH = 27, last = SHOCK.gust[SHOCK.gust.length - 1];
+  for (let i = 0; i < star; i++) {
+    const q = 0.72 + i * 0.2, hole = i === 2 ? 0.55 : i === 1 ? 0.25 : 0;
+    canvasTex(s, `mck_sw_star${i}`, 76, 76, (c) => burst(c, 38, 38, 36 * q, 36 * q, 8, 200 + i, 0, TAU, hole));
+    if (i < 2) canvasTex(s, `mck_sw_gstar${i}`, 200, 58, (c) => burst(c, 100, 57, 96 * (0.8 + i * 0.2), 56 * (0.8 + i * 0.2), 7, 210 + i, Math.PI, TAU));
+  }
+  for (let i = 0; i < ring; i++) {
+    const k = i / (ring - 1), r = 10 + 80 * out3(k), th = 11 * (1 - k) + 1.5;
+    canvasTex(s, `mck_sw_air${i}`, 188, 188, (c) => band(c, 188, 188, 94, 94, r, th, k, 300));
+    const fr = 14 + (FLOOR_R - 14) * out3(k), fth = 26 * (1 - k) + 4;
+    canvasTex(s, `mck_sw_fb${i}`, 340, FH, (c) => band(c, 340, FH, 170, FH, fr, fth, k, 320, Math.PI, 0.155));
+    canvasTex(s, `mck_sw_ff${i}`, 340, FH, (c) => band(c, 340, FH, 170, 0, fr, fth, k, 340, Math.PI, 0.155));
+  }
+  for (let i = 0; i < burp; i++) canvasTex(s, `mck_sw_burp${i}`, SHOCK.burpW, SHOCK.burpH, (c) => burpFrame(c, i));
+  for (let i = 0; i < loop + fade; i++) {
+    const out = Math.max(0, i - loop + 1) / fade;
+    canvasTex(s, `mck_sw_crest${i}`, 40, 26, (c) => crest(c, i % loop, out));
+    for (const H of SHOCK.gust) for (const g of [true, false]) if (i < loop || H === last) canvasTex(s, gustKey(g, H, i), Math.round(H * 1.15), H, (c) => gust(c, Math.round(H * 1.15), H, g, i % loop, out));
+  }
+}
+
 export function makeMcKingArt(s: Phaser.Scene) {
+  makeShockArt(s);
   // Corps.
   canvasTex(s, 'mck_head', 60, 44, (c) => head(c, {}), OUTLINE);
   canvasTex(s, 'mck_head_chew', 60, 44, (c) => head(c, { mouth: 'chew' }), OUTLINE);
