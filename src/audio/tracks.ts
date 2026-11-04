@@ -202,10 +202,11 @@ const library: Track = {
 
 // ── 3. Annonce du boss : le combat part à 3,0 s (EN GARDE ! vient de s'effacer) ───────
 const announce: Track = {
-  bpm: 120, len: 5, pats: {}, ch: [],
-  // Bourdon + montée de bruit jusqu'au nom.
+  // Reste vivante jusqu'au combat (music.fight) : l'annonce suit l'horloge de la scène, qu'une pause ou un PC lent retardent.
+  bpm: 120, len: 3600, pats: {}, ch: [],
+  // Bourdon (coupé par le combat, il couvre tout retard) + montée de bruit jusqu'au nom.
   once(o, t) {
-    drone(o, 'tri', 38, t, 2.7, VOL.bass * 1.1, 0.5);
+    drone(o, 'tri', 38, t, 12, VOL.bass * 1.1, 0.5);
     drone(o, 'p50', 39, t, 0.72, VOL.pad * 0.7, 0.6);
     riser(o, t, 0.7, VOL.crash * 1.2);
   },

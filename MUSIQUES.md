@@ -59,7 +59,7 @@ Pendant l'agonie du héros, la musique du combat continue jusqu'à l'écran GAME
 
 - Balance musique / effets : `AUDIO.balMusic` et `AUDIO.balSfx` dans `src/config.ts`. Curseurs à fond = effets à l'ancien 30 % (0,09) et musique à 120 % (1,44).
 - Volumes de la musique : `VOL`, en haut de `src/audio/chip.ts`. `VOL.all` règle toute la musique d'un coup.
-- Niveaux mesurés (rendu hors ligne) : combats à −28 dB en crête et −42 dB RMS, `sfx.hit` à −40 dB et `sfx.slam` à −42 dB en crête, pluie à −42 dB RMS, tonnerre proche à −23 dB en crête. **La musique passe donc au-dessus des effets**, comme demandé en dernier : cela remplace la règle de départ « musique plus basse que les bruitages ».
+- Niveaux mesurés (rendu hors ligne) : combats à −28 dB en crête et −42 dB RMS, `sfx.hit` à −40 dB et `sfx.slam` à −42 dB en crête, pluie à −42 dB RMS, tonnerre proche à −27 dB en crête. **La musique passe donc au-dessus des effets**, comme demandé en dernier : cela remplace la règle de départ « musique plus basse que les bruitages ».
 - L'orage garde son niveau quelle que soit `balSfx` : sans musique, il tient lieu d'ambiance. Le curseur EFFETS continue de le régler.
 - M coupe la musique seule, les bruitages restent. L'état est enregistré. La touche suit la lettre imprimée, donc elle marche aussi en AZERTY. Si M est attribuée à une action, l'action a la priorité.
 - Pause : musique plus basse et étouffée, pluie plus lointaine.
