@@ -17,8 +17,8 @@ export const NIGHT = {
   rushTele: 0.85, rushTime: 0.65, rushRecover: 0.85,
   ombre: { fade: 0.2, dark: 0.24, dist: 74, tele: 0.68, turn: 0.1, active: 0.16, reach: 100, height: 112, recover: 0.9 },
   moulinet: { dist: 74, tele: 0.7, time: 0.95, centerY: 50, radius: 99, safe: 62, hit: 24, recover: 1.05 },
-  lancer: { tele: 0.75, lock: 0.18, speed: 440, hit: 14, life: 1.5, recover: 0.85 },
-  trial: { count: 3, lead: 0.1, fly: 0.12, show: 0.12, window: 5, damage: 14, stun: 2.4, sweepTele: 0.8, bandH: 40, recover: 1.1 },
+  lancer: { tele: 0.75, lock: 0.18, speed: 440, hit: 18, height: 12, life: 2.4, recover: 0.85 },
+  trial: { count: 3, lead: 0.1, fly: 0.12, show: 0.12, charge: 5, damage: 14, stun: 2.4, sweepTele: 0.8, bandH: 40, recover: 1.1 },
 };
 
 export interface Lamp {
@@ -38,6 +38,8 @@ export class Lanterns {
   lights: () => { x: number; y: number }[] = () => [];
   /** Lanternes lancées en vol : elles éclairent leur trajet, sans rendre le boss vulnérable. */
   flying = new Set<{ x: number; y: number }>();
+  /** Charge de l'épreuve : invincible et doré, plus rien ne le blesse (coups, sort, feu). */
+  shielded = false;
   private dark: Phaser.GameObjects.RenderTexture;
   private stamps: Record<number, Phaser.GameObjects.Image> = {};
   private fireG: Phaser.GameObjects.Graphics;
@@ -97,6 +99,7 @@ export class Lanterns {
 
   /** Interrompt tout ce qui dépend d'un pattern (phase 2, mort). */
   cancel() {
+    this.shielded = false;
     for (const l of this.lamps) if (l.charged) this.charge(l, false);
     if (this.trial) { for (const t of this.trial.tags) t.destroy(); for (const l of this.trial.order) l.lit = 0; this.trial = null; }
   }
@@ -135,6 +138,7 @@ export class Lanterns {
   /** Coup du joueur sur Noctis : hors de la lumière, il traverse la fumée (le sort, lui, éclaire et touche toujours). */
   filterHit(dmg: number) {
     const b = this.b;
+    if (this.shielded) { this.burst(b.x, b.y - 58, 0xffe9a0, 10); sfx.clank(); return false; }
     if (b.root.alpha < 0.4) return false; // déjà effacé dans le noir
     if (dmg >= PLAYER.spell.damage || this.exposed(b.x) || this.lights().length > 0) return true;
     this.burst(b.x, b.y - 58, 0x8a80a8, 7);
@@ -241,6 +245,7 @@ export class Lanterns {
       const flick = 0.92 + 0.08 * Math.sin(this.t * 13);
       for (const q of this.lights()) hole(96, q.x, q.y, flick);
       for (const q of this.flying) hole(96, q.x, q.y, flick);
+      if (this.shielded) hole(96, b.x, b.y - 62, flick);
     }
   }
 }

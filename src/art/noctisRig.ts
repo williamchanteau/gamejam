@@ -31,6 +31,9 @@ const TENTS: Tent[] = [
   { base: { x: 0, y: 2 }, tip: { x: 6, y: -9 }, dive: { x: 44, y: 6 }, bulge: { x: 2, y: 12 }, w: 4, amp: 3, ph: 4.2, onTorso: false, front: true },
   { base: { x: 6, y: 1 }, tip: { x: 32, y: -6 }, dive: { x: 84, y: 6 }, bulge: { x: 9, y: 10 }, w: 4, amp: 3, ph: 5.1, onTorso: false, front: true },
 ];
+// Aura d'invincibilité : contours et chair tirés vers l'or, jamais vers le rouge du danger.
+const GOLD = 0xffd76a;
+const mix = (a: number, b: number, t: number) => { const f = (s: number) => Math.round(((a >> s) & 255) + (((b >> s) & 255) - ((a >> s) & 255)) * t) << s; return f(16) | f(8) | f(0); };
 const rad = Phaser.Math.DegToRad, lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const dirOf = (deg: number): V => ({ x: Math.sin(rad(deg)), y: Math.cos(rad(deg)) });
 
@@ -182,9 +185,13 @@ export class NoctisRig {
   eyes: Phaser.GameObjects.Image; glowEye: Phaser.GameObjects.Image;
   flashParts: Phaser.GameObjects.Image[];
   limp = false;
+  aura = false;
   onBreak: ((x: number, y: number) => void) | null = null;
   private gB: Phaser.GameObjects.Graphics; private gF: Phaser.GameObjects.Graphics;
   private flash = false;
+  private auraK = 0;
+  private over: Phaser.GameObjects.Image[];
+  private halo: Phaser.GameObjects.Image;
   private t = 0; private lastX: number; private v = 0;
   private twH = 0; private twA = 0; private twT = 1;
   private feet = [{ wx: 0, from: 0, to: 0, s: -1 }, { wx: 0, from: 0, to: 0, s: -1 }];
@@ -211,8 +218,11 @@ export class NoctisRig {
     // Yeux au-dessus de l'obscurité : deux points, sans lumière projetée.
     this.eyes = sc.add.image(0, 0, 'noc_eyes').setDepth(62);
     const L_ = this.lamps;
+    // Doublures additives du buste et de la tête : elles les font briller sans repeindre les textures.
+    this.over = [this.torso, this.ribs, this.head].map((o) => sc.add.image(0, 0, o.texture.key).setOrigin(o.originX, o.originY).setBlendMode(Phaser.BlendModes.ADD).setTintFill(GOLD).setVisible(false));
+    this.halo = sc.add.image(0, 0, 'noc_hole96').setBlendMode(Phaser.BlendModes.ADD).setTint(GOLD).setDepth(61).setVisible(false);
     this.rig = sc.add.container(0, 0, [
-      this.gB, ...LAYER_BACK.map((i) => L_[i].img), this.torso, L_.rib.img, this.ribs, this.head, this.glowEye,
+      this.gB, ...LAYER_BACK.map((i) => L_[i].img), this.torso, L_.rib.img, this.ribs, this.head, this.glowEye, ...this.over,
       this.gF, ...LAYER_FRONT.map((i) => L_[i].img),
     ]);
     root.add(this.rig);
@@ -293,6 +303,7 @@ export class NoctisRig {
       this.twT -= dt;
       if (this.twT <= 0) { this.twT = 0.7 + Math.random() * 1.5; this.twH = (Math.random() - 0.5) * 48; this.twA = (Math.random() - 0.5) * 26; }
     }
+    this.auraK += ((this.aura ? 1 : 0) - this.auraK) * Math.min(1, dt * 10);
     const fade = Math.exp(-dt * 7);
     this.twH *= fade; this.twA *= fade;
     this.solve();
@@ -346,7 +357,11 @@ export class NoctisRig {
   draw() {
     const k = this.sk, t = this.t, amp = this.limp ? 0.2 : 1, L_ = this.lamps;
     const sx = this.sx(), snapX = (Math.round(this.root.x) - this.root.x) * sx;
-    const sink = (g: Phaser.GameObjects.Graphics): Sink => ({ c: (col) => g.fillStyle(this.flash ? 0xffffff : col), r: (x, y, w, h) => g.fillRect(x, y, w, h) });
+    const aura = this.auraK * (0.62 + 0.38 * Math.sin(t * 10)), on = aura > 0.02;
+    const sink = (g: Phaser.GameObjects.Graphics): Sink => ({
+      c: (col) => g.fillStyle(this.flash ? 0xffffff : on ? mix(col, GOLD, col === K ? aura : aura * 0.45) : col),
+      r: (x, y, w, h) => g.fillRect(x, y, w, h),
+    });
     this.gB.clear().setX(snapX); this.gF.clear().setX(snapX);
     drawBack(sink(this.gB), k, t, amp, L_.off.free ? null : L_.off);
     drawFront(sink(this.gF), k, t, amp, L_.main.free ? null : L_.main);
@@ -358,6 +373,8 @@ export class NoctisRig {
     const hx = k.headP.x + ex * Math.cos(th) - ey * Math.sin(th), hy = k.headP.y + ex * Math.sin(th) + ey * Math.cos(th);
     this.glowEye.setPosition(hx, hy);
     this.eyes.setPosition(Math.round(this.root.x + this.root.scaleX * hx), Math.round(this.root.y + hy)).setAngle(k.headA * this.sx());
+    [this.torso, this.ribs, this.head].forEach((o, i) => this.over[i].setVisible(on).setPosition(o.x, o.y).setAngle(o.angle).setScale(o.scaleX, 1).setAlpha(aura * 0.7));
+    this.halo.setVisible(on).setPosition(this.root.x, this.root.y - 66).setAlpha(aura * 0.4);
     const blink = Math.floor(t * 9) % 2, flick = 0.9 + Math.sin(t * 11) * 0.06 + Math.sin(t * 23) * 0.04;
     for (const id of this.ids) {
       const l = L_[id];
