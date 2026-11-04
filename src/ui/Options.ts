@@ -15,7 +15,7 @@ const TABS = ['SON', 'TOUCHES'];
 const PW = 360, PH = 252, PX = (W - PW) / 2, PY = Math.floor((H - PH) / 2);
 const LX = PX + 34;               // libellés
 const SX = [PX + 214, PX + 304];  // centres des 2 colonnes
-const TX = [W / 2 - 46, W / 2 + 46]; // onglets
+const TX = [W / 2 - 62, W / 2 + 62]; // onglets (écart assez large pour l'épée devant TOUCHES)
 const SW = 84, SH = 13, D = 55;
 const SL = PX + 172, SEG = 11, GAP = 2; // volume : 10 crans montants
 const BACK_Y = PY + 220;
