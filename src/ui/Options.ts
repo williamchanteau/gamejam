@@ -6,31 +6,42 @@ import {
   setBind, clearBind, resetBinds, captureKey, cancelCapture, isReserved,
 } from '../input';
 import { sfx } from '../audio/sfx';
+import { vol, setVol, VolKey } from '../audio/core';
 
 const NAME: Record<Bind, string> = { left: 'GAUCHE', right: 'DROITE', jump: 'SAUTER', down: 'DESCENDRE', attack: 'ATTAQUE', dash: 'DASH', spell: 'SORT' };
+const VOLS: [VolKey, string][] = [['master', 'GÉNÉRAL'], ['music', 'MUSIQUE'], ['sfx', 'EFFETS']];
 const LAYOUTS: Layout[] = ['AZERTY', 'QWERTY'];
-const PW = 360, PH = 240, PX = (W - PW) / 2, PY = (H - PH) / 2;
+const TABS = ['SON', 'TOUCHES'];
+const PW = 360, PH = 252, PX = (W - PW) / 2, PY = Math.floor((H - PH) / 2);
 const LX = PX + 34;               // libellés
 const SX = [PX + 214, PX + 304];  // centres des 2 colonnes
-const SW = 84, SH = 13;
-// Lignes (centres) : 0 clavier, 1..7 touches, 8 réinitialiser, 9 retour.
-const ROWS = [PY + 38, ...BINDS.map((_, i) => PY + 82 + i * 16), PY + 196, PY + 210];
-const RESET = 8, BACK = 9, D = 55;
+const TX = [W / 2 - 46, W / 2 + 46]; // onglets
+const SW = 84, SH = 13, D = 55;
+const SL = PX + 172, SEG = 11, GAP = 2; // volume : 10 crans montants
+const BACK_Y = PY + 220;
 
-/** Panneau OPTIONS (menu titre et pause) : clavier affiché + touches réattribuables (2 par action). Échap ou RETOUR ferme. */
+type Kind = 'tab' | 'layout' | 'bind' | 'vol' | 'reset' | 'back';
+type Row = { y: number; kind: Kind; label: string; b?: Bind; v?: VolKey };
+let lastTab = 0;
+
+/** Panneau OPTIONS (menu titre et pause), 2 onglets : SON (volumes) et TOUCHES (2 par action, clavier affiché). Échap ou RETOUR ferme. */
 export class OptionsPanel {
+  private tab = lastTab;
+  private rows: Row[] = [];
   private row = 0;
-  private col = 0;
+  private col = lastTab;
   private capturing = false;
   private blink = false;
   private msg = '';
   private msgUntil = 0;
   private g: Phaser.GameObjects.Graphics;
-  private labels: Phaser.GameObjects.BitmapText[] = [];
-  private slots: Phaser.GameObjects.BitmapText[][] = [];
+  private labels: (Phaser.GameObjects.BitmapText | null)[] = [];
+  private cells: Phaser.GameObjects.BitmapText[][] = [];
   private foot: Phaser.GameObjects.BitmapText;
   private cursor: Phaser.GameObjects.Image;
   private objs: Phaser.GameObjects.GameObject[] = [];
+  private page: Phaser.GameObjects.GameObject[] = [];
+  private unmuted: Record<VolKey, number> = { master: vol.master || 10, music: vol.music || 10, sfx: vol.sfx || 10 };
 
   constructor(private scene: Phaser.Scene, private onClose: () => void) {
     input.reset();
@@ -40,35 +51,53 @@ export class OptionsPanel {
     bg.fillStyle(0x161428).fillRect(PX, PY, PW, PH);
     bg.fillStyle(0x3d4463).fillRect(PX + 2, PY, PW - 4, 1).fillRect(PX, PY + 2, 1, PH - 4).fillRect(PX + PW - 1, PY + 2, 1, PH - 4);
     bg.fillStyle(0x0d0b18).fillRect(PX + 2, PY + PH - 1, PW - 4, 1);
-    bg.fillStyle(0x3d4463).fillRect(PX + 16, PY + 69, PW - 32, 1); // sous l'en-tête « TOUCHES »
+    bg.fillStyle(0x3d4463).fillRect(PX + 16, PY + 47, PW - 32, 1); // sous les onglets
     bg.fillStyle(0x2a2a44).fillRect(PX + 16, PY + PH - 20, PW - 32, 1);
     this.g = scene.add.graphics().setDepth(D + 1);
-    this.objs.push(bg, this.g);
-    const T = (x: number, y: number, s: string, c: number = COL.ui) => {
-      const t = txt(scene, x, y, s, c).setDepth(D + 2);
-      this.objs.push(t);
-      return t;
-    };
-    T(W / 2, PY + 4, 'OPTIONS', COL.moonLight).setOrigin(0.5, 0).setScale(2);
-    T(LX, PY + 55, 'TOUCHES', COL.uiDim);
-    T(SX[0], PY + 55, 'TOUCHE 1', COL.uiDim).setOrigin(0.5, 0);
-    T(SX[1], PY + 55, 'TOUCHE 2', COL.uiDim).setOrigin(0.5, 0);
-    const names = ['CLAVIER', ...BINDS.map((b) => NAME[b]), 'RÉINITIALISER LES TOUCHES', 'RETOUR'];
-    names.forEach((s, r) => {
-      this.labels.push(T(LX, ROWS[r] - 6, s));
-      const w = r <= 7 ? SX[0] - SW / 2 - LX + 4 : PW - 60;
-      this.zone(LX - 4 + w / 2, ROWS[r], w, SH, r, -1);
-      if (r > 7) return;
-      this.slots.push(SX.map((x, c) => {
-        this.zone(x, ROWS[r], SW, SH, r, c);
-        return T(x, ROWS[r] - 6, r === 0 ? LAYOUTS[c] : '').setOrigin(0.5, 0);
-      }));
-    });
-    this.foot = T(W / 2, PY + PH - 16, '', COL.uiDim).setOrigin(0.5, 0);
-    this.cursor = scene.add.image(LX - 18, ROWS[0], 'cursor').setDepth(D + 2);
+    this.objs.push(bg, this.g, this.T(W / 2, PY + 2, 'OPTIONS', COL.moonLight, this.objs).setOrigin(0.5, 0).setScale(2));
+    this.foot = this.T(W / 2, PY + PH - 16, '', COL.uiDim, this.objs).setOrigin(0.5, 0);
+    this.cursor = scene.add.image(0, 0, 'cursor').setDepth(D + 2);
     this.objs.push(this.cursor);
-    this.draw();
+    this.build();
     this.moveCursor(true);
+  }
+
+  private T(x: number, y: number, s: string, c: number = COL.ui, list = this.page) {
+    const t = txt(this.scene, x, y, s, c).setDepth(D + 2);
+    list.push(t);
+    return t;
+  }
+
+  /** Contenu de l'onglet courant (lignes, textes, zones cliquables). */
+  private build() {
+    for (const o of this.page) o.destroy();
+    this.page = []; this.labels = []; this.cells = [];
+    const rows: Row[] = [{ y: PY + 33, kind: 'tab', label: '' }];
+    if (this.tab === 0) VOLS.forEach(([v, label], i) => rows.push({ y: PY + 72 + i * 24, kind: 'vol', v, label }));
+    else {
+      this.T(SX[0], PY + 52, 'TOUCHE 1', COL.uiDim).setOrigin(0.5, 0);
+      this.T(SX[1], PY + 52, 'TOUCHE 2', COL.uiDim).setOrigin(0.5, 0);
+      BINDS.forEach((b, i) => rows.push({ y: PY + 72 + i * 16, kind: 'bind', b, label: NAME[b] }));
+      rows.push({ y: PY + 188, kind: 'layout', label: 'CLAVIER' }, { y: PY + 206, kind: 'reset', label: 'RÉINITIALISER LES TOUCHES' });
+    }
+    rows.push({ y: BACK_Y, kind: 'back', label: 'RETOUR' });
+    this.rows = rows;
+    rows.forEach((r, i) => {
+      if (r.kind === 'tab') {
+        this.labels.push(null);
+        this.cells.push(TABS.map((s, c) => { this.zone(TX[c], r.y, SW, SH, i, c); return this.T(TX[c], r.y - 6, s).setOrigin(0.5, 0); }));
+        return;
+      }
+      this.labels.push(this.T(LX, r.y - 6, r.label));
+      const two = r.kind === 'bind' || r.kind === 'layout';
+      const w = two || r.kind === 'vol' ? SX[0] - SW / 2 - LX : PW - 60;
+      this.zone(LX - 4 + w / 2, r.y, w, SH, i, -1);
+      if (two) this.cells.push(SX.map((x, c) => { this.zone(x, r.y, SW, SH, i, c); return this.T(x, r.y - 6, r.kind === 'layout' ? LAYOUTS[c] : '').setOrigin(0.5, 0); }));
+      else if (r.kind === 'vol') { this.slideZone(r, i); this.cells.push([this.T(PX + 324, r.y - 6, '').setOrigin(0.5, 0)]); }
+      else this.cells.push([]);
+    });
+    if (this.row >= rows.length) this.row = rows.length - 1;
+    this.draw();
   }
 
   /** Zone cliquable : survol = sélection, clic = valider (col -1 = garder la colonne). */
@@ -80,12 +109,42 @@ export class OptionsPanel {
       this.pick(r, c < 0 ? this.col : c);
       this.activate();
     });
-    this.objs.push(z);
+    this.page.push(z);
+  }
+
+  /** Curseur de volume : clic ou glisser pour régler (à gauche du 1er cran = coupé). */
+  private slideZone(r: Row, i: number) {
+    const w = 10 * (SEG + GAP) + 8;
+    const z = this.scene.add.zone(SL - 8 + w / 2, r.y, w, SH + 4).setDepth(D + 3).setInteractive({ useHandCursor: true });
+    const set = (p: Phaser.Input.Pointer) => {
+      if (this.capturing) return;
+      this.pick(i, this.col);
+      const n = Phaser.Math.Clamp(Math.ceil((p.x - SL + 1) / (SEG + GAP)), 0, 10);
+      if (n !== vol[r.v!]) this.setVolume(r.v!, n);
+    };
+    z.on('pointerover', () => this.pick(i, this.col));
+    z.on('pointerdown', set);
+    z.on('pointermove', (p: Phaser.Input.Pointer) => p.isDown && set(p));
+    this.page.push(z);
+  }
+
+  private setVolume(v: VolKey, n: number) {
+    setVol(v, n);
+    if (n > 0) this.unmuted[v] = n;
+    sfx.tick();
+    this.draw();
+  }
+
+  private setTab(c: number) {
+    this.col = c;
+    if (c !== this.tab) { this.tab = lastTab = c; this.msg = ''; sfx.tick(); this.build(); }
+    else this.draw();
+    this.moveCursor();
   }
 
   private pick(r: number, c: number) {
     if (this.capturing || (r === this.row && c === this.col)) return;
-    const moved = r !== this.row;
+    const moved = r !== this.row || this.rows[r].kind === 'tab';
     this.row = r;
     this.col = c;
     sfx.tick();
@@ -94,7 +153,8 @@ export class OptionsPanel {
   }
 
   private moveCursor(silent = false) {
-    const tw = this.scene.tweens, x = LX - 18, y = ROWS[this.row];
+    const tw = this.scene.tweens, r = this.rows[this.row];
+    const x = r.kind === 'tab' ? TX[this.col] - SW / 2 - 14 : LX - 18, y = r.y;
     tw.killTweensOf(this.cursor);
     if (silent) this.cursor.setPosition(x, y);
     tw.add({
@@ -121,43 +181,68 @@ export class OptionsPanel {
     }
   }
 
+  /** 10 barres montantes, pleines jusqu'au volume. */
+  private slider(r: Row, i: number, sel: boolean) {
+    const n = vol[r.v!], g = this.g;
+    for (let k = 0; k < 10; k++) {
+      const x = SL + k * (SEG + GAP), h = 4 + Math.round(k * 0.8), y = r.y + 5 - h, on = k < n;
+      g.fillStyle(0x06050c).fillRect(x - 1, y - 1, SEG + 2, h + 2);
+      g.fillStyle(on ? (sel ? COL.moon : 0x8a93b8) : 0x12101e).fillRect(x, y, SEG, h);
+      g.fillStyle(on ? (sel ? COL.moonLight : 0xb8c0dc) : 0x2a2a44).fillRect(x, y, SEG, 1);
+    }
+    this.cells[i][0].setText(n ? `${n * 10} %` : 'COUPÉ').setTint(sel ? COL.moonLight : n ? COL.ui : COL.uiDim);
+  }
+
   private draw() {
     this.g.clear();
     const lay = LAYOUTS.indexOf(getLayout());
-    for (let r = 0; r <= 7; r++) for (let c = 0; c < 2; c++) {
-      const sel = r === this.row && c === this.col, cap = sel && this.capturing;
-      this.frame(SX[c], ROWS[r], sel, cap && this.blink);
-      const t = this.slots[r][c];
-      const k = r > 0 ? getBind(BINDS[r - 1], c) : null;
-      if (r > 0) t.setText(cap ? (this.blink ? '. . .' : '') : keyText(k) || '-');
-      const on = r === 0 ? c === lay : !!k;
-      t.setTint(sel ? COL.moonLight : on ? COL.ui : COL.uiDim);
-    }
-    this.g.fillStyle(COL.ember, 0.7).fillRect(SX[lay] - 14, ROWS[0] + 5, 28, 1); // clavier choisi
-    this.labels.forEach((t, r) => t.setTint(r === this.row ? COL.moonLight : r === RESET || r === BACK ? COL.uiDim : COL.ui));
+    this.rows.forEach((r, i) => {
+      const rs = i === this.row;
+      this.labels[i]?.setTint(rs ? COL.moonLight : r.kind === 'reset' || r.kind === 'back' ? COL.uiDim : COL.ui);
+      if (r.kind === 'tab') TABS.forEach((_, c) => {
+        const on = c === this.tab;
+        this.frame(TX[c], r.y, on || (rs && c === this.col), false);
+        this.cells[i][c].setTint(on || (rs && c === this.col) ? COL.moonLight : COL.uiDim);
+        if (on) this.g.fillStyle(COL.ember, 0.7).fillRect(TX[c] - 12, r.y + 5, 24, 1);
+      });
+      else if (r.kind === 'vol') this.slider(r, i, rs);
+      else if (r.kind === 'bind' || r.kind === 'layout') for (let c = 0; c < 2; c++) {
+        const sel = rs && c === this.col, cap = sel && this.capturing;
+        this.frame(SX[c], r.y, sel, cap && this.blink);
+        const t = this.cells[i][c], k = r.b ? getBind(r.b, c) : null;
+        if (r.b) t.setText(cap ? (this.blink ? '. . .' : '') : keyText(k) || '-');
+        const on = r.b ? !!k : c === lay;
+        t.setTint(sel ? COL.moonLight : on ? COL.ui : COL.uiDim);
+        if (!r.b && c === lay) this.g.fillStyle(COL.ember, 0.7).fillRect(SX[c] - 14, r.y + 5, 28, 1); // clavier choisi
+      }
+    });
     this.drawFoot();
   }
 
   private drawFoot() {
-    const r = this.row;
+    const k = this.rows[this.row].kind;
     const [s, c] = this.capturing ? ['APPUIE SUR UNE TOUCHE · ÉCHAP : ANNULER', COL.moonLight]
       : this.msg ? [this.msg, COL.moonLight]
-      : r === 0 ? ['LETTRES AFFICHÉES POUR LES TOUCHES PAR DÉFAUT', COL.uiDim]
-      : r <= 7 ? ['ENTRÉE : CHANGER · SUPPR : EFFACER · ÉCHAP : RETOUR', COL.uiDim]
-      : r === RESET ? ['REMET TOUTES LES TOUCHES PAR DÉFAUT', COL.uiDim]
+      : k === 'tab' ? ["←→ : CHANGER D'ONGLET · ÉCHAP : RETOUR", COL.uiDim]
+      : k === 'vol' ? ['←→ : RÉGLER · ENTRÉE : COUPER / REMETTRE', COL.uiDim]
+      : k === 'layout' ? ['LETTRES AFFICHÉES POUR LES TOUCHES PAR DÉFAUT', COL.uiDim]
+      : k === 'bind' ? ['ENTRÉE : CHANGER · SUPPR : EFFACER · ÉCHAP : RETOUR', COL.uiDim]
+      : k === 'reset' ? ['REMET TOUTES LES TOUCHES PAR DÉFAUT', COL.uiDim]
       : ['ÉCHAP : RETOUR', COL.uiDim];
     this.foot.setText(s).setTint(c);
   }
 
   private activate() {
     goFullscreen();
-    const r = this.row;
-    if (r === BACK) return this.close();
+    const r = this.rows[this.row];
+    if (r.kind === 'back') return this.close();
+    if (r.kind === 'tab') return this.setTab(this.col);
+    if (r.kind === 'vol') return this.setVolume(r.v!, vol[r.v!] ? 0 : this.unmuted[r.v!] || 10);
     sfx.select();
     this.msg = '';
-    if (r === 0) setLayout(LAYOUTS[this.col]);
-    else if (r === RESET) { resetBinds(); this.say('TOUCHES PAR DÉFAUT RÉTABLIES'); }
-    else this.listen(BINDS[r - 1], this.col);
+    if (r.kind === 'layout') setLayout(LAYOUTS[this.col]);
+    else if (r.kind === 'reset') { resetBinds(); this.say('TOUCHES PAR DÉFAUT RÉTABLIES'); }
+    else this.listen(r.b!, this.col);
     this.draw();
   }
 
@@ -186,7 +271,7 @@ export class OptionsPanel {
   close() {
     cancelCapture();
     this.scene.tweens.killTweensOf(this.cursor);
-    for (const o of this.objs) o.destroy();
+    for (const o of [...this.page, ...this.objs]) o.destroy();
     input.reset();
     this.onClose();
   }
@@ -200,15 +285,21 @@ export class OptionsPanel {
     }
     if (this.msg && now > this.msgUntil) { this.msg = ''; this.drawFoot(); }
     if (input.take('pause')) return this.close();
-    if (input.take('up')) this.pick((this.row + 9) % 10, this.col);
-    if (input.take('mdown')) this.pick((this.row + 1) % 10, this.col);
-    if (this.row <= 7) {
-      if (input.take('mleft')) this.pick(this.row, 0);
-      if (input.take('mright')) this.pick(this.row, 1);
+    const n = this.rows.length, cur = this.rows[this.row];
+    const go = (d: number) => {
+      const r = (this.row + d + n) % n, k = this.rows[r].kind;
+      this.pick(r, k === 'tab' ? this.tab : cur.kind === 'tab' ? 0 : this.col);
+    };
+    if (input.take('up')) go(-1);
+    if (input.take('mdown')) go(1);
+    const r = this.rows[this.row], dl = input.take('mleft'), dr = input.take('mright');
+    if (dl || dr) {
+      if (r.kind === 'tab') this.setTab(dl ? 0 : 1);
+      else if (r.kind === 'vol') { const v = Phaser.Math.Clamp(vol[r.v!] + (dl ? -1 : 1), 0, 10); if (v !== vol[r.v!]) this.setVolume(r.v!, v); }
+      else if (r.kind === 'bind' || r.kind === 'layout') this.pick(this.row, dl ? 0 : 1);
     }
-    if (input.take('clear') && this.row >= 1 && this.row <= 7) {
-      const b = BINDS[this.row - 1];
-      this.say(clearBind(b, this.col) ? 'TOUCHE EFFACÉE' : 'IL FAUT AU MOINS UNE TOUCHE');
+    if (input.take('clear') && r.kind === 'bind') {
+      this.say(clearBind(r.b!, this.col) ? 'TOUCHE EFFACÉE' : 'IL FAUT AU MOINS UNE TOUCHE');
       sfx.tick();
       this.draw();
     }

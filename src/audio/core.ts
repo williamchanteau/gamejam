@@ -5,6 +5,28 @@ export let ac: BaseAudioContext | null = null;
 export let sfxBus: GainNode, musBus: GainNode, musVerb: GainNode, verbIn: GainNode, musLP: BiquadFilterNode;
 let noiseBuf: AudioBuffer;
 const ready: (() => void)[] = [];
+let master: GainNode, musOut: GainNode, musVerbOut: GainNode, sfxVerb: GainNode;
+
+/** Volumes du joueur (OPTIONS > SON), 0..10, enregistrés. */
+export type VolKey = 'master' | 'music' | 'sfx';
+export const vol: Record<VolKey, number> = { master: 10, music: 10, sfx: 10 };
+try {
+  const s = JSON.parse(localStorage.getItem('ashenborn.vol') ?? 'null');
+  if (s) for (const k of Object.keys(vol) as VolKey[]) if (typeof s[k] === 'number') vol[k] = Math.max(0, Math.min(10, Math.round(s[k])));
+} catch { /* file:// ou stockage bloqué */ }
+const curve = (n: number) => (n / 10) ** 2; // perçu à peu près linéaire
+function applyVol(at?: number) {
+  if (!ac) return;
+  const set = (g: GainNode, x: number) => (at === undefined ? (g.gain.value = x) : g.gain.setTargetAtTime(x, at, 0.03));
+  set(master, AUDIO.volume * curve(vol.master));
+  set(musOut, curve(vol.music)); set(musVerbOut, curve(vol.music));
+  set(sfxBus, curve(vol.sfx)); set(sfxVerb, curve(vol.sfx));
+}
+export function setVol(k: VolKey, n: number) {
+  vol[k] = Math.max(0, Math.min(10, n));
+  try { localStorage.setItem('ashenborn.vol', JSON.stringify(vol)); } catch { /* ignoré */ }
+  applyVol(ac?.currentTime);
+}
 export const onReady = (f: () => void) => ready.push(f);
 
 export function unlockAudio() {
@@ -34,11 +56,12 @@ export function setup(c: BaseAudioContext) {
   ac = c;
   const comp = c.createDynamicsCompressor();
   comp.threshold.value = -14; comp.knee.value = 12; comp.ratio.value = 3.5; comp.attack.value = 0.004; comp.release.value = 0.22;
-  const master = gain(AUDIO.volume);
+  master = gain(AUDIO.volume);
   master.connect(comp).connect(c.destination);
   sfxBus = gain(1); sfxBus.connect(master);
   musLP = c.createBiquadFilter(); musLP.type = 'lowpass'; musLP.frequency.value = 18000; musLP.Q.value = 0.5;
-  musBus = gain(AUDIO.music); musBus.connect(musLP).connect(master);
+  musOut = gain(1); musOut.connect(master);
+  musBus = gain(AUDIO.music); musBus.connect(musLP).connect(musOut);
   const pre = c.createDelay(0.1); pre.delayTime.value = 0.022;
   const conv = c.createConvolver(); conv.buffer = impulse(c, 3.2, 3.4);
   // Réverb nettoyée : ni grave (boue) ni aigu (sifflement) dans la queue.
@@ -46,7 +69,10 @@ export function setup(c: BaseAudioContext) {
   const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 220;
   const lpv = c.createBiquadFilter(); lpv.type = 'lowpass'; lpv.frequency.value = 6000;
   verbIn.connect(hp).connect(lpv).connect(pre).connect(conv).connect(master);
-  musVerb = gain(AUDIO.music); musVerb.connect(verbIn);
+  musVerbOut = gain(1); musVerbOut.connect(verbIn);
+  musVerb = gain(AUDIO.music); musVerb.connect(musVerbOut);
+  sfxVerb = gain(1); sfxVerb.connect(verbIn);
+  applyVol();
   noiseBuf = c.createBuffer(1, c.sampleRate * 2, c.sampleRate);
   const d = noiseBuf.getChannelData(0);
   for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
@@ -56,10 +82,10 @@ export function setup(c: BaseAudioContext) {
 /** Sortie d'une voix : sèche (d) + envoi réverb (w). */
 export type Out = { d: AudioNode; w: AudioNode };
 let fxOut: Out | null = null;
-export const fx = (): Out => fxOut ?? { d: sfxBus, w: verbIn };
+export const fx = (): Out => fxOut ?? { d: sfxBus, w: sfxVerb };
 /** Joue f avec un niveau propre (k) : toutes les voix créées par fx() passent par ce gain. */
 export function level(k: number, f: () => void) {
-  const d = gain(k), w = gain(k); d.connect(sfxBus); w.connect(verbIn);
+  const d = gain(k), w = gain(k); d.connect(sfxBus); w.connect(sfxVerb);
   fxOut = { d, w };
   try { f(); } finally { fxOut = null; }
 }
