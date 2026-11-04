@@ -3,3 +3,4 @@ dist
 *.zip
 .claude/settings.local.json
 .shots
+trailer
