@@ -305,6 +305,24 @@ function* flop(b: Boss) {
   b.eyes('on'); MCKING.rest(b, 0.3);
 }
 
+/** Étourdi : couronne d'étoiles en orbite aplatie au-dessus de la tête, yeux en spirale qui tournent. */
+function dizzy(b: Boss, sec: number) {
+  const head = A(b).head, sc = b.scene, n = 4, turns = Math.max(2, Math.round(sec / 0.6)), o = { t: 0 };
+  const stars = Array.from({ length: n }, () => b.temp(sc.add.image(0, 0, 'mck_star')));
+  const eyes = [-7.5, 10.5].map((x) => b.temp(sc.add.image(x, -25, 'mck_spiral')));
+  head.add([...stars, ...eyes]);
+  const place = () => {
+    stars.forEach((s, i) => {
+      const q = (o.t * turns + i / n) * Math.PI * 2, front = Math.sin(q) >= 0;
+      s.setTexture(front ? 'mck_star' : 'mck_star_s').setPosition(Math.round(Math.cos(q) * 36), Math.round(CROWN_Y - 32 + Math.sin(q) * 9));
+      if (front) head.bringToTop(s); else head.sendToBack(s);
+    });
+    for (const e of eyes) e.setAngle(Math.floor((o.t * sec) / 0.09) * 90);
+  };
+  place();
+  b.tw(o, { t: 1, onUpdate: place }, sec, 'Linear');
+}
+
 /** Charge à bedaine : il trépigne, puis fonce jusqu'au mur… et s'y assomme. */
 function* charge(b: Boss) {
   const C = MK.charge, a = A(b), sc = b.scene, k = F(b).k, dir = b.dir, x0 = b.x;
@@ -325,10 +343,10 @@ function* charge(b: Boss) {
   sfx.slam(); sc.flashScreen(0.16); sc.cameras.main.shake(380, 0.016);
   sc.debris(b.x + dir * 34, b.floorY - 60, 16);
   b.tw(a.rig, { angle: -14, x: -dir * b.root.scaleX * 12 }, 0.2, 'Back.out');
-  // La couronne saute, des burgers tournent autour de sa tête.
+  // La couronne saute, des étoiles tournent autour de sa tête.
   sc.tweens.chain({ targets: a.crown, tweens: [{ y: CROWN_Y - 26, angle: 30, duration: 200, ease: 'Quad.out' }, { y: CROWN_Y, angle: -5, duration: 260, ease: 'Bounce.out' }] });
-  const halo = b.temp(sc.add.container(b.x, b.y - 148, [-20, 20].map((x) => sc.add.image(x, 0, 'burger').setScale(0.6))).setDepth(16));
-  b.tw(halo, { angle: 1080 }, b.t(C.recover), 'Linear');
+  setHead(b, 'open');
+  dizzy(b, b.t(C.recover));
   yield* recover(b, C.recover);
 }
 
@@ -536,17 +554,19 @@ function* choke(b: Boss, big: boolean) {
   b.eyes('on'); MCKING.rest(b, 0.3);
 }
 
-/** Arrivée dans l'arène : il saute de son trône et s'écrase près du joueur. */
+/** Arrivée dans l'arène : il bondit par-dessus la table et s'écrase près du joueur. */
 export function* entrance(b: Boss) {
+  b.scene.time.delayedCall(220, () => b.root.setDepth(7)); // assez haut : il repasse devant la table
   yield* hop(b, b.clampX(b.player.x + 220), 150, 0.85);
   b.scene.flashScreen(0.1);
   yield 0.25;
 }
 
-/** Cinématique : assis sur le trône, il mâche. */
+/** Cinématique : attablé sur sa grande chaise (sous le sol et la table), il mâche. */
 export function seat(b: Boss) {
   const a = A(b), f = F(b), sc = b.scene;
-  a.rig.y = -38;
+  b.root.setDepth(4.9);
+  a.rig.y = 8;
   a.armF.angle = -140;
   syncArms(b);
   a.held.setTexture('burger_b2').setVisible(true);
@@ -554,7 +574,7 @@ export function seat(b: Boss) {
   let on = false;
   f.chewT = sc.time.addEvent({ delay: 240, loop: true, callback: () => { on = !on; a.headImg.setTexture(on ? 'mck_head_chew' : 'mck_head'); } });
 }
-/** Il se lève d'un coup : tout le trône en tremble. */
+/** Il se lève d'un coup : toute la table en tremble. */
 export function stand(b: Boss) {
   const a = A(b), f = F(b), sc = b.scene;
   f.chewT?.remove(); f.chewT = null;

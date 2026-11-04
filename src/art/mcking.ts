@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { glyphRow } from './font';
-import { beam, canvasTex, ell, OUTLINE, poly } from './pixel';
+import { beam, canvasTex, ell, mapTex, OUTLINE, poly } from './pixel';
 
 type C = CanvasRenderingContext2D;
 const R = (c: C, col: string, x: number, y: number, w = 1, h = 1) => { c.fillStyle = col; c.fillRect(x, y, w, h); };
@@ -12,9 +12,7 @@ const HAIR = '#3a2a22', HAIRL = '#5c4332', HAIRD = '#2a1d17', STUB = '#b9977c';
 const TEE = '#c9ccd6', TEED = '#9fa3b3', TEEL = '#e6e8ee', SLV = '#23222c', SLVL = '#3d3c4a';
 const INK = '#23222c', RUST = '#c0531c';
 const JN = '#2b3560', JND = '#1c2342', JNL = '#3f4b7e';
-const GOLD = '#ffd36a', GOLDD = '#c8902a', GOLDDD = '#8a5c1c', GOLDL = '#fff0b0';
-const VEL = '#3a1f5a', VELD = '#28143f', VELL = '#54307c';
-const WOOD = '#6a4428', WOODD = '#3f2716', WOODL = '#8f6036';
+const GOLD = '#ffd36a', GOLDD = '#c8902a', GOLDL = '#fff0b0';
 const K = '#ff2a5a', KD = '#b0123c', KL = '#ff8aa2';
 /** Bras en 2 segments : longueurs épaule→coude et coude→poing, pivots dans les textures. */
 export const ARM_LEN = { up: 20, fore: 23 }, ARM_PIVOT = { up: 10 / 38, fore: 7 / 40 };
@@ -209,71 +207,6 @@ function burger(c: C, bite = 0) {
   }
 }
 
-function throne(c: C) {
-  const X = 56;
-  // Dossier : cadre doré, velours capitonné.
-  c.translate(0, 40); // dossier très haut : y < 0 = au-dessus de l'assise d'origine
-  ell(c, GOLDD, X, -10, 37, 30); R(c, GOLDD, 19, -10, 74, 118);
-  ell(c, GOLD, X, -10, 35, 28); R(c, GOLD, 21, -10, 70, 118);
-  ell(c, VELD, X, -8, 30, 25); R(c, VELD, 26, -8, 60, 114);
-  ell(c, VEL, X, -7, 27, 22); R(c, VEL, 29, -7, 54, 112);
-  for (let y = -18; y < 104; y += 14) for (let x = 34 + (y % 28 ? 7 : 0); x < 82; x += 14) { ell(c, VELL, x, y, 2, 2); R(c, VELD, x, y + 2, 1, 1); }
-  // Crête en couronne et pommeaux.
-  poly(c, GOLDD, [40, -28, 38, -40, 47, -33, 56, -40, 65, -33, 74, -40, 72, -28]);
-  poly(c, GOLDL, [43, -29, 42, -35, 48, -30, 56, -37, 64, -30, 70, -35, 69, -29]);
-  ell(c, '#7ff6ff', X, -30, 2, 2);
-  for (const x of [17, 95]) { ell(c, GOLDD, x, -10, 6, 6); ell(c, GOLDL, x + 1, -11, 3, 3); }
-  for (const x of [22, 88]) for (let y = 4; y < 92; y += 9) R(c, GOLDDD, x, y, 2, 4); // gorges du cadre
-  // Assise, accoudoirs, pieds griffus.
-  R(c, GOLDD, 8, 106, 96, 12); R(c, GOLDL, 8, 106, 96, 1); R(c, GOLD, 10, 108, 92, 7);
-  R(c, VELD, 15, 96, 82, 10); R(c, VEL, 15, 95, 82, 8); R(c, VELL, 17, 95, 78, 1);
-  for (const x of [5, 93]) {
-    R(c, GOLDD, x, 76, 14, 34); R(c, GOLD, x + 2, 76, 10, 32);
-    ell(c, GOLDD, x + 7, 74, 9, 5); ell(c, GOLDL, x + 7, 73, 7, 3);
-  }
-  for (const x of [12, 88]) {
-    R(c, GOLDDD, x, 118, 12, 26); R(c, GOLDD, x + 2, 118, 8, 24);
-    ell(c, GOLDDD, x + 6, 146, 9, 4); for (const d of [-6, 0, 6]) R(c, GOLD, x + 6 + d, 146, 2, 3);
-  }
-  R(c, GOLDDD, 24, 118, 64, 8); ell(c, GOLD, X, 121, 8, 4); ell(c, GOLDDD, X, 121, 5, 2);
-  // Saleté : moutarde, sauce séchée, graisse, coulures.
-  const stain = (i: number, x: number, y: number, col: string, r: number) => {
-    ell(c, col, x, y, r, r * 0.7);
-    for (let k = 0; k < 7; k++) R(c, col, Math.round(x + (rnd(i + k) - 0.5) * r * 3.4), Math.round(y + (rnd(i + k + 30) - 0.5) * r * 2.6));
-    for (let k = 0; k < 3; k++) { const dx = Math.round((rnd(i + k + 60) - 0.5) * r * 1.6); R(c, col, x + dx, y, 1, 4 + Math.round(rnd(i + k + 70) * r * 1.4)); }
-  };
-  stain(11, 44, -14, '#c8a030', 4); stain(12, 70, 6, '#5a4630', 5); stain(13, 38, 16, '#7a3618', 4);
-  stain(1, 40, 42, '#c8a030', 5); stain(2, 72, 60, '#7a3618', 6); stain(3, 48, 80, '#5a4630', 5);
-  stain(4, 70, 28, '#7a3618', 3); stain(5, 12, 86, '#c8a030', 3); stain(6, 98, 84, '#7a3618', 4);
-  stain(7, 34, 100, '#c8a030', 4); stain(8, 78, 98, '#5a4630', 4); stain(9, 60, 110, '#7a3618', 3); stain(10, 26, 62, '#5a4630', 3);
-}
-
-function table(c: C) {
-  const w = 170;
-  R(c, WOOD, 0, 0, w, 5); R(c, WOODL, 0, 0, w, 1); R(c, WOODD, 0, 5, w, 2);
-  for (let x = 12; x < w; x += 29) R(c, WOODD, x, 1, 1, 4);
-  // Nappe violette à galon doré, qui pend au centre.
-  R(c, VEL, 28, 0, 114, 4); R(c, VELL, 28, 0, 114, 1);
-  for (let x = 28; x < 142; x++) { const h = 13 + ((x >> 2) % 2); R(c, VELD, x, 4, 1, h - 4); R(c, GOLDD, x, h, 1, 1); }
-  // Pieds en X.
-  for (const x of [14, 148]) { beam(c, WOODD, x, 7, x + 12, 27, 3); beam(c, WOOD, x + 12, 7, x, 27, 3); }
-  R(c, WOODD, 20, 14, 8, 1); R(c, WOODD, 142, 14, 8, 1);
-}
-
-function chair(c: C) {
-  R(c, WOODD, 2, 2, 18, 40); R(c, WOOD, 4, 4, 14, 36); R(c, VEL, 6, 8, 10, 26); R(c, VELL, 6, 8, 10, 1);
-  ell(c, WOODL, 3, 3, 2, 2); ell(c, WOODL, 19, 3, 2, 2); R(c, WOODL, 4, 2, 14, 1);
-}
-
-function lustre(c: C) {
-  R(c, '#3d4463', 44, 0, 2, 26);
-  ell(c, GOLDDD, 45, 33, 36, 5); ell(c, GOLDD, 45, 32, 34, 4); ell(c, '#0b0a14', 45, 31, 28, 2.5);
-  for (const x of [13, 29, 45, 61, 77]) {
-    R(c, '#efe6d0', x - 1, 21, 3, 9); R(c, GOLD, x, 18, 1, 3); R(c, '#fff0b0', x, 17, 1, 2);
-  }
-  beam(c, '#3d4463', 44, 8, 16, 30, 1); beam(c, '#3d4463', 46, 8, 74, 30, 1);
-}
-
 export function makeMcKingArt(s: Phaser.Scene) {
   // Corps.
   canvasTex(s, 'mck_head', 60, 44, (c) => head(c, {}), OUTLINE);
@@ -311,6 +244,12 @@ export function makeMcKingArt(s: Phaser.Scene) {
   canvasTex(s, 'bun_bot', 22, 22, (c) => { // brioche du bas, roule comme une roue
     ell(c, '#b8701f', 11, 11, 10, 10); ell(c, '#e0a048', 11, 11, 8, 8); ell(c, '#b8701f', 11, 11, 5, 5); ell(c, '#e0a048', 11, 11, 2.5, 2.5); R(c, '#fbd896', 7, 4, 4, 1);
   }, OUTLINE);
+  // Étoile d'étourdissement.
+  const STAR = { g: '#ffdf5a', w: '#fffbe0', d: GOLDD };
+  mapTex(s, 'mck_star', ['......g......', '......g......', '.....gwg.....', '.....gwg.....', 'ggggggwgggggg', '.ggwwwwwwwgg.', '..ggwwwwwgg..', '...gwwwwwg...', '...gwwwwwg...', '..ggwwdwwgg..', '..gwdg.gdwg..', '.ggd.....dgg.', '.d.........d.'], STAR);
+  mapTex(s, 'mck_star_s', ['....g....', '....g....', '...gwg...', 'gggwwwggg', '.ggwwwgg.', '..gwwwg..', '..ggdgg..', '.ggd.dgg.', '.d.....d.'], STAR);
+  // Œil en spirale (étourdi), blanc plein.
+  mapTex(s, 'mck_spiral', ['kkkkkkkkk', 'wwwwwwwwk', 'kkkkkkkwk', 'kwwwwwkwk', 'kwkkkwkwk', 'kwkwwwkwk', 'kwkkkkkwk', 'kwwwwwwwk', 'kkkkkkkkk'], { k: '#14121c', w: '#fff' }, null);
   // Dangers : ketchup, rot.
   canvasTex(s, 'mck_wave', 32, 24, (c) => {
     poly(c, KD, [0, 24, 2, 14, 9, 6, 20, 1, 30, 4, 25, 8, 28, 16, 32, 24]);
@@ -331,11 +270,7 @@ export function makeMcKingArt(s: Phaser.Scene) {
     beam(c, '#7ff6ff', 5, 5, 33, 33, 2); beam(c, '#7ff6ff', 5, 33, 33, 5, 2);
     beam(c, '#fff', 11, 11, 27, 27, 1); beam(c, '#fff', 11, 27, 27, 11, 1);
   });
-  // Trône souillé et salle à manger.
-  canvasTex(s, 'din_throne', 112, 190, throne, OUTLINE);
-  canvasTex(s, 'din_table', 170, 28, table, OUTLINE);
-  canvasTex(s, 'din_chair', 22, 44, chair, OUTLINE);
-  canvasTex(s, 'din_lustre', 90, 40, lustre);
+  // Couverts (repris par art/dining.ts).
   canvasTex(s, 'din_plate', 28, 6, (c) => { ell(c, '#8a90a8', 14, 3, 13, 2.6); ell(c, '#e8ecf6', 14, 2.4, 12, 1.9); ell(c, '#c4cadc', 14, 2.4, 8, 1); }, OUTLINE);
   canvasTex(s, 'din_goblet', 10, 14, (c) => {
     poly(c, GOLDD, [1, 0, 9, 0, 8, 6, 2, 6]); R(c, GOLDL, 2, 0, 6, 1); R(c, GOLD, 3, 2, 2, 3);
@@ -347,9 +282,4 @@ export function makeMcKingArt(s: Phaser.Scene) {
     for (const [x, y] of [[4, 7], [12, 3], [21, 7]]) { R(c, '#efe6d0', x - 1, y, 3, 6); R(c, '#ff8a2a', x, y - 3, 1, 3); R(c, '#fff0b0', x, y - 2, 1, 1); }
   });
   canvasTex(s, 'din_bone', 14, 6, (c) => { R(c, '#e8e0c8', 3, 2, 8, 2); for (const [x, y] of [[1, 1], [1, 3], [11, 1], [11, 3]]) R(c, '#e8e0c8', x, y, 2, 2); }, OUTLINE);
-  canvasTex(s, 'din_stain', 56, 8, (c) => { ell(c, '#3a2412', 28, 4, 27, 3.5); ell(c, '#5a4018', 22, 4, 16, 2); for (let i = 0; i < 9; i++) R(c, '#5a3a18', Math.round(rnd(i) * 56), Math.round(rnd(i + 20) * 7)); });
-  canvasTex(s, 'din_wrap', 14, 10, (c) => { poly(c, '#d8d2bc', [1, 8, 3, 2, 9, 0, 13, 4, 11, 9, 5, 9]); poly(c, '#a8a28c', [5, 8, 7, 3, 11, 5, 9, 8]); R(c, '#f0ecd8', 4, 3, 3, 1); }, OUTLINE);
-  canvasTex(s, 'din_cup', 12, 18, (c) => {
-    R(c, '#c8ccd8', 7, 0, 1, 5); poly(c, '#e8ecf6', [1, 5, 11, 5, 9, 17, 3, 17]); R(c, '#9aa0b4', 1, 5, 10, 1); R(c, '#ff9a3a', 3, 9, 6, 3);
-  }, OUTLINE);
 }
