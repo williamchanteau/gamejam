@@ -16,10 +16,9 @@ export class TransitScene extends Phaser.Scene {
   private end = false;
   private nextKey = '';
   private t = 0; private phi = 0; private cam = 0; private stepI = 0;
-  private back!: Phaser.GameObjects.Graphics;
-  private front!: Phaser.GameObjects.Graphics;
+  /** Marches en 4 couches : arrière (avant / après le héros), puis avant (avant / après le héros). */
+  private gs!: Phaser.GameObjects.Graphics[];
   private p!: Phaser.GameObjects.Image;
-  private hideMask!: Phaser.Display.Masks.GeometryMask;
   private tiles!: { o: Phaser.GameObjects.TileSprite; f: number }[];
   private decor!: { o: Phaser.GameObjects.Image; glow: Phaser.GameObjects.Image; z: number; u: number }[];
   constructor() { super('Transit'); }
@@ -50,12 +49,8 @@ export class TransitScene extends Phaser.Scene {
     this.time.addEvent({ delay: 110, loop: true, callback: () => {
       for (const dc of this.decor) if (dc.o.texture.key !== 'slit') { dc.o.setTexture(Math.random() < 0.5 ? 'torch0' : 'torch1'); dc.glow.setAlpha(0.45 + Math.random() * 0.2); }
     } });
-    this.back = this.add.graphics().setDepth(1);
-    this.front = this.add.graphics().setDepth(3);
+    this.gs = [1, 1.6, 3, 3.6].map((dp) => this.add.graphics().setDepth(dp));
     this.p = this.add.image(0, 0, 'p_idle0').setOrigin(0.5, 1).setDepth(3.5);
-    // Derrière : toujours lisible devant les marches, mais caché par le noyau (masque inversé).
-    const colShape = this.make.graphics({}, false).fillStyle(0xffffff).fillRect(cx - rc, 0, rc * 2, H);
-    this.hideMask = colShape.createGeometryMask().setInvertAlpha(true);
     // Poussière en suspension dans le puits de la tour.
     this.add.particles(0, 0, 'px', {
       x: { min: cx - rw, max: cx + rw }, y: { min: 0, max: H }, lifespan: 3000, speedY: { min: 4, max: 14 }, speedX: { min: -4, max: 4 },
@@ -117,13 +112,17 @@ export class TransitScene extends Phaser.Scene {
       dc.o.setPosition(x, y).setAlpha(0.55 + 0.45 * s);
       dc.glow.setPosition(x, y - 14);
     }
-    // Marches visibles, triées de l'arrière vers l'avant ; le noyau sépare les deux moitiés.
-    const g0 = this.back.clear(), g1 = this.front.clear(), i0 = Math.floor((cam - 70) / rise), i1 = Math.ceil((cam + H + 40) / rise);
+    // Marches visibles, triées de l'arrière vers l'avant ; le noyau sépare les deux moitiés. Le héros est rangé
+    // parmi elles : les marches plus proches que lui (sauf celle qu'il foule) le cachent, le noyau aussi quand il passe derrière.
+    for (const g of this.gs) g.clear();
+    const sp = Math.sin(this.phi), behind = sp < 0, ip = Math.floor(this.phi / DT), onNext = this.phi / DT - ip > 0.5;
+    const i0 = Math.floor((cam - 70) / rise), i1 = Math.ceil((cam + H + 40) / rise);
     const list: { i: number; s: number }[] = [];
     for (let i = i0; i <= i1; i++) list.push({ i, s: Math.sin((i + 0.5) * DT) });
     list.sort((a, b) => a.s - b.s);
     for (const { i, s } of list) {
-      const g = s < 0 ? g0 : g1, a = i * DT, b = a + DT, m = a + DT / 2, z = i * rise, f = 0.5 + 0.5 * (s + 1) / 2;
+      const fr = s >= 0, after = fr === !behind && s > sp && i !== ip && !(onNext && i === ip + 1);
+      const g = this.gs[(fr ? 2 : 0) + (after ? 1 : 0)], a = i * DT, b = a + DT, m = a + DT / 2, z = i * rise, f = 0.5 + 0.5 * (s + 1) / 2;
       // Dessous de la marche (hélice) : visible côté droit, où l'escalier monte vers nous (sinon des lamelles flottent).
       const zu = (q: number) => z - 8 - rise * (1 - (q - a) / DT);
       if (Math.cos(m) > 0) g.fillStyle(shade([28, 26, 44], f)).fillPoints([this.proj(a, rc, zu(a)), this.proj(m, rc, zu(m)), this.proj(b, rc, zu(b)), this.proj(b, rs, zu(b)), this.proj(m, rs, zu(m)), this.proj(a, rs, zu(a))], true);
@@ -144,9 +143,9 @@ export class TransitScene extends Phaser.Scene {
       g.lineStyle(1, shade([120, 112, 146], f)).lineBetween(this.proj(a, rc, z).x, this.proj(a, rc, z).y, this.proj(a, rs, z).x, this.proj(a, rs, z).y);
     }
     // Le héros : derrière le noyau quand il passe à l'arrière (plus petit, dans l'ombre).
-    const sp = Math.sin(this.phi), pos = this.proj(this.phi, RP, this.zOf(this.phi)), behind = sp < 0;
+    const pos = this.proj(this.phi, RP, this.zOf(this.phi));
     const moving = this.t < CLIMB;
-    if (behind) this.p.setMask(this.hideMask); else this.p.clearMask();
+    this.p.setDepth(behind ? 1.5 : 3.5);
     this.p.setPosition(pos.x, pos.y + 1).setFlipX(sp > 0)
       .setScale(behind ? 0.9 : 1).setTint(behind ? 0x8a88a8 : 0xffffff)
       .setTexture(moving ? capeTex('run' + (Math.floor(this.t * 10) % 4), 2, 0, this.t * 9) : capeTex('idle' + (Math.floor(this.t * 1.6) % 2), 0, 0, this.t * 1.6));
