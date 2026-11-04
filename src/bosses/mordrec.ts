@@ -714,8 +714,8 @@ function* combo(b: Boss) {
   yield* slash(b, t[2], M.combo.recover, true);
 }
 export const MORDREC: BossDef = {
-  name: 'MORDREC',
-  title: 'LE CHASSEUR CREUX',
+  name: 'YSOLDE',
+  title: "LA DAME D'ARGENT",
   hp: M.hp,
   hurt: { w: 40, h: 86 },
   build(b) {
