@@ -11,7 +11,7 @@ import { MCKING } from '../bosses/mcking';
 import { TITLE_MOON } from '../art/title';
 
 const LX = 26; // bord gauche du logo et des boutons
-const BW = 104, DW = 120; // largeur des boutons : menu principal, difficulté
+const BW = 104, DW = 192; // largeur des boutons : menu principal, difficulté (assez pour VRAIMENT FACILE)
 let AX = 0; // axe du losange sous le logo : les boutons y sont centrés
 const hillY = (x: number) => 228 + Math.round(Math.sin(x / 40) * 6 + Math.sin(x / 13) * 2);
 
@@ -20,7 +20,7 @@ export class MenuScene extends Phaser.Scene {
   private menu!: Menu;
   private bossMenu: Menu | null = null;
   private diff: Menu | null = null;
-  private diffNote: Phaser.GameObjects.BitmapText | null = null;
+  private diffNotes: Phaser.GameObjects.GameObject[] = [];
   private sub: Phaser.GameObjects.Container | null = null;
   private opts: OptionsPanel | null = null;
 
@@ -28,7 +28,7 @@ export class MenuScene extends Phaser.Scene {
 
   create() {
     input.reset();
-    this.sub = null; this.opts = null; this.bossMenu = null; this.diff = null; this.diffNote = null;
+    this.sub = null; this.opts = null; this.bossMenu = null; this.diff = null; this.diffNotes = [];
     this.add.image(0, 0, 'bg_title').setOrigin(0);
     const [mx, my] = TITLE_MOON;
     const halo = this.add.image(mx, my, 'glowC').setBlendMode(Phaser.BlendModes.ADD).setScale(3.2).setAlpha(0.3);
@@ -75,7 +75,6 @@ export class MenuScene extends Phaser.Scene {
       { label: 'QUITTER', act: () => this.quit() },
       { label: 'TESTER BOSS', x: W - 94, y: H - 32, w: 140, act: () => this.bosses() },
     ], { framed: BW, gap: 25 });
-    txt(this, AX, H - 13, '↑↓ : CHOISIR · ENTRÉE/ESPACE : VALIDER', COL.uiDim).setOrigin(0.5, 0).setDepth(40);
     this.cameras.main.fadeIn(250);
   }
 
@@ -95,21 +94,36 @@ export class MenuScene extends Phaser.Scene {
     this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start(key));
   }
 
-  /** JOUER → choix de la difficulté (même colonne) ; NORMAL = sauvegarde au début de chaque boss. */
+  private play(easy: boolean, hard: boolean) {
+    run.easy = easy; run.hard = hard;
+    this.go('Outside');
+  }
+
+  /** JOUER → choix de la difficulté, du plus facile au plus dur, textes à droite ; NORMAL présélectionné. */
   private difficulty() {
     input.reset();
     this.menu.enabled = false; this.menu.setVisible(false);
-    this.diffNote = txt(this, AX, 78, 'SAUVEGARDE AU DÉBUT DE CHAQUE BOSS', COL.moonLight).setOrigin(0.5, 0).setDepth(40);
-    this.diff = new Menu(this, AX, 100, [
-      { label: 'NORMAL', act: () => { run.hard = false; this.go('Outside'); } },
-      { label: 'DIFFICILE', act: () => { run.hard = true; this.go('Outside'); } },
+    const y0 = 82, gap = 25;
+    this.diff = new Menu(this, LX + DW / 2, y0, [
+      { label: 'VRAIMENT FACILE', act: () => this.play(true, false) },
+      { label: 'NORMAL', act: () => this.play(false, false) },
+      { label: 'DIFFICILE', act: () => this.play(false, true) },
       { label: 'RETOUR', act: () => this.closeDiff() },
-    ], { framed: DW, gap: 25 });
+    ], { framed: DW, gap });
+    this.diff.select(1, true);
+    // Sur plaque sombre : au-delà du voile, le texte passe sur le décor éclairé.
+    const note = (k: number, s: string) => {
+      const t = txt(this, LX + DW + 10, y0 + k * gap + 6, s, COL.moonLight).setDepth(41);
+      this.diffNotes.push(this.add.rectangle(t.x - 4, t.y + 1, t.width + 8, 11, 0x06050c, 0.75).setOrigin(0).setDepth(40), t);
+    };
+    note(0, '(MODE HISTOIRE)');
+    note(1, 'SAUVEGARDE AU DÉBUT DE CHAQUE BOSS');
   }
 
   private closeDiff() {
     this.diff?.destroy(); this.diff = null;
-    this.diffNote?.destroy(); this.diffNote = null;
+    for (const o of this.diffNotes) o.destroy();
+    this.diffNotes = [];
     this.menu.setVisible(true); this.menu.enabled = true;
     input.reset();
   }
@@ -123,7 +137,7 @@ export class MenuScene extends Phaser.Scene {
     this.sub = this.add.container(0, 0, [backdrop, title]).setDepth(100);
     const defs = [YSOLDE, NYCTHOR, MCKING];
     this.bossMenu = new Menu(this, W / 2, 100, [
-      ...FLOORS.map((f, i) => ({ label: defs[i]?.name ?? f.place, act: () => { run.hard = false; run.upgrade = ''; this.go(f.scene); } })),
+      ...FLOORS.map((f, i) => ({ label: defs[i]?.name ?? f.place, act: () => { run.easy = false; run.hard = false; run.upgrade = ''; this.go(f.scene); } })),
       { label: 'RETOUR', act: () => this.closeSub() },
     ], { framed: 220, gap: 38, depth: 110 });
   }

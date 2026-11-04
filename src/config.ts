@@ -27,6 +27,8 @@ export const ARENA = {
 
 export const PLAYER = {
   hp: 4,
+  easyHp: 8, // VRAIMENT FACILE : cœurs
+  easyDmg: 2, // VRAIMENT FACILE : multiplicateur des dégâts infligés aux boss
   runSpeed: 172,
   accelGround: 2400,
   accelAir: 1650,
@@ -58,8 +60,8 @@ export const PLAYER = {
 
   manaMax: 8,
   manaPerHit: 1,
-  spell: { damage: 20, speed: 345, life: 1.4, castTime: 0.22, recoil: 90, waveDelay: 0.17 },
-  dashStab: { damage: 6, reach: 32, at: 0.2 }, // amélioration : coup de dagues pendant le dash (at = fraction du dash)
+  spell: { damage: 40, speed: 345, life: 1.4, castTime: 0.22, recoil: 90, waveDelay: 0.17 },
+  dashStab: { damage: 24, reach: 32, at: 0.2 }, // amélioration : coup de dagues pendant le dash (at = fraction du dash)
 
   invuln: 1.2,
   hurtStun: 0.22,

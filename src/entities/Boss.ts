@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { BOSS, COL } from '../config';
+import { BOSS, COL, PLAYER } from '../config';
+import { run } from '../floors';
 import { sfx } from '../audio/sfx';
 import type { Target } from './types';
 import type { ArenaScene } from '../scenes/ArenaScene';
@@ -34,6 +35,8 @@ export class Boss implements Target {
   parts: Record<string, Obj> = {};
   flashParts: Phaser.GameObjects.Image[] = [];
   hp: number; maxHp: number; phase = 1; speed = 1; dir = -1;
+  /** Plancher de PV : un coup ne peut pas sauter un passage scripté encore dû (épreuve, festin). */
+  minHp = 0;
   state: State = 'intro';
   /** Zone de coup active (coordonnées monde), vérifiée chaque frame. */
   hitbox: (() => Phaser.Geom.Rectangle) | null = null;
@@ -167,7 +170,7 @@ export class Boss implements Target {
 
   private damage(dmg: number) {
     if (!this.alive()) return;
-    this.hp = Math.max(0, this.hp - dmg);
+    this.hp = Math.max(this.minHp, this.hp - dmg * (run.easy ? PLAYER.easyDmg : 1));
     for (const p of this.flashParts) p.setTintFill(0xffffff);
     this.scene.time.delayedCall(60, () => { for (const p of this.flashParts) p.clearTint(); });
     if (this.parts.rig) this.scene.tweens.add({ targets: this.parts.rig, x: { from: -3, to: 0 }, duration: 110, ease: 'Quad.out' });

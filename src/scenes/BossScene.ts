@@ -69,7 +69,7 @@ export class BossScene extends ArenaScene {
   protected begin() { this.frozen = false; this.boss.start(BOSS.pauseMin); }
 
   tick(dt: number) {
-    if (DEV && input.take('debug1') && this.boss.alive()) this.boss.hp = 1;
+    if (DEV && input.take('debug1') && this.boss.alive()) { this.boss.hp = 1; this.boss.minHp = 0; }
     this.boss.update(dt);
     this.bar?.update(dt);
     this.room.update(dt);

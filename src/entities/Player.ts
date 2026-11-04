@@ -3,7 +3,7 @@ import { PLAYER as C, PHYS, COL, DEV } from '../config';
 import { input } from '../input';
 import { CAPE, capeTex } from '../art/player';
 import { sfx } from '../audio/sfx';
-import { run } from '../floors';
+import { run, maxHp } from '../floors';
 import type { Target } from './types';
 import type { ArenaScene } from '../scenes/ArenaScene';
 
@@ -16,7 +16,7 @@ export class Player {
   spr: Phaser.GameObjects.Image;
   /** Vide (la cape du sprite suffit) ; gardé pour les fondus des scènes. */
   scarf: Phaser.GameObjects.Graphics;
-  hp = C.hp; mana = 0; facing = 1; state: State = 'normal'; god = false; safe = false;
+  hp = maxHp(); mana = 0; facing = 1; state: State = 'normal'; god = false; safe = false;
   private stateT = 0; private coyote = 0; private airDashes = 0; private airJumps = 0;
   private dashCd = 0; private dashDir = 1; private afterT = 0; private invuln = 0;
   private jumpHeld = false; private wasGrounded = true; private lastVy = 0;

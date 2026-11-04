@@ -1,4 +1,6 @@
 // Étages du château, du bas vers le haut. Ajouter un boss = ajouter une entrée (scène + étiquettes).
+import { PLAYER } from './config';
+
 export interface Floor { scene: string; name: string; place: string }
 export const FLOORS: Floor[] = [
   { scene: 'Boss1', name: 'REZ-DE-CHAUSSÉE', place: 'LA NEF' },
@@ -9,8 +11,10 @@ export const FLOORS: Floor[] = [
 export const floorName = (i: number) => FLOORS[i]?.name ?? `ÉTAGE ${i}`;
 /** Amélioration choisie à la table du banquet : sort en 2 vagues ou dash qui plante les dagues. */
 export type Upgrade = '' | 'wave' | 'dash';
-/** Partie en cours : DIFFICILE = aucune sauvegarde (une mort en boss renvoie devant le château). */
-export const run = { hard: false, upgrade: '' as Upgrade };
+/** Partie en cours : DIFFICILE = aucune sauvegarde (une mort en boss renvoie devant le château) ; VRAIMENT FACILE = sauvegardes de NORMAL, plus de cœurs et de dégâts. */
+export const run = { easy: false, hard: false, upgrade: '' as Upgrade };
+/** Cœurs au maximum selon la difficulté. */
+export const maxHp = () => (run.easy ? PLAYER.easyHp : PLAYER.hp);
 /** Scène de reprise après une mort : boss 1 (ou tout boss en DIFFICILE) → dehors ; sinon la salle elle-même. */
 export function saveOf(from: string) {
   const i = FLOORS.findIndex((f) => f.scene === from);

@@ -257,11 +257,12 @@ function* epreuve(b: Boss) {
   sfx.tick(); sfx.roar(); sc.cameras.main.shake(400, 0.008);
   pose(b, 'cry', 0.2, 'Back.out');
   yield b.t(E.roar);
-  if (!(yield* attempt(b))) { yield* fauche(b); return; }
+  if (!(yield* attempt(b))) { b.minHp = 0; yield* fauche(b); return; }
   sc.flashScreen(0.3); sfx.slam(); sc.cameras.main.shake(240, 0.01);
   L.burst(b.x, b.y - 60, 0xffc45c, 26);
   L.ignite(L.nearest(b.x), E.stun + 1);
-  b.burn(E.damage);
+  b.burn(E.damage); // toujours sous le plancher : la récompense ne tue pas en plein pattern, le joueur achève
+  b.minHp = 0;
   yield* recover(b, E.stun, 'collapse');
 }
 
@@ -314,6 +315,7 @@ export const NYCTHOR: BossDef = {
     b.hit = (dmg, from) => { if (!L.shielded) return hit(dmg, from); L.block(); return false; };
     b.burn = (dmg) => { if (!L.shielded) burn(dmg); };
     let trialDue = true;
+    b.minHp = 1; // un seul coup ne saute pas l'épreuve (rendu à 0 quand elle est jouée)
     b.update = (dt) => {
       const was = b.state;
       L.update(dt);

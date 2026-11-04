@@ -21,8 +21,6 @@ export class ArenaScene extends Phaser.Scene {
   floorKey = 'floor';
   /** Jeu figé (cinématique) : joueur et salle à l'arrêt. */
   frozen = false;
-  /** Rappel des contrôles en haut à droite (masqué dans le tuto, qui a ses panneaux). */
-  showControls = true;
   private spells!: Spell[];
   private hitstopEnd = 0;
   private sparkFx!: Phaser.GameObjects.Particles.ParticleEmitter;
@@ -79,7 +77,7 @@ export class ArenaScene extends Phaser.Scene {
       speedX: { min: -50, max: 50 }, speedY: { min: -30, max: -5 }, lifespan: { min: 400, max: 700 },
       scale: { start: 0.5, end: 1.6 }, alpha: { start: 0.55, end: 0 }, tint: [0x8088a8, 0x6a7090, 0xa8a0b8], emitting: false,
     }).setDepth(8);
-    this.hud = new Hud(this, this.player, this.showControls);
+    this.hud = new Hud(this, this.player);
     // Sortie du plein écran (Échap du navigateur) → pause.
     const onFs = () => { if (!document.fullscreenElement && this.scene.isActive()) this.openPause(); };
     document.addEventListener('fullscreenchange', onFs);

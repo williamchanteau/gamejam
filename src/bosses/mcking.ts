@@ -3,6 +3,7 @@ import type { Boss, BossDef } from '../entities/Boss';
 import type { BossScene } from '../scenes/BossScene';
 import type { Target } from '../entities/types';
 import { COL, PLAYER } from '../config';
+import { maxHp } from '../floors';
 import { sfx } from '../audio/sfx';
 import { txt } from '../art/font';
 import { ARM_LEN, ARM_PIVOT } from '../art/mcking';
@@ -46,7 +47,7 @@ class Feast {
   eating: { hits: number; need: number; big: boolean; draw(): void } | null = null;
   private stolen: { o: Img; g: Img; t: number; gift: number } | null = null;
   chewT: Phaser.Time.TimerEvent | null = null;
-  constructor(private b: Boss) {}
+  constructor(private b: Boss) { b.minHp = 1; } // un seul coup ne saute pas le festin
 
   get k() { return 1 + this.meals * 0.07; }
 
@@ -100,7 +101,7 @@ class Feast {
   private steal(gift: number) {
     const b = this.b, sc = b.scene, p = b.player;
     const was = p.hp;
-    p.hp = Math.min(PLAYER.hp, p.hp + gift);
+    p.hp = Math.min(maxHp(), p.hp + gift);
     if (p.hp === was) p.gainMana(PLAYER.manaMax);
     sfx.chomp(); sc.time.delayedCall(120, () => sfx.chomp()); sc.time.delayedCall(260, () => sfx.gulp()); sc.time.delayedCall(360, () => sfx.manaFull());
     sc.sparks(p.x, p.y - 10, 0xffd36a, 16); sc.sparks(p.x, p.y - 10, COL.moon, 8);
@@ -125,7 +126,7 @@ class Feast {
     }
     if (!b.alive()) return;
     this.eatCd -= dt;
-    if (this.festinDue && b.phase === 2 && b.hp <= b.maxHp * MK.festin.at) { this.festinDue = false; this.eating = null; b.force((x) => eat(x, true)); return; }
+    if (this.festinDue && b.phase === 2 && b.hp <= b.maxHp * MK.festin.at) { this.festinDue = false; b.minHp = 0; this.eating = null; b.force((x) => eat(x, true)); return; }
     if (b.state !== 'idle') return;
     if (this.eatCd <= 0 && this.meals < MK.eat.max && b.hp < b.maxHp * MK.eat.below[b.phase - 1]) { this.eatCd = MK.eat.cd; b.force((x) => eat(x)); return; }
     if (this.rests.length >= MK.inhale.every) b.force(inhale);
@@ -632,7 +633,7 @@ export const MCKING: BossDef = {
       if (st) {
         if (!b.alive()) f.eating = null;
         else {
-          st.hits += dmg >= 10 ? 3 : 1;
+          st.hits += dmg >= PLAYER.spell.damage ? 3 : 1; // seul le sort compte triple
           st.draw();
           if (st.hits >= st.need) { f.eating = null; b.force((x) => choke(x, st.big)); }
         }
