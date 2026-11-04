@@ -6,7 +6,7 @@ import type { Boss, BossDef } from '../entities/Boss';
 
 // Réglages de Mordrec (durées en s avant ×vitesse de phase 2, distances en px).
 const M = {
-  hp: 140,
+  hp: 200,
   slash: { tele: 0.65, dash: 0.28, minDist: 70, maxDist: 250, overshoot: 50, recover: 0.5, reach: 64, height: 54 },
   slam: { tele: 0.6, rise: 0.35, mark: 0.7, fall: 0.16, recover: 0.6, waveSpeed: 210, doubleGap: 0.8 },
   swing: { wind: 0.3, cut: 0.16, height: 80 },

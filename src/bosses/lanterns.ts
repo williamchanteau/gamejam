@@ -1,13 +1,12 @@
 import Phaser from 'phaser';
 import { W, H, COL } from '../config';
 import { sfx } from '../audio/sfx';
-import { txt } from '../art/font';
 import { HOLES, LAMP_ON } from '../art/noctis';
 import type { Boss } from '../entities/Boss';
 
 // Réglages de Noctis et de sa salle (durées en s avant ×vitesse de phase 2, distances en px).
 export const NIGHT = {
-  hp: 240,
+  hp: 260,
   darkAlpha: 0.93, viewerDark: 0.45, // le viewer garde le boss lisible, le jeu est presque noir
   lanterns: [105, 255, 405, 555, 705, 855], lanternY: 196,
   litLife: 3.2, exposeR: 92, // portée où une lanterne ou un feu révèle Noctis (> demi-écart : toujours couvert)
@@ -25,10 +24,7 @@ export interface Lamp {
   x: number; y: number; lit: number; charged: boolean; fall: number; fire: number; tick: number; ember: number;
   img: Phaser.GameObjects.Image; glow: Phaser.GameObjects.Image;
 }
-interface Trial { order: Lamp[]; next: number; failed: boolean; tags: Phaser.GameObjects.BitmapText[] }
-
-const ROMAN = ['I', 'II', 'III', 'IV'];
-const TAG = 0xffc45c; // cible à frapper, pas un danger : or, jamais rouge
+interface Trial { lamps: Lamp[]; struck: number }
 
 /** La salle noire : lanternes, feux, obscurité percée de lumières. Vit avec le boss (jeu et viewer partagent ce code). */
 export class Lanterns {
@@ -98,33 +94,17 @@ export class Lanterns {
   cancel() {
     this.shielded = false;
     for (const l of this.lamps) if (l.charged) this.charge(l, false);
-    if (this.trial) { for (const t of this.trial.tags) t.destroy(); for (const l of this.trial.order) l.lit = 0; this.trial = null; }
+    if (this.trial) { for (const l of this.trial.lamps) l.lit = 0; this.trial = null; }
   }
 
-  beginTrial(order: Lamp[]) {
-    this.trial = { order, next: 0, failed: false, tags: [] };
-  }
-  addTag(l: Lamp, i: number) {
-    const t = txt(this.b.scene, l.x, l.y - 18, ROMAN[i], TAG).setOrigin(0.5, 0).setScale(2).setDepth(80);
-    this.trial?.tags.push(t);
-    return t;
-  }
+  beginTrial(lamps: Lamp[]) { this.trial = { lamps, struck: 0 }; }
 
-  /** Coup du joueur sur une lanterne allumée : elle tombe et brûle ; pendant l'épreuve, seul l'ordre compte. */
+  /** Coup du joueur sur une lanterne allumée : elle tombe et brûle ; pendant l'épreuve, elle s'éteint et compte. */
   private strike(l: Lamp) {
-    const tr = this.trial;
-    if (tr) {
-      if (tr.order[tr.next] === l) {
-        tr.tags[tr.next]?.setTint(COL.moon);
-        tr.next++;
-        l.lit = 0; this.charge(l, false);
-        this.burst(l.x, l.y + 12, COL.moon, 14); sfx.ting();
-      } else {
-        // Mauvais ordre : tout se rallume, il faut reprendre à zéro.
-        tr.next = 0;
-        tr.order.forEach((o, i) => { o.lit = 99; tr.tags[i]?.setTint(TAG); });
-        this.b.scene.cameras.main.shake(120, 0.005); sfx.crack();
-      }
+    if (this.trial) {
+      this.trial.struck++;
+      l.lit = 0; this.charge(l, false);
+      this.burst(l.x, l.y + 12, COL.moon, 14); sfx.ting();
       return;
     }
     l.lit = 0; this.charge(l, false); l.fall = NIGHT.fallTime;

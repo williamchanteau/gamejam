@@ -213,44 +213,44 @@ function* lancer(b: Boss) {
   yield* recover(b, T.recover);
 }
 
-/** Épreuve (phase 2) : en chef d'orchestre, il lance trois flammes qui allument les lanternes à frapper dans l'ordre. Réussite : il s'effondre. Échec : la grande fauche. */
+/** Épreuve (phase 2) : toutes ses lanternes allumées, il lance trois flammes qui allument les lanternes de la salle à frapper, dans n'importe quel ordre. Réussite : il s'effondre. Échec : la grande fauche. */
 function* epreuve(b: Boss) {
   const E = NIGHT.trial, L = F(b), r = R(b), sc = b.scene;
   b.face(); b.eyes('tele'); sfx.warn();
   L.allOut();
-  const order = L.available(b.player.x, E.count).sort(() => Math.random() - 0.5);
-  if (order.length < E.count) { yield* fauche(b); return; } // trop de lanternes à terre
+  r.lightAll();
+  for (const q of r.litWorld()) L.burst(q.x, q.y, 0xffc45c, 6);
+  sfx.tick();
+  const lamps = L.available(b.player.x, E.count);
+  if (lamps.length < E.count) { yield* fauche(b); return; } // trop de lanternes à terre
   // Tant qu'il charge (5 s au plus, flammes comprises) : invincible et doré.
   L.shielded = true;
-  lightUp(b, 't1');
   pose(b, 'conductA', 0.16, 'Back.out');
-  L.beginTrial(order);
-  let t = E.charge - b.t(E.lead) - order.length * (E.fly + E.show);
+  L.beginTrial(lamps);
+  let t = E.charge - b.t(E.lead) - lamps.length * (E.fly + E.show);
   yield b.t(E.lead);
-  for (let i = 0; i < order.length; i++) {
-    const l = order[i], q = r.world('t1');
+  for (let i = 0; i < lamps.length; i++) {
+    const l = lamps[i], q = r.world('t1');
     pose(b, i % 2 ? 'conductA' : 'conductB', 0.1);
     const f = b.temp(sc.add.image(q.x, q.y, 'noc_flame0').setScale(2).setDepth(66));
     b.tw(f, { x: l.x, y: l.y + 12 }, E.fly, 'Sine.in');
     L.burst(q.x, q.y, 0xffc45c, 6); sfx.whoosh();
     yield E.fly;
     f.destroy();
-    L.ignite(l, 99); L.addTag(l, i);
+    L.ignite(l, 99);
     sfx.ting(); sc.cameras.main.shake(70, 0.003);
     yield E.show;
   }
-  // Il a jeté son feu : c'est son corps qui brille maintenant.
-  douse(b);
   pose(b, 'charge', 0.2);
   // Le cercle se referme sur lui : c'est le temps restant.
   const ring = b.temp(sc.add.graphics().setDepth(80)), total = t;
-  while (t > 0 && L.trial && L.trial.next < order.length) {
+  while (t > 0 && L.trial && L.trial.struck < lamps.length) {
     ring.clear().lineStyle(1, COL.danger, 0.8).strokeCircle(b.x, b.y - 66, 18 + (t / total) * 70);
     if (Math.floor(t) !== Math.floor(t - 0.05)) sfx.tick();
     yield 0.05; t -= 0.05;
   }
   ring.destroy();
-  const won = !!L.trial && L.trial.next >= order.length;
+  const won = !!L.trial && L.trial.struck >= lamps.length;
   L.cancel();
   if (won) {
     sc.flashScreen(0.3); sfx.slam(); sc.cameras.main.shake(240, 0.01);
@@ -267,7 +267,6 @@ function* epreuve(b: Boss) {
 function* fauche(b: Boss) {
   const E = NIGHT.trial, L = F(b), sc = b.scene, y = b.floorY - E.bandH;
   L.allOut();
-  lightUp(b, 'off');
   b.eyes('tele'); sfx.warn();
   pose(b, 'reap0', 0.24, 'Back.out');
   const mark = b.temp(sc.add.rectangle(0, y, sc.worldW, E.bandH, COL.danger, 0.2).setOrigin(0).setDepth(80));
