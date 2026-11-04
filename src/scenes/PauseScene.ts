@@ -22,7 +22,7 @@ export class PauseScene extends Phaser.Scene {
       { label: 'OPTIONS', act: () => { this.menu.setVisible(false); this.menu.enabled = false; this.opts = new OptionsPanel(this, () => { this.opts = null; this.menu.setVisible(true); this.menu.enabled = true; }); } },
       { label: 'MENU PRINCIPAL', act: () => { this.scene.stop(this.from); this.scene.start('Menu'); } },
     ]);
-    txt(this, W / 2, H - 13, 'ÉCHAP : REPRENDRE', COL.uiDim).setOrigin(0.5, 0);
+    txt(this, W / 2, H - 13, 'ÉCHAP : REPRENDRE · M : COUPER LA MUSIQUE', COL.uiDim).setOrigin(0.5, 0);
   }
   private resume() {
     input.reset();

@@ -29,6 +29,8 @@ export class BossScene extends ArenaScene {
   protected bossX = 440;
   /** false = la salle ouvre la grille elle-même (openGate). */
   protected autoGate = true;
+  /** Piste qui suit le jingle de victoire ('' = silence). */
+  protected afterWin = 'explore';
   /** Sous-titre de la victoire. */
   protected victoryHint() { return "L'ESCALIER S'OUVRE →"; }
   private bannerObjs: Phaser.GameObjects.GameObject[] = [];
@@ -65,7 +67,8 @@ export class BossScene extends ArenaScene {
       this.time.delayedCall(450, () => { this.boss.eyes('tele'); sfx.warn(); });
       const f = FLOORS[this.floor];
       // Combat sur l'horloge de la scène : une pause pendant l'annonceur le retarde aussi.
-      announce(this, this.def, `${f.name} · ${f.place}`, () => { this.begin(); music.fight(this.scene.key); });
+      music.stinger('announce');
+      announce(this, this.def, `${f.name} · ${f.place}`, () => { this.begin(); this.time.delayedCall(700, () => { if (this.boss.alive()) music.fight(this.scene.key); }); });
     }
   }
 
@@ -102,7 +105,7 @@ export class BossScene extends ArenaScene {
   private victory() {
     this.won = true;
     this.player.safe = true;
-    this.time.delayedCall(1300, () => { sfx.victory(); this.banner(`${this.def.name} EST TOMBÉ`, this.victoryHint()); });
+    this.time.delayedCall(1300, () => { music.stinger('victory', this.afterWin); this.banner(`${this.def.name} EST TOMBÉ`, this.victoryHint()); });
     if (this.autoGate) this.time.delayedCall(2200, () => this.openGate());
   }
 

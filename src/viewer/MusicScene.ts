@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { W, H, COL } from '../config';
+import { H, COL } from '../config';
 import { txt } from '../art/font';
 import { input } from '../input';
 import { music } from '../audio/music';
@@ -47,6 +47,5 @@ export class MusicScene extends Phaser.Scene {
     this.status.setText(s.running
       ? `${s.name ? `${s.name.toUpperCase()} MESURE ${s.bar + 1} PAS ${s.step + 1} PHASE ${s.phase}` : 'SILENCE'}${s.muted ? ' · COUPÉE' : ''}`
       : 'APPUIE SUR UNE TOUCHE POUR DÉBLOQUER LE SON');
-    void W;
   }
 }

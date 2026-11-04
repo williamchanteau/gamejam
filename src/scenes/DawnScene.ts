@@ -84,8 +84,8 @@ export class DawnScene extends Phaser.Scene {
       b.o.setY(Math.round(b.y + Math.sin(this.t * 2 + b.ph) * 3)).setTexture(`end_bird${Math.floor(this.t * 8 + b.ph) % 2}`);
     }
     this.layout();
-    // Sons calés sur la lumière : coq au premier rayon, cloches, fanfare en plein jour.
-    const beats: [number, () => void][] = [[2.5, sfx.rooster], [3.6, sfx.bell], [4.2, sfx.bell], [4.8, sfx.fanfare]];
+    // Sons calés sur la lumière : coq au premier rayon, cloches ; la fanfare du plein jour est dans la musique (tracks.ts, dawn).
+    const beats: [number, () => void][] = [[2.5, sfx.rooster], [3.6, sfx.bell], [4.2, sfx.bell]];
     while (this.fired < beats.length && this.t >= beats[this.fired][0]) beats[this.fired++][1]();
     if (!this.done && this.t >= LENGTH) {
       this.done = true;

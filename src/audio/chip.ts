@@ -99,13 +99,13 @@ function thump(o: Out, f0: number, f1: number, at: number, len: number, vol: num
 }
 
 /** Batterie : K grosse caisse, S caisse claire, H charleston, O charleston ouvert, C cymbale, T tom. k = nuance. */
-export function drum(o: Out, kind: DrumKind, at: number, k = 1, hat = VOL.hat) {
+export function drum(o: Out, kind: DrumKind, at: number, k = 1) {
   switch (kind) {
     case 'K': thump(o, 165, 46, at, 0.12, VOL.kick * k); nz(o, at, 0.012, VOL.snare * 0.35 * k, 0.5); break;
     case 'S': nz(o, at, 0.13, VOL.snare * k, 0.55); thump(o, 220, 130, at, 0.07, VOL.kick * 0.5 * k); break;
     case 'T': thump(o, 240, 90, at, 0.15, VOL.kick * 0.8 * k); nz(o, at, 0.05, VOL.snare * 0.45 * k, 0.3); break;
-    case 'H': nz(o, at, 0.03, hat * k, 1); break;
-    case 'O': nz(o, at, 0.13, hat * 1.3 * k, 1); break;
+    case 'H': nz(o, at, 0.03, VOL.hat * k, 1); break;
+    case 'O': nz(o, at, 0.13, VOL.hat * 1.3 * k, 1); break;
     case 'C': nz(o, at, 0.8, VOL.crash * k, 0.8); break;
   }
 }

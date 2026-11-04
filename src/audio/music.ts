@@ -44,7 +44,7 @@ function compile(tr: Track) {
     return p;
   };
   const chs = tr.ch.map((def) => ({ def, bars: def.seq.split(' ').flatMap((w) => { const [n, x] = w.split('*'); return Array.from({ length: +(x ?? 1) }, () => pat(n)); }) }));
-  c = { chs, bars: Math.max(...chs.map((x) => x.bars.length)) };
+  c = { chs, bars: Math.max(1, ...chs.map((x) => x.bars.length)) };
   compiled.set(tr, c);
   return c;
 }
@@ -165,17 +165,17 @@ function tick() {
 setInterval(tick, 40);
 
 /** Piste de chaque scène ; '' = silence ; absente = garde ce qui joue (combats : gérés par BossScene). */
-const BY_SCENE: Record<string, string> = { Menu: 'menu', Outside: '' };
+const BY_SCENE: Record<string, string> = { Menu: 'menu', Outside: '', Test: 'library', Transit: 'explore', Dawn: 'dawn', Throne: 'throne' };
 const FIGHT: Record<string, string> = { Boss1: 'boss1', Boss2: 'boss2', Boss3: 'boss3' };
 
 export const music = {
-  /** Piste en boucle, en fondu. Sans `now`, attend le début de mesure si l'ancienne a des mesures courtes. */
+  /** Piste en boucle, en fondu. Sans `immediate`, attend le début de mesure si l'ancienne boucle sur des mesures courtes. */
   play(name: string, fade = 0.8, immediate = false) {
     pending = null;
     if (!running()) { want = name; return; }
     want = '';
     if (cur?.name === name && !cur.tr.boss && !immediate) return;
-    if (cur && !immediate && !cur.end && cur.spb * STEPS <= 2) { pending = { name, fade }; return; }
+    if (cur && !immediate && cur.tr.loop !== undefined && cur.spb * STEPS <= 2) { pending = { name, fade }; return; }
     fadeOut(cur, cur?.end ? 0.3 : fade);
     cur = start(name, fade);
     tick();
@@ -225,11 +225,13 @@ export const music = {
   /** Appelé à la création de chaque scène (main.ts). */
   scene(key: string) {
     if (key === 'Pause') return this.duck(true);
+    if (key === 'GameOver') return this.stinger('defeat');
     if (!(key in BY_SCENE)) return;
     this.duck(false);
     const n = BY_SCENE[key];
     if (!n) return this.stop(1);
-    this.play(n, 0.6, key === 'Menu' && !!cur?.tr.boss);
+    // La cinématique se cale sur la scène ; le retour au menu coupe le combat tout de suite.
+    this.play(n, key === 'Throne' ? 0.3 : 0.6, key === 'Dawn' || key === 'Throne' || (key === 'Menu' && !!cur?.tr.boss));
   },
   /** DEV : écrit une piste dans le contexte courant (rendu hors ligne), passage en phase 2 à p2At secondes. */
   render(name: string, sec: number, p2At = 0) {

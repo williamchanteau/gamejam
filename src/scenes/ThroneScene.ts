@@ -3,6 +3,7 @@ import { W, H, COL } from '../config';
 import { txt } from '../art/font';
 import { input } from '../input';
 import { sfx } from '../audio/sfx';
+import { music } from '../audio/music';
 import { capeTex } from '../art/player';
 import { THR } from '../art/throne';
 import { CITIZENS, type Citizen, type Kind } from '../art/citizens';
@@ -134,6 +135,7 @@ export class ThroneScene extends Phaser.Scene {
   private present() {
     const hero = this.hero, sv = this.servant, feet = THR.lane;
     this.heroPose = 'idle'; this.mood = 'hush';
+    music.cue(3);
     const d = (ms: number, f: () => void) => this.time.delayedCall(ms, f);
     d(200, () => this.tweens.add({ targets: sv, x: 580, duration: 520, onUpdate: (tw) => { sv.setTexture(`sv_${Math.floor(tw.progress * 6) % 2}`); this.placeTray(); }, onComplete: () => {
       sv.setTexture('sv_0');
@@ -179,7 +181,8 @@ export class ThroneScene extends Phaser.Scene {
     this.worn = true; this.heroPose = 'idle'; this.mood = 'wild';
     const cam = this.cameras.main;
     this.tweens.add({ targets: this.servant, x: 590, angle: -16, duration: 260, ease: 'Sine.out', onUpdate: () => this.placeTrayOnly() });
-    sfx.ting(); sfx.fanfare(); sfx.crowd(1.3);
+    sfx.ting(); sfx.crowd(1.3);
+    music.cue(5);
     cam.shake(380, 0.006);
     const flash = this.add.rectangle(0, 0, W, H, 0xfff4e8, 0.6).setOrigin(0).setScrollFactor(0).setDepth(150);
     this.tweens.add({ targets: flash, alpha: 0, duration: 260, onComplete: () => flash.destroy() });
@@ -219,6 +222,7 @@ export class ThroneScene extends Phaser.Scene {
 
   /** Faux générique qui défile vite sur le panneau de gauche, le roi reste visible à droite. */
   private rollCredits() {
+    music.cue(8);
     const a = this.add, panel = a.image(0, 0, 'thr_panel').setOrigin(0).setScrollFactor(0).setDepth(80).setAlpha(0);
     this.tweens.add({ targets: panel, alpha: 1, duration: 500 });
     const box = a.container(136, H, []).setScrollFactor(0).setDepth(81);

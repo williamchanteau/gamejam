@@ -4,6 +4,7 @@ import { ArenaScene } from './ArenaScene';
 import { txt } from '../art/font';
 import { sfx } from '../audio/sfx';
 import { DOOR, OUT, PORTAL } from '../art/outside';
+import { addStorm } from '../art/storm';
 import { Portal } from '../entities/Portal';
 import { run } from '../floors';
 
@@ -31,11 +32,7 @@ export class OutsideScene extends ArenaScene {
     this.torches = OUT.torches.map((x) => this.add.image(x, 168, 'torch0').setDepth(3));
     for (const x of OUT.torches) glow(x, 160, 'glowO', 2.2, 0.55);
     for (const [x, y] of OUT.windows) glow(x, y, 'glowO', 0.8, 0.4);
-    // Lucioles chaudes.
-    this.add.particles(0, 0, 'px', {
-      x: { min: 0, max: W }, y: { min: 120, max: 228 }, lifespan: 4000, speedX: { min: -8, max: 8 }, speedY: { min: -8, max: 4 },
-      scale: 0.5, alpha: { onEmit: () => 0, onUpdate: (_p: unknown, _k: string, t: number) => Math.sin(t * Math.PI) }, tint: [0xffd36a, 0xff8a2a], frequency: 220,
-    }).setDepth(9);
+    addStorm(this, this.floorY, () => (this.player && this.player.spr.alpha > 0.5 ? { x: this.player.spr.x, y: this.player.spr.y - 33 } : null));
     this.add.image(0, 0, 'vignette').setOrigin(0).setDepth(90).setScrollFactor(0);
   }
 

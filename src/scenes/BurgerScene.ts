@@ -3,6 +3,7 @@ import { W, COL } from '../config';
 import { BossScene } from './BossScene';
 import { txt } from '../art/font';
 import { sfx } from '../audio/sfx';
+import { music } from '../audio/music';
 import { run } from '../floors';
 import { shout } from '../ui/Shout';
 import { UpgradeCards } from '../ui/UpgradeCards';
@@ -30,6 +31,7 @@ export class BurgerScene extends BossScene {
   private mealGlow: Phaser.GameObjects.Image | null = null;
   private mealHint: Phaser.GameObjects.BitmapText | null = null;
   protected autoGate = false;
+  protected afterWin = '';
   protected victoryHint() { return this.boss.x > this.player.x ? 'PRENDS SA COURONNE →' : '← PRENDS SA COURONNE'; }
   /** Tant que la couronne est au sol (elle tombe là où il est mort), la caméra la garde dans le cadre. */
   protected camFocus() { return this.crownTaken ? super.camFocus() : this.boss.x; }
@@ -190,6 +192,7 @@ export class BurgerScene extends BossScene {
   /** La salle tremble, le cri, puis la caméra longe la table jusqu'au roi. */
   private rage() {
     const cam = this.cameras.main, p = this.player, spr = p.spr;
+    music.stop(0.5);
     this.time.delayedCall(250, () => {
       sfx.rumble();
       cam.shake(1500, 0.011);
