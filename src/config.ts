@@ -26,7 +26,7 @@ export const ARENA = {
 };
 
 export const PLAYER = {
-  hp: 3,
+  hp: 4,
   runSpeed: 172,
   accelGround: 2400,
   accelAir: 1650,

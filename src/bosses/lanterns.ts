@@ -18,7 +18,7 @@ export const NIGHT = {
   moulinet: { dist: 74, tele: 0.7, time: 0.95, centerY: 50, radius: 99, safe: 62, hit: 24, recover: 1.05 },
   lancer: { tele: 0.75, lock: 0.18, speed: 440, hit: 18, height: 12, life: 2.4, recover: 0.85 },
   // at : part des PV totaux où l'épreuve se déclenche (la moitié de la barre de phase 2).
-  trial: { at: 0.25, roar: 0.6, retry: 0.45, count: 3, lead: 0.1, fly: 0.12, show: 0.12, charge: 5, damage: 14, stun: 2.4, sweepTele: 0.8, bandH: 40, recover: 1.1 },
+  trial: { at: 0.25, roar: 0.6, count: 3, lead: 0.1, fly: 0.12, show: 0.12, charge: 5, damage: 14, stun: 2.4, sweepTele: 0.8, sweepHearts: 3, bandH: 40, recover: 1.1 },
 };
 
 export interface Lamp {
@@ -35,7 +35,7 @@ export class Lanterns {
   lights: () => { x: number; y: number }[] = () => [];
   /** Lanternes lancées en vol : elles éclairent leur trajet. */
   flying = new Set<{ x: number; y: number }>();
-  /** Épreuve pas encore réussie : invincible et doré, plus rien ne le blesse (coups, sort, feu). */
+  /** Charge de l'épreuve : invincible et doré, plus rien ne le blesse (coups, sort, feu). */
   shielded = false;
   private dark: Phaser.GameObjects.RenderTexture;
   private stamps: Record<number, Phaser.GameObjects.Image> = {};

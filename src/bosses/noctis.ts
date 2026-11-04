@@ -218,8 +218,7 @@ function* attempt(b: Boss): Generator<number, boolean, unknown> {
   const E = NIGHT.trial, L = F(b), r = R(b), sc = b.scene;
   b.face(); b.eyes('tele'); sfx.warn();
   L.allOut();
-  const lamps = L.available(b.player.x, E.count);
-  if (lamps.length < E.count) return false; // trop de lanternes à terre
+  const lamps = L.available(b.player.x, E.count); // moins de trois si d'autres sont à terre : jamais d'échec d'office
   pose(b, 'conductA', 0.16, 'Back.out');
   L.beginTrial(lamps);
   let t = E.charge - b.t(E.lead) - lamps.length * (E.fly + E.show);
@@ -250,24 +249,15 @@ function* attempt(b: Boss): Generator<number, boolean, unknown> {
   return won;
 }
 
-/** Épreuve : passage obligé à la moitié de la phase 2. Tant qu'elle n'est pas réussie il reste doré, toutes ses lanternes allumées, rien ne le blesse ; chaque échec vaut une grande fauche, puis il recommence. Réussite : il s'effondre. */
+/** Épreuve : passage obligé, une seule fois, à la moitié de la phase 2. Doré et toutes ses lanternes allumées pendant la charge. Réussite : il s'effondre. Échec : la grande fauche. */
 function* epreuve(b: Boss) {
   const E = NIGHT.trial, L = F(b), r = R(b), sc = b.scene;
-  const ready = () => {
-    L.shielded = true; r.lightAll();
-    for (const q of r.litWorld()) L.burst(q.x, q.y, 0xffc45c, 6);
-    sfx.tick();
-  };
-  ready();
-  sfx.roar(); sc.cameras.main.shake(400, 0.008);
+  L.shielded = true; r.lightAll();
+  for (const q of r.litWorld()) L.burst(q.x, q.y, 0xffc45c, 6);
+  sfx.tick(); sfx.roar(); sc.cameras.main.shake(400, 0.008);
   pose(b, 'cry', 0.2, 'Back.out');
   yield b.t(E.roar);
-  while (!(yield* attempt(b))) {
-    L.shielded = true;
-    yield* fauche(b);
-    ready(); // la fin de la fauche l'a éteint
-    yield b.t(E.retry);
-  }
+  if (!(yield* attempt(b))) { yield* fauche(b); return; }
   sc.flashScreen(0.3); sfx.slam(); sc.cameras.main.shake(240, 0.01);
   L.burst(b.x, b.y - 60, 0xffc45c, 26);
   L.ignite(L.nearest(b.x), E.stun + 1);
@@ -275,7 +265,7 @@ function* epreuve(b: Boss) {
   yield* recover(b, E.stun, 'collapse');
 }
 
-/** La grande fauche : ses bras et ses tentacules balaient tout le sol, une fois. Sauter ou esquiver. */
+/** La grande fauche : ses bras et ses tentacules balaient tout le sol, une fois (−3 cœurs). Sauter ou esquiver. */
 function* fauche(b: Boss) {
   const E = NIGHT.trial, L = F(b), sc = b.scene, y = b.floorY - E.bandH;
   L.allOut();
@@ -289,6 +279,7 @@ function* fauche(b: Boss) {
   const band = b.temp(sc.add.rectangle(0, y, sc.worldW, E.bandH, 0xffd6e0, 0.95).setOrigin(0).setDepth(70));
   const edge = b.temp(sc.add.rectangle(0, y, sc.worldW, 2, COL.danger).setOrigin(0).setDepth(71));
   b.tw([band, edge], { alpha: 0 }, 0.24, 'Quad.in');
+  b.hitHearts = E.sweepHearts;
   b.hitbox = () => new Phaser.Geom.Rectangle(0, y, sc.worldW, E.bandH);
   yield b.t(0.14);
   b.hitbox = null;

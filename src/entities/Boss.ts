@@ -37,6 +37,8 @@ export class Boss implements Target {
   state: State = 'intro';
   /** Zone de coup active (coordonnées monde), vérifiée chaque frame. */
   hitbox: (() => Phaser.Geom.Rectangle) | null = null;
+  /** Cœurs retirés par cette zone (revient à 1 à la fin du pattern). */
+  hitHearts = 1;
   private gen: Generator<number, void, unknown> | null = null;
   private waitT = 0;
   private history: string[] = [];
@@ -97,7 +99,7 @@ export class Boss implements Target {
   clampX(x: number) { return Phaser.Math.Clamp(x, 40, this.scene.worldW - 40); }
 
   update(dt: number) {
-    if (this.hitbox && this.alive() && Phaser.Geom.Rectangle.Overlaps(this.hitbox(), this.player.rect())) this.player.hurt(this.x);
+    if (this.hitbox && this.alive() && Phaser.Geom.Rectangle.Overlaps(this.hitbox(), this.player.rect())) this.player.hurt(this.x, this.hitHearts);
     if (this.state === 'idle') {
       this.face();
       const dx = this.player.x - this.x;
@@ -141,7 +143,7 @@ export class Boss implements Target {
 
   /** Coupe le pattern en cours : tweens, hitbox, objets temporaires, retour au sol. */
   private cleanup() {
-    this.gen = null; this.hitbox = null;
+    this.gen = null; this.hitbox = null; this.hitHearts = 1;
     for (const tw of this.tws) tw.remove();
     for (const o of this.temps) o.destroy();
     this.tws = []; this.temps = [];

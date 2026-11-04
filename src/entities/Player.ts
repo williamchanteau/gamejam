@@ -202,9 +202,9 @@ export class Player {
     sfx.spell();
   }
 
-  hurt(fromX: number) {
+  hurt(fromX: number, hearts = 1) {
     if (this.invulnerable) return;
-    this.hp--; this.invuln = C.invuln;
+    this.hp = Math.max(0, this.hp - hearts); this.invuln = C.invuln;
     if (this.state === 'dash') this.endDash();
     this.body.setAllowGravity(true);
     const k = Math.sign(this.x - fromX) || -this.facing;
