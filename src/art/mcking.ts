@@ -250,19 +250,9 @@ export function makeMcKingArt(s: Phaser.Scene) {
   mapTex(s, 'mck_star_s', ['....g....', '....g....', '...gwg...', 'gggwwwggg', '.ggwwwgg.', '..gwwwg..', '..ggdgg..', '.ggd.dgg.', '.d.....d.'], STAR);
   // Œil en spirale (étourdi), blanc plein.
   mapTex(s, 'mck_spiral', ['kkkkkkkkk', 'wwwwwwwwk', 'kkkkkkkwk', 'kwwwwwkwk', 'kwkkkwkwk', 'kwkwwwkwk', 'kwkkkkkwk', 'kwwwwwwwk', 'kkkkkkkkk'], { k: '#14121c', w: '#fff' }, null);
-  // Dangers : ketchup, rot.
-  canvasTex(s, 'mck_wave', 32, 24, (c) => {
-    poly(c, KD, [0, 24, 2, 14, 9, 6, 20, 1, 30, 4, 25, 8, 28, 16, 32, 24]);
-    poly(c, K, [3, 24, 5, 15, 11, 8, 20, 4, 26, 5, 22, 9, 25, 17, 28, 24]);
-    poly(c, KL, [8, 15, 12, 9, 19, 6, 15, 11, 11, 18]);
-  }, OUTLINE);
+  // Flaque de ketchup.
   canvasTex(s, 'mck_splat', 40, 9, (c) => {
     ell(c, KD, 20, 5, 19, 3.5); ell(c, K, 20, 4.5, 16, 2.6); R(c, KL, 11, 3, 9, 1); ell(c, K, 3, 2, 2, 1.5); ell(c, K, 36, 2, 2, 1.5);
-  }, OUTLINE);
-  canvasTex(s, 'mck_gas', 22, 40, (c) => {
-    poly(c, KD, [2, 0, 12, 4, 19, 13, 21, 20, 19, 27, 12, 36, 2, 40, 8, 31, 12, 20, 8, 9]);
-    poly(c, K, [6, 4, 13, 8, 17, 14, 18, 20, 17, 26, 13, 32, 6, 36, 10, 29, 13, 20, 10, 11]);
-    R(c, KL, 15, 15, 1, 10);
   }, OUTLINE);
   canvasTex(s, 'mck_mark', 44, 6, (c) => ell(c, '#fff', 22, 3, 22, 3));
   canvasTex(s, 'xslash', 38, 38, (c) => {

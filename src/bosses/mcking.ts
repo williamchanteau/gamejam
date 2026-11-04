@@ -16,7 +16,7 @@ export const MK = {
   bump: { tele: 0.6, reach: 62, recover: 0.65 },
   flop: { tele: 0.7, air: 0.75, height: 135, wave: 170, recover: 1.15 },
   charge: { tele: 0.85, speed: 345, recover: 1.5 },
-  burp: { tele: 0.8, speed: 215, recover: 0.8 },
+  burp: { tele: 0.8, speed: 215, dive: 0.2, recover: 0.8 },
   inhale: { tele: 1.3, time: 2.2, pull: 105, range: 340, heal: 5, every: 4, recover: 0.9 },
   rain: { tele: 0.7, lanes: 7, gap: 72, fall: 0.85, recover: 0.8 },
   crown: { tele: 0.6, time: 1.75, recover: 0.5 },
@@ -27,9 +27,15 @@ export const MK = {
 
 type Img = Phaser.GameObjects.Image;
 type Cont = Phaser.GameObjects.Container;
+type Gfx = Phaser.GameObjects.Graphics;
 const Rect = Phaser.Geom.Rectangle;
 const HEAD_Y = -82, CROWN_Y = -37, BELLY_Y = -34, SHOULDER_Y = -75, ARM = { f: -7, b: 7 }, EAT_ARM = 122; // bras en travers du torse : la main arrive à la bouche
 const A = (b: Boss) => b.parts as unknown as { rig: Cont; head: Cont; headImg: Img; belly: Img; torso: Img; armF: Cont; armB: Cont; upF: Img; upB: Img; foreF: Cont; foreB: Cont; held: Img; crown: Img; legL: Img; legR: Img };
+/** Souffle : air blanc et traîne chaude, du fond vers le front [décalage du rayon, épaisseur, couleur, opacité]. */
+const AIR = [[-16, 8, 0xffb070, 0.22], [-9, 6, 0xffe2b8, 0.42], [-3, 4, 0xfff6e4, 0.7], [0, 2, 0xffffff, 1]];
+const MOUTH = { x: 10, y: -84 };
+/** Tambour du rugissement : bras écarté / poing sur le bide (angles de bras), cadence en ms. */
+const DRUM = { up: -40, hit: 44, at: 190, beats: 5, gap: 145 };
 const fields = new WeakMap<Boss, Feast>();
 const F = (b: Boss) => fields.get(b)!;
 
@@ -211,12 +217,55 @@ function splat(b: Boss, x: number, rest = true) {
   sfx.splat();
   if (rest) F(b).addRest(x);
 }
-function waves(b: Boss, x: number, speed: number) {
-  for (const d of [-1, 1]) {
-    const w = b.hazard('mck_wave', x + d * 22, b.floorY + 1, d * speed, 20, 17, 2.6);
-    let t = Math.random() * 6;
-    w.setData('tick', (dt: number) => { t += dt * 16; w.scaleY = 1 + Math.sin(t) * 0.12; });
+/** La salle tremble (prioritaire sur la secousse en cours) ; sur les gros coups, du plâtre tombe du plafond. */
+function quake(b: Boss, ms: number, amp: number, plaster = 0) {
+  const sc = b.scene, cam = sc.cameras.main;
+  cam.shake(ms, amp, true);
+  for (let i = 0; i < plaster; i++) sc.debris(cam.scrollX + Phaser.Math.Between(20, cam.width - 20), Phaser.Math.Between(10, 40), 1);
+}
+/** Un front de souffle : arc net et sa traîne d'air chaud, trait d'épaisseur constante. */
+function airArc(g: Gfx, cx: number, cy: number, r: number, a0: number, a1: number, alpha: number) {
+  for (const [dr, w, col, k] of AIR) {
+    if (r + dr < 1) continue;
+    g.lineStyle(w, col, alpha * k);
+    g.beginPath(); g.arc(cx, cy, r + dr, a0, a1); g.strokePath();
   }
+}
+const airGfx = (sc: Phaser.Scene) => sc.add.graphics().setDepth(15).setBlendMode(Phaser.BlendModes.ADD);
+/** Anneau de souffle, sans danger : un dôme posé au sol, ou un cercle complet en l'air. */
+function shock(sc: Phaser.Scene, x: number, y: number, R: number, dome = false) {
+  const g = airGfx(sc), o = { t: 0 };
+  sc.tweens.add({
+    targets: o, t: 1, duration: 380, ease: 'Quad.out', onComplete: () => g.destroy(),
+    onUpdate: () => { g.clear(); airArc(g, x, y, 6 + R * o.t, dome ? Math.PI : 0, Math.PI * 2, 1 - o.t * o.t); },
+  });
+}
+/** Souffle au sol : un dôme qui s'ouvre, puis un front qui file de chaque côté en soulevant la poussière. Se saute. */
+function waves(b: Boss, x: number, speed: number) {
+  const sc = b.scene, floor = b.floorY;
+  shock(sc, x, floor, 118, true);
+  for (const d of [-1, 1]) {
+    const w = b.hazard('mck_mark', x + d * 22, floor + 1, d * speed, 20, 17, 2.6).setVisible(false), g = airGfx(sc);
+    w.once('destroy', () => g.destroy());
+    let dust = 0;
+    w.setData('tick', (dt: number) => {
+      const fx = w.x + d * 10, r = Math.min(28, Math.abs(fx - x));
+      g.clear();
+      airArc(g, fx - d * r, floor, r, d > 0 ? -Math.PI / 2 : Math.PI, d > 0 ? 0 : Math.PI * 1.5, Math.min(1, w.getData('life') / 0.5));
+      if ((dust -= dt) <= 0) { dust = 0.07; sc.puffs(fx, floor, 1); }
+    });
+  }
+}
+/** Un coup de poing sur le bide pendant le rugissement (s = 1 : poing avant, -1 : poing arrière). */
+function drumBeat(b: Boss, s: 1 | -1) {
+  const a = A(b), sc = b.scene, hit = s > 0 ? a.armF : a.armB, other = s > 0 ? a.armB : a.armF, ms = DRUM.gap * 0.45;
+  sc.tweens.add({ targets: other, angle: -s * DRUM.up, duration: ms, ease: 'Quad.out' });
+  sc.tweens.add({ targets: a.rig, angle: s * 2.5, duration: ms, ease: 'Quad.in' });
+  sc.tweens.add({ targets: a.head, angle: -14 + s * 4, duration: ms, ease: 'Quad.in' });
+  sc.tweens.add({
+    targets: hit, angle: s * DRUM.hit, duration: ms, ease: 'Quad.in',
+    onComplete: () => { jiggle(b, 0.15, DRUM.gap); sfx.thud(); quake(b, DRUM.gap, 0.008); sc.puffs(b.x, b.floorY, 1); },
+  });
 }
 /** Récupération : yeux éteints, il reste ouvert. */
 function* recover(b: Boss, sec: number) {
@@ -281,7 +330,7 @@ function* flop(b: Boss) {
   arms(b, -70, 70, 0.3);
   mark(b, tx, (b.tele(C.tele) + b.t(C.air)) * 1000);
   yield b.tele(C.tele);
-  sfx.leap();
+  sfx.leap(); quake(b, 150, 0.007);
   b.tw(a.rig, { scaleY: 1.08, scaleX: 0.94 }, 0.1);
   b.tw(b.root, { x: tx }, b.t(C.air), 'Linear');
   b.tw(b.root, { y: b.floorY - C.height }, b.t(C.air * 0.55), 'Quad.out');
@@ -294,7 +343,7 @@ function* flop(b: Boss) {
   b.hitbox = () => new Rect(b.x - 62, b.y - 56, 124, 56);
   yield b.t(C.air * 0.4);
   f.lying = true;
-  sfx.slam(); sc.flashScreen(0.18); sc.cameras.main.shake(320, 0.016);
+  sfx.slam(); sc.flashScreen(0.18); quake(b, 460, 0.018, 8);
   sc.debris(b.x, b.floorY, 14); sc.puffs(b.x - 40, b.floorY, 4); sc.puffs(b.x + 40, b.floorY, 4);
   jiggle(b, 0.2, 420);
   waves(b, b.x, C.wave * b.speed);
@@ -361,15 +410,30 @@ function* burp(b: Boss) {
   setHead(b, 'open'); sfx.burp();
   b.tw(a.head, { angle: 12, y: HEAD_Y + 2 }, 0.1, 'Back.out');
   b.tw(a.belly, { scaleX: k, scaleY: k }, 0.18, 'Bounce.out');
-  sc.cameras.main.shake(240, 0.008);
+  quake(b, 420, 0.014, 6);
   shout(sc, ['BUUURP !'], b.x + dir * 62, b.y - 138, { scale: 1, ms: 650 });
-  const gas = (y: number) => {
-    const o = b.hazard('mck_gas', b.x + dir * 34, y, dir * C.speed, 13, 34, 2.8).setFlipX(dir < 0);
+  // Le souffle sort de la bouche et plonge vers son couloir ; il ne blesse qu'une fois arrivé.
+  const gas = (bottom: number) => {
+    const mx = b.x + dir * MOUTH.x, my = b.y + MOUTH.y, ground = bottom > b.floorY, g = airGfx(sc), R90 = Math.PI / 2;
+    shock(sc, mx, my, 78); sc.time.delayedCall(70, () => shock(sc, mx, my, 46));
+    const o = b.hazard('mck_mark', mx, bottom, 0, 13, 34, 2.8).setVisible(false), body = o.body as Phaser.Physics.Arcade.Body;
+    body.enable = false;
+    o.once('destroy', () => g.destroy());
     let t = 0;
-    o.setData('tick', (dt: number) => { t += dt; o.setScale(1 + Math.min(0.5, t * 0.5)); o.setAlpha(0.8 + 0.2 * Math.sin(t * 22)); });
+    o.setData('tick', (dt: number) => {
+      t += dt;
+      o.x += dir * C.speed * dt;
+      const s = 1 + Math.min(0.5, t * 0.5), h = 34 * s, p = Phaser.Math.Easing.Quadratic.Out(Math.min(1, t / C.dive));
+      if (t >= C.dive) body.enable = true;
+      o.setScale(s);
+      const L = Phaser.Math.Linear, r = L(8, ground ? h : h * 0.65, p), cy = L(my, ground ? b.floorY : bottom - h / 2, p);
+      const top = L(-R90 * 0.8, ground ? -R90 : -R90 * 0.55, p), bot = L(R90 * 0.8, ground ? 0 : R90 * 0.55, p);
+      g.clear();
+      airArc(g, o.x + dir * (6 * s - r), cy, r, dir > 0 ? top : Math.PI - bot, dir > 0 ? bot : Math.PI - top, Math.min(1, o.getData('life') / 0.5));
+    });
   };
   gas(b.floorY + 1);
-  if (b.phase === 2) { yield b.t(0.42); gas(b.floorY - 46); }
+  if (b.phase === 2) { yield b.t(0.42); sfx.whoosh(); quake(b, 320, 0.012, 4); gas(b.floorY - 46); }
   yield b.t(0.2);
   yield* recover(b, C.recover);
 }
@@ -462,7 +526,7 @@ function* split(b: Boss) {
   const giant = b.temp(sc.add.image(b.x, b.y - 150, 'burger').setScale(2).setDepth(16));
   arms(b, -170, 170, 0.28);
   yield b.tele(C.tele);
-  giant.destroy(); sfx.whoosh();
+  giant.destroy(); sfx.whoosh(); quake(b, 180, 0.008);
   arms(b, -80, 20, 0.14, 'Quad.in');
   const y0 = b.floorY - 112, T = b.t(0.55);
   const o = b.hazard('burger', b.x, b.y - 150, 0, 16, 14, T + 0.2).setOrigin(0.5).setScale(2);
@@ -470,11 +534,12 @@ function* split(b: Boss) {
   mark(b, tx, (T + 0.5) * 1000);
   o.setData('tick', (dt: number) => { t += dt; const k = Math.min(1, t / T); o.x = x0 + (tx - x0) * k; o.y = b.y - 150 + (y0 - b.y + 150) * k; o.angle += dt * 400; if (k >= 1) { o.setData('life', 0); pop(); } });
   const pop = () => {
-    sfx.splat(); sfx.clank(); sc.flashScreen(0.12); sc.sparks(tx, y0, 0xe8a548, 18); sc.sparks(tx, y0, COL.danger, 10);
+    sfx.splat(); sfx.clank(); sc.flashScreen(0.12); sc.sparks(tx, y0, 0xe8a548, 18); sc.sparks(tx, y0, 0xfff1d0, 10);
+    quake(b, 260, 0.012, 4); shock(sc, tx, y0, 84);
     b.hazard('bun_top', tx, y0 + 50, dir * 240, 34, 14, 2.6).setOrigin(0.5, 1).setScale(2);
     const m = b.hazard('patty', tx, y0, 0, 40, 10, 0.6).setOrigin(0.5).setScale(2);
     let v = 0;
-    m.setData('tick', (dt: number) => { v += 1000 * dt; m.y += v * dt; if (m.y >= b.floorY - 8) { m.setData('life', 0); sc.cameras.main.shake(170, 0.01); splat(b, tx, false); waves(b, tx, 150); } });
+    m.setData('tick', (dt: number) => { v += 1000 * dt; m.y += v * dt; if (m.y >= b.floorY - 8) { m.setData('life', 0); sfx.slam(); quake(b, 380, 0.016, 6); sc.puffs(tx, b.floorY, 6); waves(b, tx, 150); } });
     const r = b.hazard('bun_bot', tx, y0, 0, 30, 34, 3.4).setOrigin(0.5).setScale(2), vx = -dir * 165;
     let vy = 0, ground = false;
     r.setData('tick', (dt: number) => {
@@ -667,16 +732,20 @@ export const MCKING: BossDef = {
   roar(b) {
     const a = A(b), sc = b.scene;
     F(b).eating = null;
+    F(b).lying = false; // la bascule peut l'interrompre à plat ventre
     setHead(b, 'open');
-    sc.tweens.add({ targets: a.rig, angle: -6, scaleY: 1.06, duration: 200, ease: 'Back.out' });
-    sc.tweens.add({ targets: a.armF, angle: -165, duration: 240, ease: 'Back.out' });
-    sc.tweens.add({ targets: a.armB, angle: 165, duration: 240, ease: 'Back.out' });
+    sc.tweens.add({ targets: a.rig, angle: -4, scaleX: 1, scaleY: 1.06, x: 0, y: 0, duration: 160, ease: 'Back.out' });
+    sc.tweens.add({ targets: a.head, angle: -14, y: HEAD_Y - 3, duration: 160, ease: 'Back.out' });
+    arms(b, DRUM.up, -DRUM.up, 0.16);
+    // Il se martèle le bide à deux poings : le bras arrière passe devant le ventre le temps du tambour.
+    a.rig.bringToTop(a.armB);
+    for (let i = 0; i < DRUM.beats; i++) sc.time.delayedCall(DRUM.at + i * DRUM.gap, () => drumBeat(b, i % 2 ? -1 : 1));
     sc.tweens.chain({ targets: a.crown, tweens: [{ y: CROWN_Y - 20, angle: 14, duration: 180, ease: 'Quad.out' }, { y: CROWN_Y + 1, angle: 12, duration: 240, ease: 'Bounce.out' }] });
     jiggle(b, 0.22, 700);
     shout(sc, ["J'AI ENCORE FAIM !!!"], b.x, b.y - 158, { scale: 2, ms: 1000 });
     sc.sparks(b.x, b.y - 70, COL.danger, 20);
     sc.puffs(b.x - 26, b.floorY, 5); sc.puffs(b.x + 26, b.floorY, 5);
-    sc.time.delayedCall(850, () => this.rest(b, 0.25));
+    sc.time.delayedCall(DRUM.at + DRUM.beats * DRUM.gap, () => { a.rig.sendToBack(a.armB); this.rest(b, 0.22); });
   },
   death(b) {
     const a = A(b), f = F(b), sc = b.scene, x = b.x, y = b.y;
