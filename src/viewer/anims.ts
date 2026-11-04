@@ -13,7 +13,7 @@ const BOSS_ENGINE = 'src/entities/Boss.ts (moteur générique : b.tele/t/tw/temp
 export const ENTITIES: Entity[] = [
   { id: 'player', label: 'JOUEUR', files: ['src/art/player.ts (dessin : palette P, HOOD, POSES)', 'src/entities/Player.ts (états, animation, sort)', 'src/config.ts → PLAYER (gameplay)', 'src/scenes/ArenaScene.ts (spawnSpell/updateSpells, particules)', 'src/art/fx.ts (textures slash, moon, glowC…)'] },
   { id: 'mordrec', label: 'MORDREC', boss: MORDREC, files: ['src/bosses/mordrec.ts (dessin makeMordrecArt, build/rest/roar/death, patterns, valeurs M)', BOSS_ENGINE] },
-  { id: 'noctis', label: 'NOCTIS', boss: NOCTIS, files: ['src/art/noctis.ts (dessin : palette N, buste, masque, lanternes, onde)', 'src/art/noctisRig.ts (squelette : membres, tentacules, pieds, lanternes pendulaires)', 'src/bosses/noctis.ts (build/rest/roar/death, poses P, patterns)', 'src/bosses/lanterns.ts (valeurs NIGHT, lanternes, feu, obscurité)', BOSS_ENGINE] },
+  { id: 'noctis', label: 'NOCTIS', boss: NOCTIS, files: ['src/art/noctis.ts (dessin : palette N, buste, tête-cage, lanternes)', 'src/art/noctisRig.ts (squelette : membres, tentacules, pieds, lanternes pendulaires)', 'src/bosses/noctis.ts (build/rest/roar/death, poses P, patterns)', 'src/bosses/lanterns.ts (valeurs NIGHT, lanternes, feu, obscurité)', BOSS_ENGINE] },
 ];
 
 export type Seg = { k: 't' | 'a' | 'r' | 'n'; from: number; n: number };

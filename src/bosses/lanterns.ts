@@ -12,10 +12,12 @@ export const NIGHT = {
   lanterns: [105, 255, 405, 555, 705, 855], lanternY: 196,
   litLife: 3.2, exposeR: 92, // portée où une lanterne ou un feu rend Noctis vulnérable (> demi-écart : toujours couvert)
   fallTime: 0.35, fireDamage: 3, fireTick: 0.35, fireLife: 4.5, fireWidth: 132,
-  rushTime: 0.65,
-  ombre: { fade: 0.22, dark: 0.34, dist: 74, tele: 0.8, turn: 0.1, active: 0.16, reach: 100, height: 112, recover: 1.05 },
-  moulinet: { dist: 74, tele: 0.75, time: 0.95, centerY: 52, radius: 116, safe: 62, hit: 24, recover: 1.05 },
-  onde: { tele: 0.9, speed: 215, ressac: 0.6, back: 260, recover: 0.95 },
+  pause: [0.42, 0.6], // entre deux attaques (plus court que la pause générique)
+  seenAt: 150, // au-delà, hors de toute lumière, son corps a totalement disparu
+  rushTele: 0.85, rushTime: 0.65, rushRecover: 0.85,
+  ombre: { fade: 0.2, dark: 0.24, dist: 74, tele: 0.68, turn: 0.1, active: 0.16, reach: 100, height: 112, recover: 0.9 },
+  moulinet: { dist: 74, tele: 0.7, time: 0.95, centerY: 50, radius: 99, safe: 62, hit: 24, recover: 1.05 },
+  lancer: { tele: 0.75, lock: 0.18, speed: 440, hit: 14, life: 1.5, recover: 0.85 },
   trial: { count: 3, lead: 0.1, fly: 0.12, show: 0.12, window: 5, damage: 14, stun: 2.4, sweepTele: 0.8, bandH: 40, recover: 1.1 },
 };
 
@@ -34,6 +36,8 @@ export class Lanterns {
   trial: Trial | null = null;
   /** Lanternes du corps allumées (position monde) : seule lumière émise par le boss. */
   lights: () => { x: number; y: number }[] = () => [];
+  /** Lanternes lancées en vol : elles éclairent leur trajet, sans rendre le boss vulnérable. */
+  flying = new Set<{ x: number; y: number }>();
   private dark: Phaser.GameObjects.RenderTexture;
   private stamps: Record<number, Phaser.GameObjects.Image> = {};
   private fireG: Phaser.GameObjects.Graphics;
@@ -236,6 +240,7 @@ export class Lanterns {
       if (this.exposed(b.x) || b.state === 'dead' || b.state === 'phase') hole(62, b.x, b.y - 58);
       const flick = 0.92 + 0.08 * Math.sin(this.t * 13);
       for (const q of this.lights()) hole(96, q.x, q.y, flick);
+      for (const q of this.flying) hole(96, q.x, q.y, flick);
     }
   }
 }

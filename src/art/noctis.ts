@@ -11,63 +11,40 @@ export const N = {
   iron: '#3d4052', ironL: '#6a6e88',
 };
 
-// Chair meurtrie, désaturée : plus chaude que le fer et le tissu, jamais rouge.
-export const FLESH = { f0: '#1c1526', f1: '#2f2438', f2: '#4a3a52', f3: '#6b5870', f4: '#8a7488' };
-
-// Pointes déchirées du col.
+// Pointes déchirées de la pèlerine.
 const TATTER = [3, 0, 5, 2, 7, 1, 4, 8, 2, 6, 0, 3, 7, 1, 5, 2, 8, 3, 0, 6, 2, 4, 1, 7, 3, 0, 5, 2, 6, 1, 4, 2];
 
-/** Buste massif, 58×56 (hanche à y = 48) : épaules voûtées, poitrail éventré sur la cage, ventre qui pend, plis, couture. */
+/** Buste creux, 32×44 : pèlerine en lambeaux, cage ouverte, taille vertébrée, bassin. */
 export function drawTorso(c: Ctx) {
-  const F = FLESH, cx = 29, H = 56;
-  const prof = (y: number) => (y < 9 ? 13 + Math.sqrt(y / 9) * 14 : y < 24 ? 27 - (y - 9) * 0.12 : y < 40 ? 25 + Math.sin(((y - 24) / 16) * Math.PI) * 2.5 : 25 - (y - 40) * 0.95) + Math.sin(y * 0.7) * 0.8;
-  for (let y = 0; y < H; y++) {
-    const hw = prof(y);
+  const cx = 16;
+  // Bassin et vertèbres.
+  for (let y = 34; y < 44; y++) {
+    const hw = Math.round(4 + (y - 34) * 0.55);
+    for (let x = -hw; x <= hw; x++) px(c, x > hw * 0.4 ? N.l : x < -hw * 0.4 ? N.d : N.b, cx + x, y);
+  }
+  px(c, N.s0, cx - 5, 34, 11, 1); px(c, N.s1, cx + 1, 34, 4, 1);
+  for (let y = 26; y < 34; y++) {
+    px(c, N.k, cx - 4, y, 9, 1);
+    px(c, y % 2 ? N.s1 : N.s0, cx - 2, y, 5, 1);
+  }
+  // Cage : creux noir, côtes dessinées à part pour passer devant la lanterne.
+  for (let y = 8; y < 27; y++) {
+    const hw = Math.round(11 - Math.abs(y - 14) * 0.26);
+    for (let x = -hw; x <= hw; x++) px(c, Math.abs(x) >= hw ? N.m : N.k, cx + x, y);
+  }
+  // Pèlerine : col en V ouvert sur la cage.
+  for (let y = 0; y < 19; y++) {
+    const hw = Math.min(15, 6 + Math.sqrt(y) * 3.6), hole = (y - 4) * 0.95;
     for (let x = -Math.floor(hw); x <= Math.floor(hw); x++) {
-      const nx = x / hw;
-      const v = nx * 0.55 - ((y - 22) / 28) * 0.4 - Math.abs(nx) ** 3 * 0.35;
-      let col = v > 0.42 ? F.f3 : v > 0.12 ? F.f2 : v > -0.2 ? F.f1 : F.f0;
-      // Plis : sous le poitrail, sous le ventre, sur les flancs.
-      for (const [y0, dp, min] of [[27, 4, 0.34], [39, 5, 0], [47, 2, 0]]) {
-        const yf = y0 + Math.round((1 - nx * nx) * dp);
-        if (Math.abs(nx) < min) continue;
-        if (y === yf) col = F.f0; else if (y === yf + 1 && v > -0.3) col = F.f2;
-      }
-      px(c, col, cx + x, y);
+      if (x > -hole && x < hole) continue;
+      if (y > 10 + TATTER[(x + 16) & 31]) continue;
+      const t = x / hw;
+      px(c, t > 0.6 ? N.l : t > 0.1 ? N.b : t > -0.55 ? N.m : N.d, cx + x, y);
     }
   }
-  // Ventre : reflet large et rond.
-  for (let y = 31; y < 39; y++) for (let x = 3; x < 17; x++) if (((x - 10) / 7) ** 2 + ((y - 35) / 4) ** 2 < 1) px(c, F.f3, cx + x, y);
-  px(c, F.f4, cx + 9, 33, 5, 2);
-  // Masses des épaules.
-  for (const sx of [-1, 1]) for (let y = 3; y < 12; y++) for (let x = 13; x < 25; x++) {
-    if (((x - 19) / 6) ** 2 + ((y - 7) / 4.5) ** 2 < 1) px(c, sx > 0 ? F.f3 : F.f1, cx + sx * x, y);
-  }
-  // Cage ouverte dans le poitrail : bord de chair déchirée, creux noir pour la lanterne.
-  const ic = 18;
-  for (let y = 6; y < 31; y++) for (let x = -14; x <= 14; x++) {
-    const d = (x / 12) ** 2 + ((y - ic) / 10.5) ** 2 + (((x * 3 + y * 5) % 7) * 0.012);
-    if (d < 1) px(c, N.k, cx + x, y);
-    else if (d < 1.28) px(c, x > 0 ? F.f4 : F.f2, cx + x, y);
-  }
-  // Couture sur le ventre.
-  for (let y = 31; y < 46; y++) px(c, F.f0, cx - 6, y);
-  for (let y = 32; y < 46; y += 3) px(c, N.s0, cx - 8, y, 5, 1);
-  // Col en lambeaux, repris par le voile de la tête.
-  for (let x = -14; x <= 14; x++) {
-    const bottom = 3 + TATTER[(x + 16) & 31] * 0.7;
-    for (let y = 0; y < bottom; y++) px(c, x > 3 ? N.b : x > -5 ? N.m : N.d, cx + x, y);
-  }
   // Pointes d'os aux épaules.
-  for (const [sx, col] of [[-1, N.s1], [1, N.s2]] as const) {
-    px(c, col, cx + sx * 21, 1, 2, 3); px(c, col, cx + sx * 22, 0, 1, 1);
-    px(c, col, cx + sx * 25, 4, 2, 3); px(c, col, cx + sx * 26, 2, 1, 2);
-  }
-  // Pagne déchiré sous le bassin.
-  for (let x = -15; x <= 15; x++) {
-    const bottom = H - 1 - TATTER[(x + 16) & 31] * 0.8;
-    for (let y = 48; y < bottom; y++) px(c, x > 4 ? N.b : x > -6 ? N.m : N.d, cx + x, y);
-  }
+  px(c, N.s1, cx - 13, 4, 2, 2); px(c, N.s1, cx - 14, 2, 1, 2);
+  px(c, N.s2, cx + 12, 4, 2, 2); px(c, N.s2, cx + 14, 2, 1, 2);
 }
 
 /** Côtes, 23×17 : passent devant la lanterne logée dans la poitrine. */
@@ -80,36 +57,46 @@ export function drawRibs(c: Ctx) {
   }
 }
 
-/** Tête 24×32 : voile pointu et masque de théâtre mi-noir, mi-porcelaine, au rictus fendu jusqu'aux joues. */
+/** Tête 26×38 : une lanterne morte de fer rouillé en guise de crâne, toit pointu et anneau ; dedans, un long crâne à la mâchoire pendante. */
 export function drawHead(c: Ctx) {
-  const cx = 13;
-  for (let y = 1; y < 32; y++) {
-    const t = y / 31, hw = 1 + 9 * Math.sin(Math.PI * t ** 0.75), m = cx - 3 - (1 - t) ** 2 * 6;
-    for (let x = Math.ceil(m - hw); x <= Math.floor(m + hw); x++) px(c, x < m - hw * 0.4 ? N.d : N.m, x, y);
+  const cx = 13, rust = '#5a4434';
+  // Anneau et toit.
+  px(c, N.iron, cx - 2, 0, 5, 1); px(c, N.iron, cx - 2, 1, 1, 2); px(c, N.iron, cx + 2, 1, 1, 2); px(c, N.ironL, cx - 1, 3, 3, 1);
+  for (let y = 4; y < 10; y++) {
+    const hw = 1 + (y - 4) * 1.9;
+    for (let x = -Math.round(hw); x <= Math.round(hw); x++) px(c, x > hw * 0.45 ? N.ironL : x < -hw * 0.5 ? N.d : (x + y) % 5 === 0 ? rust : N.iron, cx + x, y);
   }
-  // Épines de fer autour du masque.
-  for (const [x, top] of [[cx - 7, 2], [cx - 2, 0], [cx + 3, 1], [cx + 8, 4]]) {
-    for (let y = top; y < top + 7; y++) { px(c, N.iron, x, y); if (y > top + 3) px(c, N.ironL, x + 1, y); }
+  // Intérieur noir de la cage, qui se resserre vers le cou.
+  for (let y = 10; y < 34; y++) {
+    const hw = y < 29 ? 11 : 11 - (y - 28) * 1.6;
+    for (let x = -Math.round(hw); x <= Math.round(hw); x++) px(c, N.k, cx + x, y);
   }
-  for (let y = 5; y < 32; y++) {
-    const hw = y <= 15 ? 8 * Math.sqrt(Math.max(0, 1 - ((15 - y) / 10.5) ** 2)) : 8 * (1 - ((y - 15) / 17) ** 1.7);
-    const seam = Math.round(Math.sin(y * 1.1) * 1.2);
-    for (let x = -Math.round(hw); x <= Math.round(hw); x++) {
-      const light = x >= seam;
-      const col = light ? (x > hw - 2 ? N.s1 : x > 3 ? N.s3 : N.s2) : (x < 1 - hw ? N.m : N.l);
-      px(c, col, cx + x, y);
-    }
+  // Long crâne : boîte crânienne, joues creuses.
+  for (let y = 11; y < 25; y++) {
+    const hw = y < 19 ? 6.5 * Math.sqrt(Math.max(0, 1 - ((19 - y) / 8.5) ** 2)) : 6.5 - (y - 19) * 0.55;
+    for (let x = -Math.round(hw); x <= Math.round(hw); x++) px(c, x < -hw * 0.45 ? N.s0 : x < hw * 0.35 ? N.s1 : N.s2, cx + x, y);
   }
-  // Orbites obliques : les yeux (noc_eyes) brillent dedans.
-  for (let i = 0; i < 5; i++) { px(c, N.k, cx + 1 + i, 14 - (i >> 1), 1, 3); px(c, N.k, cx - 1 - i, 14 - (i >> 1), 1, 3); }
-  // Rictus : coins relevés, dents.
-  for (let x = -6; x <= 6; x++) {
-    const y = Math.round(24 - (x / 6) ** 2 * 4);
-    px(c, N.k, cx + x, y, 1, 2);
-    if (x % 2 === 0 && Math.abs(x) < 6) px(c, N.s3, cx + x, y, 1, 1);
+  px(c, N.s3, cx + 1, 12, 3, 2);
+  // Orbites et fosse nasale.
+  for (const sx of [-1, 1]) { px(c, N.k, cx + (sx < 0 ? -5 : 2), 16, 4, 4); px(c, N.k, cx + (sx < 0 ? -4 : 2), 15, 3, 1); }
+  px(c, N.k, cx, 21, 1, 3); px(c, N.k, cx - 1, 22, 3, 1);
+  // Dents, puis mâchoire qui pend, décrochée d'un côté.
+  for (let x = -4; x <= 4; x += 2) px(c, N.s3, cx + x, 25, 1, 2);
+  for (let y = 28; y < 33; y++) {
+    const hw = 4 - (y - 28) * 0.5, dx = y >= 30 ? 1 : 0;
+    for (let x = -Math.round(hw); x <= Math.round(hw); x++) px(c, x < 0 ? N.s0 : N.s1, cx + x + dx, y);
   }
+  for (let x = -3; x <= 3; x += 2) px(c, N.s3, cx + x, 27, 1, 1);
   // Fêlure.
-  for (const [x, y] of [[6, 7], [5, 8], [5, 9], [4, 10], [6, 17], [5, 18], [5, 19]]) px(c, N.s0, cx + x, y);
+  for (const [x, y] of [[3, 11], [4, 12], [3, 13], [4, 14], [-3, 12], [-4, 13]]) px(c, N.s0, cx + x, y);
+  // Barreaux devant le crâne, cerclages, base qui prend le cou.
+  for (const x of [-11, -8, 8, 11]) for (let y = 10; y < 29; y++) px(c, y % 7 === 3 ? rust : x > 0 ? N.ironL : N.iron, cx + x, y);
+  for (let x = -11; x <= 11; x++) { px(c, N.iron, cx + x, 10); px(c, x > 4 ? N.ironL : N.iron, cx + x, 28); }
+  for (let y = 29; y < 38; y++) {
+    const hw = Math.max(2, 10 - (y - 29) * 1.25);
+    for (const sx of [-1, 1]) px(c, sx > 0 ? N.ironL : N.iron, cx + sx * Math.round(hw), y);
+  }
+  px(c, N.iron, cx - 3, 36, 7, 2);
 }
 
 /** Lanterne de laiton (salle et mains) : éteinte, ou deux images de flamme. */
@@ -164,28 +151,15 @@ function hole(c: Ctx, r: number) {
   c.putImageData(img, 0, 0);
 }
 
-/** Onde : trois tentacules jaillissent du sol, courbés vers l'avant, cernés de danger. */
-function wave(c: Ctx, f: number) {
-  const W = 34, H = 36;
-  const spikes = [[[9, 21, 5], [20, 33, 9], [26, 14, 5]], [[8, 25, 7], [19, 29, 12], [27, 18, 4]], [[10, 18, 4], [18, 34, 7], [26, 22, 6]]][f];
-  for (const [bx, h, curl] of spikes) {
-    const pts: [number, number, number][] = [];
-    for (let i = 0; i <= h; i++) { const s = i / h; pts.push([Math.round(bx + curl * s * s), H - 1 - i, Math.round(6 * (1 - s) + 1)]); }
-    for (const [x, y, w] of pts) px(c, '#ff2a5a', x - (w >> 1) - 1, y - 1, w + 2, 3);
-    for (const [x, y, w] of pts) px(c, y < H - h + 3 ? '#ffd6e0' : '#2a0a1e', x - (w >> 1), y, w, 1);
-  }
-  for (let x = 2; x < W - 2; x += 3) px(c, x % 2 ? '#c0144a' : '#ff2a5a', x, H - 2 - (x + f) % 3, 2, 2 + (x + f) % 3);
-}
-
 export const LAMP_ON = ['noc_lamp1', 'noc_lamp2'];
 export const LAMPS_ON = ['noc_lampS1', 'noc_lampS2'];
 export const HOLES = [20, 62, 96, 130];
 
 export function makeNoctisArt(s: Phaser.Scene) {
   if (s.textures.exists('noc_torso')) return;
-  canvasTex(s, 'noc_torso', 58, 56, drawTorso, OUTLINE);
+  canvasTex(s, 'noc_torso', 32, 44, drawTorso, OUTLINE);
   canvasTex(s, 'noc_ribs', 23, 17, drawRibs);
-  canvasTex(s, 'noc_head', 24, 32, drawHead, OUTLINE);
+  canvasTex(s, 'noc_head', 26, 38, drawHead, OUTLINE);
   canvasTex(s, 'noc_lamp0', 15, 24, (c) => drawLamp(c, 0), OUTLINE);
   LAMP_ON.forEach((k, i) => canvasTex(s, k, 15, 24, (c) => drawLamp(c, i + 1), OUTLINE));
   canvasTex(s, 'noc_lampS0', 9, 15, (c) => drawLampS(c, 0), OUTLINE);
@@ -199,6 +173,5 @@ export function makeNoctisArt(s: Phaser.Scene) {
     crescent(c, 44, 52, 48, 12, 47, '#ff8a2a', '#ff8a2a');
     crescent(c, 44, 52, 46, 12, 48, '#ffd08a', '#fff0b0');
   });
-  for (let f = 0; f < 3; f++) canvasTex(s, `noc_wave${f}`, 34, 36, (c) => wave(c, f));
   for (const r of HOLES) canvasTex(s, `noc_hole${r}`, r * 2, r * 2, (c) => hole(c, r));
 }

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { canvasTex } from './pixel';
-import { N, FLESH, LAMP_ON, LAMPS_ON, drawHead, drawLamp, drawLampS, drawRibs, drawTorso } from './noctis';
+import { N, LAMP_ON, LAMPS_ON, drawHead, drawLamp, drawLampS, drawRibs, drawTorso } from './noctis';
 
 // Squelette de Noctis : membres et tentacules rastérisés au pixel à chaque image, pieds plantés au sol,
 // lanternes pendulaires. Repère local : y = 0 au sol, +x vers l'avant ; angle 0 = bas, 90 = avant, 180 = haut.
@@ -15,26 +15,21 @@ type V = { x: number; y: number };
 interface Sink { c(col: number): void; r(x: number, y: number, w: number, h: number): void }
 
 const hex = (s: string) => parseInt(s.slice(1), 16);
-const K = hex(N.k), S0 = hex(N.s0), S1 = hex(N.s1), IR = hex(N.iron), IL = hex(N.ironL);
-// Chair : ombre, base, reflet (plus chaud que le fer et le tissu, jamais rouge).
-type Tone = readonly [number, number, number];
-const F0 = hex(FLESH.f0), F1 = hex(FLESH.f1), F2 = hex(FLESH.f2), F3 = hex(FLESH.f3);
-const NEAR: Tone = [F0, F1, F2], FAR: Tone = [K, F0, F1], LIMB: Tone = [F1, F2, F3], BONE: Tone = [S0, S0, S1];
+const K = hex(N.k), D = hex(N.d), M = hex(N.m), B = hex(N.b), L = hex(N.l), S0 = hex(N.s0), S1 = hex(N.s1), S2 = hex(N.s2), IR = hex(N.iron), IL = hex(N.ironL);
 const G = {
-  hip: 50, hipW: 9, thigh: 33, shin: 33, ankle: 8, footF: 26, footB: -28, stepAt: 16, stepTime: 0.15,
-  up: 30, fore: 33, shF: { x: 20, y: -37 }, shB: { x: -20, y: -37 }, third: { x: 16, y: -18 }, neckB: { x: 3, y: -43 }, neck: 11, rib: { x: 0, y: -29 },
-  torso: { w: 58, h: 56, hy: 48 },
+  hip: 50, thigh: 31, shin: 31, ankle: 8, footF: 18, footB: -20, stepAt: 16, stepTime: 0.15,
+  up: 30, fore: 33, shF: { x: 9, y: -30 }, shB: { x: -9, y: -30 }, third: { x: 5, y: -13 }, neckB: { x: 2, y: -36 }, neck: 14, rib: { x: 0, y: -21 },
   gravity: 620, damp: 0.975,
-  eye: { x: 1.5, y: -18 },
+  eye: { x: 0, y: -19 },
 };
 interface Tent { base: V; tip: V; rise?: V; dive?: V; bulge: V; w: number; amp: number; ph: number; onTorso: boolean; front: boolean }
 const TENTS: Tent[] = [
-  { base: { x: -14, y: -30 }, tip: { x: -54, y: -68 }, rise: { x: -72, y: -88 }, bulge: { x: -24, y: -22 }, w: 10, amp: 3, ph: 0, onTorso: true, front: false },
-  { base: { x: 10, y: -36 }, tip: { x: 36, y: -90 }, rise: { x: 46, y: -102 }, bulge: { x: -18, y: -30 }, w: 9, amp: 2.5, ph: 2, onTorso: true, front: false },
-  { base: { x: -12, y: 2 }, tip: { x: -78, y: -3 }, dive: { x: -94, y: 6 }, bulge: { x: -30, y: 18 }, w: 11, amp: 3, ph: 1, onTorso: false, front: false },
-  { base: { x: -9, y: 4 }, tip: { x: -32, y: -6 }, dive: { x: -50, y: 6 }, bulge: { x: -7, y: 12 }, w: 8, amp: 3, ph: 3, onTorso: false, front: false },
-  { base: { x: 0, y: 5 }, tip: { x: 8, y: -10 }, dive: { x: 50, y: 6 }, bulge: { x: 2, y: 12 }, w: 8, amp: 3, ph: 4.2, onTorso: false, front: true },
-  { base: { x: 11, y: 4 }, tip: { x: 40, y: -7 }, dive: { x: 92, y: 6 }, bulge: { x: 9, y: 10 }, w: 8, amp: 3, ph: 5.1, onTorso: false, front: true },
+  { base: { x: -7, y: -28 }, tip: { x: -44, y: -66 }, rise: { x: -62, y: -86 }, bulge: { x: -24, y: -22 }, w: 5, amp: 3, ph: 0, onTorso: true, front: false },
+  { base: { x: 5, y: -30 }, tip: { x: 30, y: -84 }, rise: { x: 40, y: -96 }, bulge: { x: -18, y: -30 }, w: 5, amp: 2.5, ph: 2, onTorso: true, front: false },
+  { base: { x: -6, y: 0 }, tip: { x: -68, y: -2 }, dive: { x: -86, y: 6 }, bulge: { x: -30, y: 18 }, w: 5, amp: 3, ph: 1, onTorso: false, front: false },
+  { base: { x: -5, y: 1 }, tip: { x: -24, y: -5 }, dive: { x: -44, y: 6 }, bulge: { x: -7, y: 12 }, w: 4, amp: 3, ph: 3, onTorso: false, front: false },
+  { base: { x: 0, y: 2 }, tip: { x: 6, y: -9 }, dive: { x: 44, y: 6 }, bulge: { x: 2, y: 12 }, w: 4, amp: 3, ph: 4.2, onTorso: false, front: true },
+  { base: { x: 6, y: 1 }, tip: { x: 32, y: -6 }, dive: { x: 84, y: 6 }, bulge: { x: 9, y: 10 }, w: 4, amp: 3, ph: 5.1, onTorso: false, front: true },
 ];
 const rad = Phaser.Math.DegToRad, lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 const dirOf = (deg: number): V => ({ x: Math.sin(rad(deg)), y: Math.cos(rad(deg)) });
@@ -57,10 +52,9 @@ function solve(p: Pose, o: Solve): Sk {
   const hip = { x: 0, y: -(G.hip - p.crouch) + Math.round(Math.sin(t * 2.1) * 1.5) * amp };
   const T = (q: V): V => ({ x: hip.x + q.x * cs - q.y * sn, y: hip.y + q.x * sn + q.y * cs });
   const legs = o.ankles.map((an, i) => {
-    const joint = { x: hip.x + (i === 0 ? G.hipW : -G.hipW), y: hip.y };
-    const knee = ik(joint, an, G.thigh, G.shin, i === 0 ? -1 : 1);
-    const toe = { x: an.x + 12, y: Math.min(-1, an.y + G.ankle) }, heel = { x: an.x - 5, y: Math.min(-1, an.y + G.ankle) };
-    return [joint, knee, an, toe, heel];
+    const knee = ik(hip, an, G.thigh, G.shin, i === 0 ? -1 : 1);
+    const toe = { x: an.x + 9, y: Math.min(-1, an.y + G.ankle) }, heel = { x: an.x - 4, y: Math.min(-1, an.y + G.ankle) };
+    return [hip, knee, an, toe, heel];
   });
   const limb = (s: V, a: number, e: number, l1 = G.up, l2 = G.fore) => {
     const d1 = dirOf(a), d2 = dirOf(a + e), m = { x: s.x + d1.x * l1, y: Math.min(-4, s.y + d1.y * l1) };
@@ -87,13 +81,13 @@ function solve(p: Pose, o: Solve): Sk {
     bases.push(b); tips.push(e);
     ctrls.push({ x: lerp(b.x, e.x, 0.5) + n.bulge.x, y: lerp(b.y, e.y, 0.5) + n.bulge.y * (1 - p.dive * 0.8) });
   }
-  const f1 = T({ x: 48 + Math.sin(t * 0.9) * 3, y: -46 + Math.sin(t * 1.7) * 4 });
-  const f2 = T({ x: -50 + Math.sin(t * 1.2 + 1) * 3, y: -26 + Math.sin(t * 1.4 + 2) * 4 });
+  const f1 = T({ x: 36 + Math.sin(t * 0.9) * 3, y: -38 + Math.sin(t * 1.7) * 4 });
+  const f2 = T({ x: -38 + Math.sin(t * 1.2 + 1) * 3, y: -20 + Math.sin(t * 1.4 + 2) * 4 });
   return { lean, hip, legs, arm, off, third, neck, headP, headA: p.head + lean * 0.5 + o.twH, tips, bases, ctrls, rib: T(G.rib), f1, f2 };
 }
 
-/** Membre de chair : contour, ombre, base décalée vers la lumière, reflet ; tampons entiers (net au pixel), arrondis quand ils sont larges. */
-function tube(s: Sink, pts: V[], w0: number, w1: number, tone: Tone, bulge = 0, clip = false) {
+/** Membre tubulaire : contour, remplissage, reflet, posés par tampons entiers (rendu net au pixel). */
+function tube(s: Sink, pts: V[], w0: number, w1: number, fill: number, hi: number, clip = false) {
   const nodes: number[] = [];
   let total = 0;
   for (let i = 1; i < pts.length; i++) total += Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y);
@@ -101,24 +95,18 @@ function tube(s: Sink, pts: V[], w0: number, w1: number, tone: Tone, bulge = 0, 
   for (let i = 1; i < pts.length; i++) {
     const a = pts[i - 1], b = pts[i], d = Math.hypot(b.x - a.x, b.y - a.y), n = Math.max(1, Math.ceil(d / 2));
     for (let k = 0; k <= n; k++) {
-      const u = k / n, x = a.x + (b.x - a.x) * u, y = a.y + (b.y - a.y) * u, q = (run + d * u) / (total || 1);
+      const u = k / n, x = a.x + (b.x - a.x) * u, y = a.y + (b.y - a.y) * u;
       if (clip && y > 0) continue;
-      nodes.push(Math.round(x), Math.round(y), Math.round(lerp(w0, w1, q) + bulge * Math.sin(q * Math.PI)));
+      nodes.push(Math.round(x), Math.round(y), Math.round(lerp(w0, w1, (run + d * u) / (total || 1))));
     }
     run += d;
   }
-  const stamp = (x: number, y: number, w: number) => { if (w >= 5) { s.r(x + 1, y, w - 2, w); s.r(x, y + 1, w, w - 2); } else s.r(x, y, w, w); };
   s.c(K);
-  for (let i = 0; i < nodes.length; i += 3) { const w = nodes[i + 2], o = w >> 1; stamp(nodes[i] - o - 1, nodes[i + 1] - o - 1, w + 2); }
-  s.c(tone[0]);
-  for (let i = 0; i < nodes.length; i += 3) { const w = nodes[i + 2], o = w >> 1; stamp(nodes[i] - o, nodes[i + 1] - o, w); }
-  s.c(tone[1]);
-  for (let i = 0; i < nodes.length; i += 3) { const w = nodes[i + 2], o = w >> 1, n = w >= 4 ? w - 2 : w; stamp(nodes[i] - o + w - n, nodes[i + 1] - o, n); }
-  s.c(tone[2]);
-  for (let i = 0; i < nodes.length; i += 3) {
-    const w = nodes[i + 2], o = w >> 1, h = w >= 6 ? Math.round(w * 0.3) : 1;
-    if (w >= 2) s.r(nodes[i] - o + w - h - (w >= 4 ? 1 : 0), nodes[i + 1] - o + (w >= 4 ? 1 : 0), h, h);
-  }
+  for (let i = 0; i < nodes.length; i += 3) { const w = nodes[i + 2], o = w >> 1; s.r(nodes[i] - o - 1, nodes[i + 1] - o - 1, w + 2, w + 2); }
+  s.c(fill);
+  for (let i = 0; i < nodes.length; i += 3) { const w = nodes[i + 2], o = w >> 1; s.r(nodes[i] - o, nodes[i + 1] - o, w, w); }
+  s.c(hi);
+  for (let i = 0; i < nodes.length; i += 3) { const w = nodes[i + 2], o = w >> 1; if (w >= 2) s.r(nodes[i] - o, nodes[i + 1] - o, Math.max(1, w - 1), 1); }
 }
 
 const tentPts = (b: V, c: V, e: V, t: number, n: Tent, amp: number) => {
@@ -130,25 +118,20 @@ const tentPts = (b: V, c: V, e: V, t: number, n: Tent, amp: number) => {
   return pts;
 };
 
-/** Main : grosse paume, trois doigts charnus finis en griffes d'os, ouverts en éventail. */
-function claws(s: Sink, a: V, from: V, tone: Tone) {
-  const dx = a.x - from.x, dy = a.y - from.y, l = Math.hypot(dx, dy) || 1, ux = dx / l, uy = dy / l, ax = Math.round(a.x), ay = Math.round(a.y);
-  const each = (draw: (x: number, y: number, i: number) => void) => {
-    for (const k of [-1, 0, 1]) for (let i = 3; i <= 12; i++) {
-      const bend = k * (i < 7 ? i * 0.95 : 6.6 - (i - 7) * 0.6);
-      draw(Math.round(a.x + ux * i - uy * bend), Math.round(a.y + uy * i + ux * bend), i);
-    }
-  };
-  s.c(K); each((x, y, i) => s.r(x - 1, y - 1, i < 9 ? 4 : 3, i < 9 ? 4 : 3));
-  each((x, y, i) => { s.c(i < 9 ? tone[1] : S1); s.r(x, y, i < 9 ? 2 : 1, i < 9 ? 2 : 1); });
-  // Paume arrondie, sans coins : elle prolonge le poignet au lieu de faire un bloc.
-  s.c(K); s.r(ax - 3, ay - 4, 7, 9); s.r(ax - 4, ay - 3, 9, 7);
-  s.c(tone[0]); s.r(ax - 2, ay - 3, 5, 7); s.r(ax - 3, ay - 2, 7, 5);
-  s.c(tone[1]); s.r(ax - 1, ay - 3, 4, 5); s.r(ax - 2, ay - 2, 5, 3);
-  s.c(tone[2]); s.r(ax, ay - 2, 2, 2);
+/** Main : paume et trois longs doigts d'un pixel, ouverts en éventail. */
+function claws(s: Sink, a: V, from: V, col: number) {
+  const dx = a.x - from.x, dy = a.y - from.y, l = Math.hypot(dx, dy) || 1, ux = dx / l, uy = dy / l;
+  for (const k of [-0.9, 0, 0.9]) for (let i = 2; i <= 9; i++) {
+    const bend = k * (i < 6 ? i * 0.9 : 5.4 - (i - 6) * 0.5);
+    const x = Math.round(a.x + ux * i - uy * bend), y = Math.round(a.y + uy * i + ux * bend);
+    s.c(K); s.r(x, y + 1, 1, 1);
+    s.c(col); s.r(x, y, 1, 1);
+  }
+  s.c(K); s.r(Math.round(a.x) - 2, Math.round(a.y) - 2, 5, 5);
+  s.c(S0); s.r(Math.round(a.x) - 1, Math.round(a.y) - 1, 3, 3);
 }
 
-const spur = (s: Sink, a: V, col: number) => { s.c(col); s.r(Math.round(a.x), Math.round(a.y) - 7, 3, 3); s.r(Math.round(a.x) + 1, Math.round(a.y) - 10, 1, 3); };
+const spur = (s: Sink, a: V, col: number) => { s.c(col); s.r(Math.round(a.x), Math.round(a.y) - 4, 2, 3); s.r(Math.round(a.x) + 1, Math.round(a.y) - 6, 1, 2); };
 
 function chain(s: Sink, a: V, b: V) {
   const d = Math.hypot(b.x - a.x, b.y - a.y), n = Math.max(1, Math.floor(d / 2));
@@ -158,42 +141,37 @@ function chain(s: Sink, a: V, b: V) {
   }
 }
 
-function leg(s: Sink, q: V[], tone: Tone) {
-  tube(s, [q[0], q[1]], 13, 8, tone, 2);
-  tube(s, [q[1], q[2]], 8, 5, tone, 2);
-  tube(s, [q[2], q[3]], 5, 2, BONE);
-  tube(s, [q[2], q[4]], 4, 2, BONE);
+function leg(s: Sink, q: V[], fill: number, hi: number) {
+  tube(s, [q[0], q[1]], 6, 4, fill, hi);
+  tube(s, [q[1], q[2]], 4, 2, fill, hi);
+  tube(s, [q[2], q[3]], 2, 1, S0, S1);
+  tube(s, [q[2], q[4]], 2, 1, S0, S1);
   spur(s, q[1], S0);
 }
 
-const arm2 = (s: Sink, q: V[], tone: Tone) => {
-  tube(s, [q[0], q[1]], 11, 7, tone, 2);
-  tube(s, [q[1], q[2]], 7, 6, tone, 2);
-};
-
 function drawBack(s: Sink, k: Sk, t: number, amp: number, off: V | null) {
-  TENTS.forEach((n, i) => { if (!n.front) tube(s, tentPts(k.bases[i], k.ctrls[i], k.tips[i], t, n, amp), n.w, 2, FAR, 1, true); });
-  leg(s, k.legs[1], FAR);
-  leg(s, k.legs[0], NEAR);
+  TENTS.forEach((n, i) => { if (!n.front) tube(s, tentPts(k.bases[i], k.ctrls[i], k.tips[i], t, n, amp), n.w, 1, D, M, true); });
+  leg(s, k.legs[1], D, M);
+  leg(s, k.legs[0], M, B);
   if (off) chain(s, k.off[2], off);
-  arm2(s, k.off, FAR);
+  tube(s, [k.off[0], k.off[1]], 5, 3, D, M); tube(s, [k.off[1], k.off[2]], 3, 3, D, M);
   spur(s, k.off[1], S0);
-  claws(s, k.off[2], k.off[1], FAR);
-  tube(s, k.neck, 12, 8, NEAR);
+  claws(s, k.off[2], k.off[1], S0);
+  tube(s, k.neck, 4, 3, M, B);
 }
 
 function drawFront(s: Sink, k: Sk, t: number, amp: number, main: V | null) {
-  TENTS.forEach((n, i) => { if (n.front) tube(s, tentPts(k.bases[i], k.ctrls[i], k.tips[i], t, n, amp), n.w, 2, NEAR, 1, true); });
-  tube(s, [k.third[0], k.third[1]], 6, 4, NEAR); tube(s, [k.third[1], k.third[2]], 4, 2, LIMB);
+  TENTS.forEach((n, i) => { if (n.front) tube(s, tentPts(k.bases[i], k.ctrls[i], k.tips[i], t, n, amp), n.w, 1, M, B, true); });
+  tube(s, [k.third[0], k.third[1]], 3, 2, B, L); tube(s, [k.third[1], k.third[2]], 2, 1, S0, S1);
   if (main) chain(s, k.arm[2], main);
-  arm2(s, k.arm, LIMB);
+  tube(s, [k.arm[0], k.arm[1]], 5, 3, B, L); tube(s, [k.arm[1], k.arm[2]], 3, 3, B, L);
   spur(s, k.arm[1], S1);
-  claws(s, k.arm[2], k.arm[1], LIMB);
+  claws(s, k.arm[2], k.arm[1], S1);
 }
 
 const TIP_LAMP: Partial<Record<LampId, number>> = { t1: 1, t2: 0 };
 const LAYER_BACK: LampId[] = ['off', 't2', 'f2'], LAYER_FRONT: LampId[] = ['main', 't1', 'f1'];
-export const FULL = { w: 230, h: 170, ox: 115, oy: 166 };
+export const FULL = { w: 190, h: 170, ox: 95, oy: 166 };
 
 interface BodyLamp { id: LampId; big: boolean; x: number; y: number; px: number; py: number; ang: number; lit: boolean; free: boolean; gone: boolean; img: Phaser.GameObjects.Image; glow: Phaser.GameObjects.Image }
 
@@ -226,9 +204,9 @@ export class NoctisRig {
       main: lamp('main', true), off: lamp('off', true), rib: lamp('rib', false),
       t1: lamp('t1', false), t2: lamp('t2', false), f1: lamp('f1', false), f2: lamp('f2', false),
     };
-    this.torso = sc.add.image(0, 0, 'noc_torso').setOrigin(0.5, G.torso.hy / G.torso.h);
+    this.torso = sc.add.image(0, 0, 'noc_torso').setOrigin(0.5, 41 / 44);
     this.ribs = sc.add.image(0, 0, 'noc_ribs');
-    this.head = sc.add.image(0, 0, 'noc_head').setOrigin(0.5, 0.95);
+    this.head = sc.add.image(0, 0, 'noc_head').setOrigin(0.5, 36 / 38);
     this.glowEye = sc.add.image(0, 0, 'glowW').setBlendMode(Phaser.BlendModes.ADD).setScale(0.25);
     // Yeux au-dessus de l'obscurité : deux points, sans lumière projetée.
     this.eyes = sc.add.image(0, 0, 'noc_eyes').setDepth(62);
@@ -286,6 +264,16 @@ export class NoctisRig {
   allOut() { for (const id of this.ids) this.lamps[id].lit = false; }
   litWorld() { return this.ids.filter((i) => this.lamps[i].lit).map((i) => this.world(i)); }
   drop(id: LampId) { const l = this.lamps[id]; l.free = true; l.lit = false; }
+  /** La lanterne quitte le corps (lancée) ; restock() la lui rend à la fin de l'attaque. */
+  hide(id: LampId) { const l = this.lamps[id]; l.free = l.gone = true; l.lit = false; }
+  restock() {
+    for (const id of this.ids) {
+      const l = this.lamps[id];
+      if (!l.gone && !l.free) continue;
+      const a = this.anchor(id);
+      l.gone = l.free = false; l.x = l.px = a.x; l.y = l.py = a.y + this.len(id); l.ang = 0;
+    }
+  }
 
   /** Centre de la lanterne, coordonnées monde. */
   world(id: LampId): V {
@@ -403,10 +391,10 @@ export function bakeNoctis(s: Phaser.Scene) {
     at(off.x - 7, off.y, () => drawLamp(c, 1));
     at(k.tips[0].x - 4, k.tips[0].y + 5, () => drawLampS(c, 0));
     at(k.f2.x - 4, k.f2.y, () => drawLampS(c, 0));
-    at(k.hip.x - G.torso.w / 2, k.hip.y - G.torso.hy, () => drawTorso(c));
+    at(k.hip.x - 16, k.hip.y - 41, () => drawTorso(c));
     at(k.rib.x - 4, k.rib.y - 7, () => drawLampS(c, 1));
     at(k.rib.x - 11, k.rib.y - 8, () => drawRibs(c));
-    at(k.headP.x - 12, k.headP.y - 30, () => drawHead(c));
+    at(k.headP.x - 13, k.headP.y - 36, () => drawHead(c));
     drawFront(sink, k, 0, 0, main);
     at(main.x - 7, main.y, () => drawLamp(c, 1));
     at(k.tips[1].x - 4, k.tips[1].y + 5, () => drawLampS(c, 1));

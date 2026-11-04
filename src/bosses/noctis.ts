@@ -1,8 +1,8 @@
 import Phaser from 'phaser';
 import type { Boss, BossDef } from '../entities/Boss';
-import { COL } from '../config';
+import { BOSS, COL } from '../config';
 import { sfx } from '../audio/sfx';
-import { makeNoctisArt } from '../art/noctis';
+import { LAMP_ON, makeNoctisArt } from '../art/noctis';
 import { bakeNoctis, FULL, NoctisRig, REST, restPoints, type LampId, type Pose } from '../art/noctisRig';
 import { Lanterns, NIGHT } from './lanterns';
 
@@ -16,8 +16,8 @@ const P: Record<string, Partial<Pose>> = {
   backWind: { lean: 12, crouch: 12, head: -24, flip: -1, neck: 4, a1: 34, a2: 46, b1: 152, b2: 18, reach: 22, rise: 0.4 },
   backhand: { lean: 30, crouch: 18, head: 22, a1: -70, a2: -30, b1: 58, b2: 12, reach: 30, rise: 0.2 },
   spread: { lean: 6, crouch: 34, head: 6, a1: 110, a2: 0, b1: -70, b2: 0, reach: 24, rise: 0.5 },
-  burrow: { lean: 22, crouch: 24, head: 30, neck: -2, a1: 118, a2: -30, b1: -118, b2: 30, reach: 8, dive: 1 },
-  yank: { lean: -14, crouch: -3, head: -26, neck: 5, a1: 150, a2: 20, b1: -150, b2: -20, reach: 12, dive: 1, rise: 0.8 },
+  aim: { lean: -12, crouch: 8, head: -6, neck: 3, a1: -120, a2: -40, b1: 60, b2: 40, reach: 16, rise: 0.5 },
+  hurl: { lean: 28, crouch: 14, head: 22, a1: -264, a2: 10, b1: -60, b2: -30, rise: 0.2 },
   conductA: { lean: -6, crouch: 6, head: -14, neck: 4, a1: 140, a2: 30, b1: -50, b2: -70, reach: 10, rise: 1 },
   conductB: { lean: -2, crouch: 6, head: 8, neck: 4, a1: 70, a2: 70, b1: -130, b2: -40, reach: 10, rise: 1 },
   collapse: { lean: 44, crouch: 36, head: 60, neck: -4, a1: 6, a2: 6, b1: -6, b2: -6 },
@@ -73,7 +73,7 @@ function* rush(b: Boss) {
   const end = b.clampX(b.player.x + b.dir * 120);
   const mark = b.temp(b.scene.add.rectangle(Math.min(b.x, end) - 30, b.floorY - 92, Math.abs(end - b.x) + 60, 92, COL.danger, 0.16).setOrigin(0).setDepth(80));
   pose(b, 'raise', 0.3);
-  yield b.tele(1.05);
+  yield b.tele(NIGHT.rushTele);
   mark.destroy(); sfx.whoosh();
   pose(b, 'lance', 0.12);
   b.tw(b.root, { x: end }, b.t(NIGHT.rushTime), 'Sine.inOut');
@@ -81,7 +81,7 @@ function* rush(b: Boss) {
   const n = 8;
   for (let i = 0; i < n; i++) { ghost(b); yield b.t(NIGHT.rushTime / n); }
   b.hitbox = null;
-  yield* recover(b, 1);
+  yield* recover(b, NIGHT.rushRecover);
 }
 
 /** S'efface sans lumière et revient derrière le joueur, dos tourné ; b.dir vise déjà le joueur (zones verrouillées). */
@@ -162,48 +162,57 @@ function* moulinet(b: Boss) {
   yield* recover(b, M.recover);
 }
 
-function spawnWave(b: Boss, x: number, dir: number, speed: number, life = 3.2) {
-  const o = b.hazard('noc_wave0', x, b.floorY, dir * speed, 14, 24, life).setDepth(70);
+/** La lanterne jetée : file droit, éclaire sa route, éclate au sol ou sur toi. */
+function throwLamp(b: Boss, x: number, y: number, tx: number, ty: number) {
+  const sc = b.scene, T = NIGHT.lancer, L = F(b), a = Math.atan2(ty - y, tx - x), v = T.speed * b.speed;
+  const o = b.hazard('noc_lamp1', x, y, Math.cos(a) * v, T.hit, T.hit, T.life);
+  o.setOrigin(0.5).setFlipX(false).setDepth(70).setData('once', true);
+  (o.body as Phaser.Physics.Arcade.Body).setOffset((o.width - T.hit) / 2, (o.height - T.hit) / 2);
+  o.setVelocityY(Math.sin(a) * v);
+  const glow = sc.add.image(x, y, 'glowO').setBlendMode(ADD).setDepth(69).setScale(1.8).setAlpha(0.5);
+  L.flying.add(o);
+  o.once('destroy', () => {
+    L.flying.delete(o); glow.destroy();
+    if (!sc.sys.isActive()) return; // scène en cours d'arrêt : plus d'effets
+    L.burst(o.x, o.y, 0xffc45c, 16); L.burst(o.x, o.y, COL.danger, 6);
+    sc.puffs(o.x, Math.min(o.y, b.floorY), 2); sfx.crack();
+  });
   let t = 0;
   o.setData('tick', (dt: number) => {
     t += dt;
-    o.setTexture(`noc_wave${Math.floor(t * 12) % 3}`);
-    if (Math.random() < dt * 30) { F(b).burst(o.x, b.floorY - 6, COL.danger, 2); b.scene.debris(o.x, b.floorY, 1); }
+    o.setAngle(t * 900).setTexture(LAMP_ON[Math.floor(t * 12) % 2]);
+    glow.setPosition(o.x, o.y);
+    if (Math.random() < dt * 50) L.burst(o.x, o.y, 0xffc45c, 1);
+    if (o.y >= b.floorY - 8) { sc.cameras.main.shake(90, 0.004); o.setData('life', 0); } // détruite par la boucle des projectiles
   });
 }
 
-/** Onde : la lanterne de sa poitrine s'allume, ses tentacules s'enfoncent dans le sol, il tire d'un coup : la vague jaillit du sol. En phase 2, le ressac revient des bords vers lui. */
-function* onde(b: Boss) {
-  const O = NIGHT.onde, L = F(b), sc = b.scene;
+/** Lancer : il arme une lanterne dans son dos, te vise, puis la jette de toutes ses forces, de ton côté seulement. La visée se fige juste avant le tir : on esquive ce qu'on voit. */
+function* lancer(b: Boss) {
+  const T = NIGHT.lancer, L = F(b), r = R(b), sc = b.scene, p = b.player;
   b.face(); b.eyes('tele'); sfx.warn();
   L.ignite(L.nearest(b.x));
-  lightUp(b, 'rib');
-  pose(b, 'burrow', 0.3, 'Back.out');
-  const line = b.temp(sc.add.rectangle(b.x, b.floorY - 12, 40, 24, COL.danger, 0.2).setDepth(80));
-  const tele = b.tele(O.tele);
-  b.tw(line, { scaleX: 11 }, tele, 'Sine.in');
-  yield 0.3;
-  sfx.crack(); sc.puffs(b.x - 44, b.floorY, 2); sc.puffs(b.x + 44, b.floorY, 2); sc.debris(b.x, b.floorY, 4);
-  yield tele - 0.3;
-  line.destroy();
-  const v = O.speed * b.speed;
-  pose(b, 'yank', 0.08, 'Quad.in');
-  sfx.slam(); sc.cameras.main.shake(180, 0.008);
-  sc.puffs(b.x, b.floorY, 4); sc.debris(b.x, b.floorY, 6);
-  spawnWave(b, b.x - 22, -1, v); spawnWave(b, b.x + 22, 1, v);
-  if (b.phase === 2) {
-    const xs = [b.x - O.back, b.x + O.back], cx = b.x;
-    const marks = xs.map((x) => b.temp(sc.add.rectangle(x, b.floorY - 12, 28, 24, COL.danger, 0.3).setDepth(80)));
-    yield 0.14;
-    pose(b, 'burrow', 0.16);
-    sfx.warn();
-    yield Math.max(0, b.tele(O.ressac) - 0.14);
-    marks.forEach((m) => m.destroy());
-    pose(b, 'yank', 0.08, 'Quad.in');
-    sfx.slam(); sc.cameras.main.shake(140, 0.006);
-    xs.forEach((x) => { sc.debris(x, b.floorY, 5); spawnWave(b, x, Math.sign(cx - x), v, O.back / v); });
+  lightUp(b, 'main');
+  pose(b, 'aim', 0.26, 'Back.out');
+  const ray = b.temp(sc.add.graphics().setDepth(80));
+  const tele = b.tele(T.tele), step = 1 / 60;
+  let tx = p.x, ty = p.rect().centerY;
+  for (let t = 0; t < tele; t += step) {
+    if (t < tele - T.lock) { tx = p.x; ty = p.rect().centerY; }
+    const q = r.world('main');
+    ray.clear().lineStyle(1, COL.danger, 0.8).lineBetween(q.x, q.y, tx, ty).strokeCircle(tx, ty, 7);
+    yield step;
   }
-  yield* recover(b, O.recover);
+  ray.destroy();
+  // Par-dessus l'épaule : le bras fait presque un tour, la lanterne part au bout du geste.
+  pose(b, 'hurl', 0.09, 'Quad.in');
+  yield 0.09;
+  r.p.a1 += 360;
+  const q = r.world('main');
+  r.hide('main');
+  sfx.blade(); sc.cameras.main.shake(80, 0.004);
+  throwLamp(b, q.x, q.y, tx, ty);
+  yield* recover(b, T.recover);
 }
 
 /** Épreuve (phase 2) : en chef d'orchestre, il lance trois flammes qui allument les lanternes à frapper dans l'ordre. Réussite : il s'effondre. Échec : la grande fauche. */
@@ -279,7 +288,7 @@ function* fauche(b: Boss) {
 const art = (sc: Phaser.Scene) => { makeNoctisArt(sc); bakeNoctis(sc); };
 
 export const NOCTIS: BossDef = {
-  name: 'NOCTIS', title: 'LE DÉVOREUR DE LUMIÈRE', hp: NIGHT.hp, hurt: { w: 56, h: 108 },
+  name: 'NOCTIS', title: 'LE DÉVOREUR DE LUMIÈRE', hp: NIGHT.hp, hurt: { w: 46, h: 108 },
   build(b) {
     const sc = b.scene;
     art(sc);
@@ -289,19 +298,32 @@ export const NOCTIS: BossDef = {
     const L = new Lanterns(b);
     L.lights = () => r.litWorld();
     fields.set(b, { L, R: r });
+    // Noir complet au repos : ni yeux ni lueur ; seul le télégraphe rouge reste, pendant une attaque.
+    const eyes = b.eyes.bind(b), viewer = sc.scene.key === 'Viewer';
+    b.eyes = (m) => eyes(m === 'on' ? 'off' : m);
     r.onBreak = (x, y) => { L.burst(x, y, 0xffbc51, 14); sc.puffs(x, y + 6, 2); sfx.crack(); };
     this.rest(b, 0);
     // Coups filtrés par la lumière ; la salle et le corps avancent avec le boss.
     const hit = b.hit.bind(b), up = b.update.bind(b);
     b.hit = (dmg, from) => { if (L.filterHit(dmg)) hit(dmg, from); };
-    b.update = (dt) => { L.update(dt); up(dt); r.update(dt); };
+    b.update = (dt) => {
+      const was = b.state;
+      L.update(dt); up(dt); r.update(dt);
+      if (was === 'pattern' && b.state === 'idle') (b as unknown as { waitT: number }).waitT = Math.max(BOSS.pauseMin, Phaser.Math.FloatBetween(NIGHT.pause[0], NIGHT.pause[1]) / b.speed);
+      // Hors de toute lumière, le corps disparaît ; la lueur du joueur le fait sortir du noir quand il approche.
+      const lit = viewer || r.litWorld().length > 0 || L.exposed(b.x) || b.state === 'dead' || b.state === 'phase';
+      const want = lit ? 1 : Phaser.Math.Clamp((NIGHT.seenAt - Math.abs(b.player.x - b.x)) / 40, 0, 1);
+      r.rig.alpha += (want - r.rig.alpha) * Math.min(1, dt * 12);
+    };
     sc.events.on('prerender', r.draw, r);
     sc.events.once('shutdown', () => sc.events.off('prerender', r.draw, r));
   },
   rest(b, sec) {
     const r = R(b), sc = b.scene;
     F(b).cancel();
+    F(b).allOut(); // fin de l'attaque : plus rien d'allumé, ni sur lui ni dans la salle
     douse(b);
+    r.restock();
     sc.tweens.killTweensOf(r.p);
     if (sec <= 0) {
       b.root.alpha = 1; b.root.setScale(b.dir, 1); (b.parts.rig as Cont).x = 0;
@@ -351,7 +373,7 @@ export const NOCTIS: BossDef = {
   patterns: [
     { name: 'rush', weight: 3, phase: 0, far: true, run: rush },
     { name: 'ombre', weight: 3, phase: 0, far: true, elevated: true, run: ombre },
-    { name: 'onde', weight: 2, phase: 0, far: true, run: onde },
+    { name: 'lancer', weight: 2, phase: 0, far: true, elevated: true, run: lancer },
     { name: 'ombre2', weight: 2, phase: 2, far: true, elevated: true, run: moulinet },
     { name: 'epreuve', weight: 2, phase: 2, far: true, elevated: true, run: epreuve },
   ],
