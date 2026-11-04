@@ -53,7 +53,7 @@ class Feast {
   eating: { hits: number; need: number; big: boolean; draw(): void } | null = null;
   private stolen: { o: Img; g: Img; t: number; gift: number } | null = null;
   chewT: Phaser.Time.TimerEvent | null = null;
-  constructor(private b: Boss) { b.minHp = 1; } // un seul coup ne saute pas le festin
+  constructor(private b: Boss) { b.minHp = 1; } // aucun coup ne saute ni n'écourte le festin (rendu à 0 quand il finit ou s'étrangle)
 
   get k() { return 1 + this.meals * 0.07; }
 
@@ -132,7 +132,7 @@ class Feast {
     }
     if (!b.alive()) return;
     this.eatCd -= dt;
-    if (this.festinDue && b.phase === 2 && b.hp <= b.maxHp * MK.festin.at) { this.festinDue = false; b.minHp = 0; this.eating = null; b.force((x) => eat(x, true)); return; }
+    if (this.festinDue && b.phase === 2 && b.hp <= b.maxHp * MK.festin.at) { this.festinDue = false; this.eating = null; b.force((x) => eat(x, true)); return; }
     if (b.state !== 'idle') return;
     if (this.eatCd <= 0 && this.meals < MK.eat.max && b.hp < b.maxHp * MK.eat.below[b.phase - 1]) { this.eatCd = MK.eat.cd; b.force((x) => eat(x)); return; }
     if (this.rests.length >= MK.inhale.every) b.force(inhale);
@@ -598,6 +598,7 @@ function* eat(b: Boss, big = false) {
   }
   // Fini : ventre plus gros, et un rot en prime.
   f.eating = null; f.meals++;
+  if (big) b.minHp = 0;
   sfx.gulp();
   a.held.setVisible(false).setTexture('burger').setScale(1);
   g.destroy();
@@ -609,6 +610,7 @@ function* eat(b: Boss, big = false) {
 /** Interrompu : le burger vole, il s'étouffe, mains à la gorge, grand ouvert. */
 function* choke(b: Boss, big: boolean) {
   const C = big ? MK.festin : MK.eat, a = A(b), f = F(b), sc = b.scene;
+  if (big) b.minHp = 0;
   f.drop(C.gift);
   sfx.slam(); sc.cameras.main.shake(180, 0.009); sc.flashScreen(0.1);
   b.eyes('off'); setHead(b, 'open');
