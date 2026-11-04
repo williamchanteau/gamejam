@@ -153,6 +153,9 @@ export class Boss implements Target {
     this.def.rest(this, 0);
   }
 
+  /** Passage scripté : coupe tout et lance ce pattern. */
+  force(run: PatternFn) { this.abort(); this.state = 'pattern'; this.waitT = 0; this.gen = run(this); }
+
   hit(dmg: number, _fromX: number): boolean | void {
     if (this.def.fireOnly) return;
     this.damage(dmg);

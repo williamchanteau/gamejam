@@ -213,18 +213,13 @@ function* lancer(b: Boss) {
   yield* recover(b, T.recover);
 }
 
-/** Épreuve (phase 2) : toutes ses lanternes allumées, il lance trois flammes qui allument les lanternes de la salle à frapper, dans n'importe quel ordre. Réussite : il s'effondre. Échec : la grande fauche. */
-function* epreuve(b: Boss) {
+/** Une tentative : trois flammes allument les lanternes de la salle à frapper, dans n'importe quel ordre. Vrai si c'est fait à temps. */
+function* attempt(b: Boss): Generator<number, boolean, unknown> {
   const E = NIGHT.trial, L = F(b), r = R(b), sc = b.scene;
   b.face(); b.eyes('tele'); sfx.warn();
   L.allOut();
-  r.lightAll();
-  for (const q of r.litWorld()) L.burst(q.x, q.y, 0xffc45c, 6);
-  sfx.tick();
   const lamps = L.available(b.player.x, E.count);
-  if (lamps.length < E.count) { yield* fauche(b); return; } // trop de lanternes à terre
-  // Tant qu'il charge (5 s au plus, flammes comprises) : invincible et doré.
-  L.shielded = true;
+  if (lamps.length < E.count) return false; // trop de lanternes à terre
   pose(b, 'conductA', 0.16, 'Back.out');
   L.beginTrial(lamps);
   let t = E.charge - b.t(E.lead) - lamps.length * (E.fly + E.show);
@@ -252,15 +247,32 @@ function* epreuve(b: Boss) {
   ring.destroy();
   const won = !!L.trial && L.trial.struck >= lamps.length;
   L.cancel();
-  if (won) {
-    sc.flashScreen(0.3); sfx.slam(); sc.cameras.main.shake(240, 0.01);
-    L.burst(b.x, b.y - 60, 0xffc45c, 26);
-    L.ignite(L.nearest(b.x), E.stun + 1);
-    b.burn(E.damage);
-    yield* recover(b, E.stun, 'collapse');
-    return;
+  return won;
+}
+
+/** Épreuve : passage obligé à la moitié de la phase 2. Tant qu'elle n'est pas réussie il reste doré, toutes ses lanternes allumées, rien ne le blesse ; chaque échec vaut une grande fauche, puis il recommence. Réussite : il s'effondre. */
+function* epreuve(b: Boss) {
+  const E = NIGHT.trial, L = F(b), r = R(b), sc = b.scene;
+  const ready = () => {
+    L.shielded = true; r.lightAll();
+    for (const q of r.litWorld()) L.burst(q.x, q.y, 0xffc45c, 6);
+    sfx.tick();
+  };
+  ready();
+  sfx.roar(); sc.cameras.main.shake(400, 0.008);
+  pose(b, 'cry', 0.2, 'Back.out');
+  yield b.t(E.roar);
+  while (!(yield* attempt(b))) {
+    L.shielded = true;
+    yield* fauche(b);
+    ready(); // la fin de la fauche l'a éteint
+    yield b.t(E.retry);
   }
-  yield* fauche(b);
+  sc.flashScreen(0.3); sfx.slam(); sc.cameras.main.shake(240, 0.01);
+  L.burst(b.x, b.y - 60, 0xffc45c, 26);
+  L.ignite(L.nearest(b.x), E.stun + 1);
+  b.burn(E.damage);
+  yield* recover(b, E.stun, 'collapse');
 }
 
 /** La grande fauche : ses bras et ses tentacules balaient tout le sol, une fois. Sauter ou esquiver. */
@@ -310,9 +322,13 @@ export const NOCTIS: BossDef = {
     const hit = b.hit.bind(b), up = b.update.bind(b), burn = b.burn.bind(b);
     b.hit = (dmg, from) => { if (!L.shielded) return hit(dmg, from); L.block(); return false; };
     b.burn = (dmg) => { if (!L.shielded) burn(dmg); };
+    let trialDue = true;
     b.update = (dt) => {
       const was = b.state;
-      L.update(dt); up(dt); r.update(dt);
+      L.update(dt);
+      // Moitié de la phase 2 : l'épreuve coupe ce qu'il était en train de faire.
+      if (trialDue && b.phase === 2 && b.alive() && b.hp <= b.maxHp * NIGHT.trial.at) { trialDue = false; b.force(epreuve); }
+      up(dt); r.update(dt);
       if (was === 'pattern' && b.state === 'idle') (b as unknown as { waitT: number }).waitT = Math.max(BOSS.pauseMin, Phaser.Math.FloatBetween(NIGHT.pause[0], NIGHT.pause[1]) / b.speed);
       // Hors de toute lumière, le corps disparaît ; la lueur du joueur le fait sortir du noir quand il approche.
       r.aura = L.shielded;
@@ -381,6 +397,6 @@ export const NOCTIS: BossDef = {
     { name: 'ombre', weight: 3, phase: 0, far: true, elevated: true, run: ombre },
     { name: 'lancer', weight: 2, phase: 0, far: true, run: lancer },
     { name: 'ombre2', weight: 2, phase: 2, far: true, elevated: true, run: moulinet },
-    { name: 'epreuve', weight: 2, phase: 2, far: true, elevated: true, run: epreuve },
+    { name: 'epreuve', weight: 0, phase: 2, far: true, run: epreuve }, // jamais tirée au sort : déclenchée à la moitié de la phase 2
   ],
 };
