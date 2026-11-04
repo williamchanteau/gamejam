@@ -32,8 +32,9 @@ export class BootScene extends Phaser.Scene {
     makeEndingArt(this);
     makeThroneArt(this);
     makeCitizenArt(this);
-    // DEV : #Boss1, #Test... pour démarrer directement sur une scène ; /?viewer = visualiseur.
+    // DEV : #Boss1, #Test... pour démarrer directement sur une scène ; #Escalier = montée de la tour en boucle ; /?viewer = visualiseur.
     const dev = import.meta.env.DEV ? (location.search.includes('viewer') ? 'Viewer' : location.hash.slice(1)) : '';
-    this.scene.start(dev || 'Menu');
+    if (dev === 'Escalier') this.scene.start('Transit', { floor: 1, loop: true });
+    else this.scene.start(dev || 'Menu');
   }
 }

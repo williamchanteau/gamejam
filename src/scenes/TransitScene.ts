@@ -23,8 +23,11 @@ export class TransitScene extends Phaser.Scene {
   private decor!: { o: Phaser.GameObjects.Image; glow: Phaser.GameObjects.Image; z: number; u: number }[];
   constructor() { super('Transit'); }
 
-  create(d: { floor: number }) {
+  private loop: { floor: number; loop: boolean } | null = null;
+
+  create(d: { floor: number; loop?: boolean }) {
     input.reset();
+    this.loop = d.loop ? { floor: d.floor, loop: true } : null;
     this.end = false; this.t = 0; this.phi = Math.PI * 0.35; this.stepI = -1;
     const nx = FLOORS[d.floor], { cx, rw, rc } = T;
     this.nextKey = nx?.scene ?? '';
@@ -93,7 +96,11 @@ export class TransitScene extends Phaser.Scene {
 
   /** Arrivée en haut : étage suivant (fondu) ou fin provisoire. */
   private arrive() {
-    if (this.nextKey) {
+    if (this.loop) { // DEV (#Escalier) : la montée recommence
+      const d = this.loop;
+      this.cameras.main.fadeOut(350, 6, 5, 12);
+      this.cameras.main.once('camerafadeoutcomplete', () => this.scene.restart(d));
+    } else if (this.nextKey) {
       this.cameras.main.fadeOut(350, 6, 5, 12);
       this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start(this.nextKey));
     } else {
