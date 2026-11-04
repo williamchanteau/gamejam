@@ -9,7 +9,7 @@ Dépôt avant jeudi 5 nov. 7h. Consigne : BOSS obligatoires, focus combats de bo
 ## Rendu (non négociable)
 - `bun run build` → dist/index.html, chemins relatifs, script classique (pas de module, defer) → marche en file://. `bun run zip` → jeu-web.zip.
 - Aucun appel réseau. Anonymat total : aucun nom/crédit/lien/auteur, pas de sourcemaps, pas de chemin utilisateur. `banner: false`.
-- Jurés : titre → combat < 15 s, contrôles affichés à l'écran, mort → écran « GAME OVER » en rouge (scenes/GameOverScene.ts ; rouge = exception voulue par l'utilisateur à la règle DA, ne pas changer) : DERNIÈRE SAUVEGARDE (floors.ts saveOf) = boss 1 → dehors (OutsideScene, pour pouvoir faire le tuto), boss suivants → la salle rejouée AVEC l'annonceur ; en DIFFICILE toute mort en boss → dehors (RECOMMENCER) ; ou REVENIR À L'ACCUEIL ; pause > RECOMMENCER saute l'intro, partie ≈ 5 min, difficulté clémente.
+- Jurés : titre → combat < 15 s, contrôles affichés à l'écran, mort → écran « GAME OVER » en rouge (scenes/GameOverScene.ts ; rouge = exception voulue par l'utilisateur à la règle DA, ne pas changer) : DERNIÈRE SAUVEGARDE (floors.ts saveOf) = boss 1 → dehors (OutsideScene, pour pouvoir faire le tuto), boss suivants → la salle rejouée AVEC l'annonceur ; en DIFFICILE toute mort en boss → dehors (RECOMMENCER) ; ou REVENIR À L'ACCUEIL ; dans le tuto, pas de GAME OVER : mort → re-rentre par le portail ; pause > RECOMMENCER saute l'intro, partie ≈ 5 min, difficulté clémente.
 - Textes en français (police bitmap maison, MAJUSCULES). Ne citer aucun autre jeu. 60 fps PC modeste.
 
 ## Stack

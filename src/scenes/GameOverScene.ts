@@ -6,7 +6,7 @@ import { Menu } from '../ui/Menu';
 import { FLOORS, run, saveOf } from '../floors';
 import { sfx } from '../audio/sfx';
 
-const PLACES: Record<string, string> = { Test: 'ENTRAÎNEMENT', Outside: 'DEVANT LE CHÂTEAU' };
+const PLACES: Record<string, string> = { Outside: 'DEVANT LE CHÂTEAU' };
 
 /** Écran de mort : reprendre à la dernière sauvegarde (la salle, intro rejouée) ou revenir à l'accueil. */
 export class GameOverScene extends Phaser.Scene {

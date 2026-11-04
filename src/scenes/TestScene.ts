@@ -1,11 +1,12 @@
 import Phaser from 'phaser';
-import { W, DUMMY, COL, ARENA } from '../config';
+import { W, DUMMY, COL, ARENA, PLAYER } from '../config';
 import { ArenaScene } from './ArenaScene';
 import { txt } from '../art/font';
 import { sfx } from '../audio/sfx';
 import type { Target } from '../entities/types';
 import { input, keyLabel, getLayout } from '../input';
 import { Portal } from '../entities/Portal';
+import { iris } from '../ui/Iris';
 
 /** Épouvantail d'entraînement : encaisse les coups et tire une orbe lente. */
 class Dummy implements Target {
@@ -112,6 +113,13 @@ export class TestScene extends ArenaScene {
     g.fillStyle(lo).fillRect(x, y + h - 1, w, 1).fillRect(x + w - 1, y, 1, h);
     g.fillStyle(kind === 'post' ? 0xc8a050 : 0x7a86ac);
     for (const [rx, ry] of [[2, 2], [w - 3, 2], [2, h - 3], [w - 3, h - 3]]) g.fillRect(x + rx, y + ry, 1, 1);
+  }
+
+  /** Pas de GAME OVER à l'entraînement : iris violet, puis le joueur re-rentre par le portail. */
+  onPlayerDeath() {
+    this.leaving = true; // un corps qui glisse vers le portail ne s'y fait pas aspirer
+    this.time.delayedCall(PLAYER.deathRetryDelay * 1000, () =>
+      iris(this, this.portal.x, this.portal.cy, false, 520, 0x9a5ae8, () => this.scene.restart({ retry: false }))); // sans données, restart garderait un ancien retry
   }
 
   tick(dt: number) {
