@@ -695,8 +695,8 @@ export const MCKING: BossDef = {
         sc.tweens.chain({ targets: o, tweens: [{ y: y - Phaser.Math.Between(70, 170), duration: 420, ease: 'Quad.out' }, { y: y - 8, duration: 530, ease: 'Bounce.out' }] });
         sc.tweens.add({ targets: o, alpha: 0, delay: 2400, duration: 600, onComplete: () => o.destroy() });
       }
-      const c = sc.add.image(x, y - 110, 'mck_crown').setDepth(17);
-      sc.tweens.chain({ targets: c, tweens: [{ y: y - 190, angle: 200, duration: 480, ease: 'Quad.out' }, { y: y - 9, angle: 368, duration: 620, ease: 'Bounce.out' }] });
+      const c = sc.add.image(x, y - 110, 'mck_crown').setDepth(17).setName('dropCrown');
+      sc.tweens.chain({ targets: c, tweens: [{ y: y - 190, angle: 200, duration: 480, ease: 'Quad.out' }, { y: y - 9, angle: 368, duration: 620, ease: 'Bounce.out' }], onComplete: () => c.setData('landed', true) });
     });
   },
   /** Portrait à plat (l'annonceur teinte les images directes) : poing levé, burger brandi. ×2 à l'écran. */

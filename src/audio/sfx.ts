@@ -84,6 +84,22 @@ export const sfx = {
   burp: () => { tone(92, 58, 0.8, 'sawtooth', 0.32); tone(130, 74, 0.7, 'square', 0.1); noise(0.7, 0.2, 220, 0.8); },
   splat: () => { noise(0.13, 0.36, 620, 0.7); tone(170, 60, 0.1, 'sine', 0.16); },
   bell: () => { tone(1320, 1300, 0.5, 'triangle', 0.14); tone(1980, 1960, 0.32, 'sine', 0.07); },
+  /** Foule : rafales de bruit filtré et voix qui montent (« hourra »). */
+  crowd: (vol = 1) => {
+    for (let i = 0; i < 8; i++) noise(0.3, 0.1 * vol * (0.6 + Math.random() * 0.6), 600 + Math.random() * 1100, 0.7, i * 0.16);
+    for (let i = 0; i < 7; i++) { const f = 170 + Math.random() * 190; tone(f, f * 1.3, 0.28, 'sawtooth', 0.016 * vol, Math.random() * 1.1); }
+  },
+  rooster: () => {
+    tone(520, 760, 0.1, 'square', 0.06); tone(740, 660, 0.09, 'square', 0.06, 0.13);
+    tone(680, 980, 0.3, 'square', 0.07, 0.25); tone(960, 560, 0.34, 'square', 0.06, 0.56);
+  },
+  /** Fanfare royale : cuivres en accord, notes tenues à la fin. */
+  fanfare: () => {
+    for (const [f, at, d] of [[392, 0, 0.14], [392, 0.15, 0.1], [523, 0.27, 0.16], [659, 0.45, 0.16], [784, 0.63, 0.7]]) {
+      tone(f, f, d, 'sawtooth', 0.075, at); tone(f / 2, f / 2, d, 'square', 0.05, at);
+    }
+    tone(659, 659, 0.7, 'sawtooth', 0.05, 0.63); tone(523, 523, 0.7, 'sawtooth', 0.05, 0.63);
+  },
   powerUp: () => [392, 523, 659, 784, 1047].forEach((f, i) => tone(f, f * 1.02, 0.22, 'triangle', 0.15, i * 0.07)),
   /** GAME OVER : impact au claquement du titre, glas grave, motif mineur descendant. */
   gameOver: () => {

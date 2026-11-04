@@ -29,12 +29,21 @@ export class BurgerScene extends BossScene {
   private meal: Phaser.GameObjects.Image | null = null;
   private mealGlow: Phaser.GameObjects.Image | null = null;
   private mealHint: Phaser.GameObjects.BitmapText | null = null;
+  protected autoGate = false;
+  protected victoryHint() { return this.boss.x > this.player.x ? 'PRENDS SA COURONNE →' : '← PRENDS SA COURONNE'; }
+  /** Tant que la couronne est au sol (elle tombe là où il est mort), la caméra la garde dans le cadre. */
+  protected camFocus() { return this.crownTaken ? super.camFocus() : this.boss.x; }
+  /** Couronne de McKING : au sol après sa mort, puis portée sous le bras jusqu'à l'escalier. */
+  private crownHint: Phaser.GameObjects.GameObject[] | null = null;
+  private crownTaken = false;
+  private carried: Phaser.GameObjects.Image | null = null;
 
   constructor() { super('Boss3'); }
 
   create(data?: { retry?: boolean }) {
     this.dining = !run.upgrade; this.eating = false; this.cine = false; this.cards = null;
     this.meal = this.mealGlow = null; this.mealHint = null;
+    this.crownHint = null; this.crownTaken = false; this.carried = null;
     this.spawnX = this.dining ? 60 : 270;
     this.bossX = this.dining ? DINING.king : 560;
     super.create(data);
@@ -86,6 +95,10 @@ export class BurgerScene extends BossScene {
   update(t: number, d: number) {
     super.update(t, d);
     this.cards?.update(d / 1000);
+    if (this.carried) {
+      const spr = this.player.spr;
+      this.carried.setPosition(spr.x + this.player.facing * 8, spr.y - 13).setFlipX(spr.flipX).setAlpha(spr.alpha);
+    }
   }
 
   tick(dt: number) {
@@ -93,6 +106,50 @@ export class BurgerScene extends BossScene {
     const p = this.player;
     // Atterrir au-delà du bord compte aussi : impossible de sauter le repas.
     if (this.dining && !this.eating && p.x >= TABLE.touch && p.grounded && p.y > this.floorY - 40 && p.state === 'normal') this.eat();
+    if (!this.crownTaken) this.watchCrown();
+  }
+
+  /** Une fois la couronne retombée : halo + flèche ; marcher dessus la ramasse. */
+  private watchCrown() {
+    const c = this.children.getByName('dropCrown') as Phaser.GameObjects.Image | null;
+    if (!c?.getData('landed')) return;
+    if (!this.crownHint) {
+      const glow = this.add.image(c.x, c.y, 'glowO').setBlendMode(ADD).setDepth(16).setScale(1.3).setAlpha(0.7);
+      this.tweens.add({ targets: glow, alpha: 0.3, scale: 1, duration: 600, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+      const arrow = txt(this, c.x, c.y - 34, '↓', COL.moonLight).setOrigin(0.5, 0).setDepth(20);
+      this.tweens.add({ targets: arrow, y: c.y - 29, duration: 420, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
+      this.crownHint = [glow, arrow];
+    }
+    const p = this.player;
+    if (Math.abs(p.x - c.x) < 16 && p.y > this.floorY - 44 && p.state === 'normal') this.takeCrown(c);
+  }
+
+  /** Le héros lève la couronne à deux mains (elle se réduit à sa taille), puis la garde sous le bras. */
+  private takeCrown(c: Phaser.GameObjects.Image) {
+    this.crownTaken = true; this.frozen = true;
+    for (const o of this.crownHint ?? []) o.destroy();
+    const p = this.player, spr = p.spr, y = this.floorY;
+    p.body.reset(c.x, y - 27 / 2);
+    p.walkTo(c.x, y + 1, Math.max(100, (Math.abs(spr.x - c.x) / 172) * 1000), {}, () => {
+      spr.setTexture('p_crownHi');
+      sfx.powerUp();
+      this.sparks(c.x, c.y, 0xffd36a, 16);
+      this.tweens.add({ targets: c, x: spr.x + 1, y: spr.y - 49, angle: 0, scale: 0.43, duration: 380, ease: 'Quad.out', onComplete: () => {
+        c.setTexture('crown_s').setScale(1);
+        this.flashScreen(0.3);
+        sfx.ting();
+        this.sparks(c.x, c.y, 0xffd36a, 22);
+        const aura = this.add.image(c.x, c.y, 'glowO').setBlendMode(ADD).setScale(0.3).setDepth(16);
+        this.tweens.add({ targets: aura, scale: 3, alpha: 0, duration: 700, ease: 'Quad.out', onComplete: () => aura.destroy() });
+      } });
+      this.time.delayedCall(1250, () => {
+        spr.setTexture('p_idle0');
+        this.carried = c.setDepth(11);
+        this.frozen = false;
+        this.banner('LA COURONNE EST À TOI', "L'ESCALIER S'OUVRE →");
+        this.openGate();
+      });
+    });
   }
 
   /** Le héros se colle à la table et dévore le burger en trois bouchées. */

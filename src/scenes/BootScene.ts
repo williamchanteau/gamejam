@@ -10,6 +10,9 @@ import { makeOutsideArt } from '../art/outside';
 import { makeTowerArt } from '../art/tower';
 import { makeMcKingArt } from '../art/mcking';
 import { makeDiningArt } from '../art/dining';
+import { makeEndingArt } from '../art/ending';
+import { makeThroneArt } from '../art/throne';
+import { makeCitizenArt } from '../art/citizens';
 
 // Génère toutes les textures par code, puis lance le jeu.
 export class BootScene extends Phaser.Scene {
@@ -26,6 +29,9 @@ export class BootScene extends Phaser.Scene {
     makeTowerArt(this);
     makeMcKingArt(this);
     makeDiningArt(this);
+    makeEndingArt(this);
+    makeThroneArt(this);
+    makeCitizenArt(this);
     // DEV : #Boss1, #Test... pour démarrer directement sur une scène ; /?viewer = visualiseur.
     const dev = import.meta.env.DEV ? (location.search.includes('viewer') ? 'Viewer' : location.hash.slice(1)) : '';
     this.scene.start(dev || 'Menu');

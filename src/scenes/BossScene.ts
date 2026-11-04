@@ -26,6 +26,11 @@ export class BossScene extends ArenaScene {
   private climbing = false;
   protected camX = 0;
   protected bossX = 440;
+  /** false = la salle ouvre la grille elle-même (openGate). */
+  protected autoGate = true;
+  /** Sous-titre de la victoire. */
+  protected victoryHint() { return "L'ESCALIER S'OUVRE →"; }
+  private bannerObjs: Phaser.GameObjects.GameObject[] = [];
   worldW = ARENA.bossW;
   plats = ARENA.bossPlatforms;
   spawnX = 120;
@@ -36,7 +41,7 @@ export class BossScene extends ArenaScene {
 
   create(data?: { retry?: boolean }) {
     super.create(data);
-    this.won = false; this.gateOpen = false; this.climbing = false;
+    this.won = false; this.gateOpen = false; this.climbing = false; this.bannerObjs = [];
     this.gate = this.add.image(STAIRS.x, this.floorY - 62, 'gate').setOrigin(0.5, 0).setDepth(4.5);
     this.bar = undefined;
     this.boss = new Boss(this, this.def, this.bossX, this.floorY);
@@ -81,8 +86,11 @@ export class BossScene extends ArenaScene {
     if (this.gateOpen && !this.climbing && this.player.x > STAIRS.x - 6) this.climb();
   }
 
+  /** Ce que la caméra cadre avec le joueur. */
+  protected camFocus() { return this.boss.state === 'dead' ? this.player.x : this.boss.x; }
+
   protected camTarget() {
-    const p = this.player.x, b = this.boss.state === 'dead' ? p : this.boss.x;
+    const p = this.player.x, b = this.camFocus();
     let t = (p + b) / 2 - W / 2;
     t = Phaser.Math.Clamp(t, p - (W - BOSS.camEdge), p - BOSS.camEdge);
     return Phaser.Math.Clamp(t, 0, this.worldW - W);
@@ -91,26 +99,32 @@ export class BossScene extends ArenaScene {
   private victory() {
     this.won = true;
     this.player.safe = true;
-    this.time.delayedCall(1300, () => {
-      sfx.victory();
-      const band = this.add.rectangle(0, 84, W, 40, 0x06050c, 0.75).setOrigin(0).setDepth(95).setScrollFactor(0);
-      const tx = txt(this, W / 2, 88, `${this.def.name} EST TOMBÉ`, COL.moonLight).setOrigin(0.5, 0).setScale(2).setDepth(96).setScrollFactor(0);
-      const sub = txt(this, W / 2, 110, "L'ESCALIER S'OUVRE →", COL.ui).setOrigin(0.5, 0).setDepth(96).setScrollFactor(0);
-      for (const o of [band, tx, sub]) {
-        o.setAlpha(0);
-        this.tweens.add({ targets: o, alpha: 1, duration: 400 });
-        this.tweens.add({ targets: o, alpha: 0, delay: 2600, duration: 500 });
-      }
-    });
-    // La grille de l'escalier se lève.
-    this.time.delayedCall(2200, () => {
-      sfx.rumble();
-      this.cameras.main.shake(700, 0.003);
-      this.puffs(STAIRS.x, this.floorY, 6);
-      this.tweens.add({ targets: this.gate, scaleY: 0.05, duration: 1100, ease: 'Quad.inOut', onComplete: () => { this.gateOpen = true; } });
-      const hint = txt(this, STAIRS.x - 14, STAIRS.base - 62, 'MONTER →', COL.moonLight).setOrigin(0.5, 0).setDepth(20);
-      this.tweens.add({ targets: hint, x: STAIRS.x + 4, duration: 450, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
-    });
+    this.time.delayedCall(1300, () => { sfx.victory(); this.banner(`${this.def.name} EST TOMBÉ`, this.victoryHint()); });
+    if (this.autoGate) this.time.delayedCall(2200, () => this.openGate());
+  }
+
+  /** Bandeau de victoire (remplace le précédent s'il est encore là). */
+  protected banner(title: string, sub: string) {
+    for (const o of this.bannerObjs) o.destroy();
+    const band = this.add.rectangle(0, 84, W, 40, 0x06050c, 0.75).setOrigin(0).setDepth(95).setScrollFactor(0);
+    const tx = txt(this, W / 2, 88, title, COL.moonLight).setOrigin(0.5, 0).setScale(2).setDepth(96).setScrollFactor(0);
+    const st = txt(this, W / 2, 110, sub, COL.ui).setOrigin(0.5, 0).setDepth(96).setScrollFactor(0);
+    this.bannerObjs = [band, tx, st];
+    for (const o of [band, tx, st]) {
+      o.setAlpha(0);
+      this.tweens.add({ targets: o, alpha: 1, duration: 400 });
+      this.tweens.add({ targets: o, alpha: 0, delay: 2600, duration: 500 });
+    }
+  }
+
+  /** La grille de l'escalier se lève. */
+  protected openGate() {
+    sfx.rumble();
+    this.cameras.main.shake(700, 0.003);
+    this.puffs(STAIRS.x, this.floorY, 6);
+    this.tweens.add({ targets: this.gate, scaleY: 0.05, duration: 1100, ease: 'Quad.inOut', onComplete: () => { this.gateOpen = true; } });
+    const hint = txt(this, STAIRS.x - 14, STAIRS.base - 62, 'MONTER →', COL.moonLight).setOrigin(0.5, 0).setDepth(20);
+    this.tweens.add({ targets: hint, x: STAIRS.x + 4, duration: 450, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
   }
 
   /** Montée : le joueur gravit les premières marches et s'enfonce dans l'ombre de la tour, fondu, écran d'étage. */
@@ -124,7 +138,7 @@ export class BossScene extends ArenaScene {
     });
     this.time.delayedCall(450, () => {
       this.cameras.main.fadeOut(400, 6, 5, 12);
-      this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start('Transit', { floor: this.floor + 1 }));
+      this.cameras.main.once('camerafadeoutcomplete', () => FLOORS[this.floor + 1] ? this.scene.start('Transit', { floor: this.floor + 1 }) : this.scene.start('Dawn'));
     });
   }
 

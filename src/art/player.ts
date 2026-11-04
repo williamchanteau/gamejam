@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { canvasTex, drawMap, OUTLINE } from './pixel';
+import { canvasTex, drawMap, mapTex, OUTLINE } from './pixel';
 
 // Palette du joueur : bleu nuit, rim light lunaire, yeux cyan.
 const P: Record<string, string> = {
@@ -62,7 +62,41 @@ const POSES: Record<string, Pose> = {
   // À table : la main porte le burger à la bouche (sans dague).
   eat0: { bob: 0, lean: 0, legs: [[8, 29, 6], [13, 29, 6]], flare: 0, hem: 0, arms: [{ s: [16, 15], h: [20, 14] }] },
   eat1: { bob: 1, lean: 0, legs: [[8, 29, 6], [13, 29, 6]], flare: 0, hem: 1, arms: [{ s: [16, 15], h: [19, 11] }] },
+  // Couronnement : main tendue vers le coussin.
+  take: { bob: 0, lean: 0, legs: [[8, 29, 6], [13, 29, 6]], flare: 0, hem: 0, arms: [{ s: [16, 15], h: [22, 13] }] },
 };
+const STILL = { bob: 0, lean: 0, legs: [[8, 29, 6], [13, 29, 6]], flare: 0, hem: 0 };
+/** Couronne tenue au-dessus de la tête : mains à la hauteur y (négatif = au-dessus de la capuche). Canevas plus haut de TALL px. */
+const TALL = 16, RAISE: Record<string, number> = { crownHi: -9, crownMid: -5, crownLow: -1 };
+const raised = (y: number): Pose => ({ ...STILL, arms: [{ s: [7, 15], h: [6, y], back: true }, { s: [19, 14], h: [18, y] }] });
+/** Couronne à la taille du héros (13×8, contour en plus). */
+const CROWN_S = [
+  'L.....L.....L',
+  'G.....G.....G',
+  'GG...GGG...GG',
+  'GGG.GGGGG.GGG',
+  'GGGGGGGGGGGGG',
+  'LLLLLLLLLLLLL',
+  'DvDDDDcDDDDvD',
+  'DDDDDDDDDDDDD',
+];
+const CROWN_PAL: Record<string, string> = { L: '#fff0b0', G: '#ffd36a', D: '#c8902a', c: '#7ff6ff', v: '#b48cff' };
+// Capuche de face, yeux vers le spectateur.
+const HOOD_F = [
+  '.....ddddd.....',
+  '...ddcccccdd...',
+  '..dcccsssccld..',
+  '.dcccskkkkscld.',
+  '.dccskkkkkksld.',
+  'dmcckkkkkkkkcld',
+  'dmcckkekkekkcld',
+  'dmcckkEkkEkkcld',
+  'dmcckkkkkkkkcld',
+  '.dmcckkkkkkcld.',
+  '.dmmcckkkkccld.',
+  '.dddmcccccmddd.',
+  '...dddddddd....',
+];
 
 function px(c: CanvasRenderingContext2D, col: string, x: number, y: number, w = 1, h = 1) {
   c.fillStyle = col; c.fillRect(x, y, w, h);
@@ -171,7 +205,21 @@ function drawPlayer(c: CanvasRenderingContext2D, p: Pose, cape?: Cape) {
   c.restore();
 }
 
+/** Le roi sur son trône, de face (32×48, couronne comprise). */
+function drawKing(c: CanvasRenderingContext2D) {
+  px(c, P.d, 5, 20, 22, 22); px(c, P.m, 6, 21, 20, 20); px(c, '#2f6a7a', 6, 30, 2, 11); px(c, '#2f6a7a', 24, 30, 2, 11); // cape
+  px(c, '#221e38', 11, 23, 10, 12); px(c, '#2e2848', 14, 24, 4, 10); px(c, '#241c30', 11, 29, 10, 2); px(c, '#9aa6c8', 15, 29, 2, 2); // tunique
+  for (const x of [9, 18]) { px(c, '#2c2848', x, 34, 5, 5); px(c, '#4a4570', x, 34, 5, 1); px(c, '#1a1830', x + 1, 39, 3, 5); px(c, '#2c2848', x, 44, 5, 3); px(c, '#4a4570', x, 44, 5, 1); } // jambes
+  for (let i = 0; i < 6; i++) px(c, i === 0 ? P.s : i === 5 ? P.d : P.c, 7 - (i >> 1), 18 + i, 18 + (i >> 1) * 2, 1); // pèlerine
+  line(c, P.c, 6, 22, 4, 32, 2); line(c, P.c, 25, 22, 27, 32, 2); px(c, P.h, 3, 32, 3, 2); px(c, P.h, 26, 32, 3, 2); // bras
+  drawMap(c, HOOD_F, P, 8, 6);
+  drawMap(c, CROWN_S, CROWN_PAL, 9, 0);
+}
+
 export function makePlayerArt(scene: Phaser.Scene) {
+  for (const k in RAISE) canvasTex(scene, 'p_' + k, TW, 36 + TALL, (c) => { c.translate(0, TALL); drawPlayer(c, raised(RAISE[k])); }, OUTLINE);
+  mapTex(scene, 'crown_s', CROWN_S, CROWN_PAL);
+  canvasTex(scene, 'p_king', 32, 48, drawKing, OUTLINE);
   for (const k in POSES) canvasTex(scene, 'p_' + k, TW, 36, (c) => drawPlayer(c, POSES[k]), OUTLINE);
   for (const k of CAPE_POSES) for (const h of CAPE_H) for (const v of AIR.includes(k) ? CAPE_V : [0])
     for (let ph = 0; ph < CAPE_PH; ph++) canvasTex(scene, `p_${k}_${h}_${v}_${ph}`, TW, 36, (c) => drawPlayer(c, POSES[k], capeOf(h, v, ph)), OUTLINE);
