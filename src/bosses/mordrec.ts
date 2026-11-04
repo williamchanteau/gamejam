@@ -91,9 +91,6 @@ function drawBody(c: Ctx) {
   }
   dome(c, 18, 23, 7, 5, [A.k, H.i0, H.i1]);
   // Bras avant jusqu'à la main (48, 38) : épaulière, brassard de cuir, gantelet.
-  px(c, H.i1, 40, 24, 7, 10); px(c, H.i2, 45, 24, 2, 10);
-  px(c, H.l1, 43, 32, 8, 6); px(c, H.l2, 49, 32, 2, 6); px(c, H.b1, 43, 34, 8, 1);
-  px(c, H.i2, 44, 37, 7, 5); px(c, H.i4, 49, 37, 2, 1); px(c, A.k, 44, 39, 7, 1);
   dome(c, 41, 21, 9, 6, [H.i1, H.i3, H.i4]);
 }
 
@@ -220,11 +217,12 @@ export function makeMordrecArt(scene: Phaser.Scene) {
   canvasTex(scene, 'mord_sword_r', 16, 84, (c) => drawSword(c, true), OUTLINE);
   canvasTex(scene, 'mord_splash', 100, 124, drawSplash, OUTLINE);
   // Poing ganté qui enserre la fusée (dessiné par-dessus la lame, tourne avec elle).
-  canvasTex(scene, 'mord_fist', 10, 10, (c) => {
-    px(c, H.i1, 1, 1, 8, 8);
-    for (let i = 0; i < 4; i++) { px(c, H.i3, 2, 1 + i * 2, 6, 1); px(c, A.k, 2, 2 + i * 2, 6, 1); }
-    px(c, H.i4, 7, 1, 1, 7); px(c, H.b1, 1, 1, 1, 8); px(c, H.b2, 1, 1, 1, 2);
+  canvasTex(scene, 'mord_fist', 11, 11, (c) => {
+    px(c, H.i1, 2, 1, 7, 9); px(c, H.i1, 1, 2, 9, 7); // bloc arrondi
+    for (let i = 0; i < 4; i++) { px(c, i ? H.i3 : H.i4, 3, 2 + i * 2, 5, 1); px(c, A.k, 3, 3 + i * 2, 5, 1); } // doigts repliés
+    px(c, H.i4, 8, 2, 1, 6); px(c, H.i2, 1, 3, 2, 4); px(c, H.b1, 1, 4, 1, 2); // jointures, pouce
   }, OUTLINE);
+  canvasTex(scene, 'mord_pauldron', 22, 13, (c) => dome(c, 11, 7, 9, 6, [H.i1, H.i3, H.i4]), OUTLINE);
   canvasTex(scene, 'mord_eyes', 9, 3, (c) => { px(c, '#fff', 1, 1, 2, 1); px(c, '#fff', 6, 1, 2, 1); });
   // Danger (rouge/magenta, cœur blanc) : traînées, pics de roche, épée fantôme, repère au sol.
   canvasTex(scene, 'smear0', 146, 146, (c) => smear(c, -75, 125, 26, 72));
@@ -299,10 +297,35 @@ function glint(b: Boss, a: number) {
   b.tw(g, { scale: 1.4, angle: 90, yoyo: true }, 0.13, 'Quad.out');
   sfx.ting();
 }
+/** Bras avant articulé : la main suit l'angle de l'épée (arc autour de c), coude par IK à 2 os. */
+const ARM = { sx: 13, sy: -57, cx: 11, cy: -40, r: 8, l1: 13, l2: 12 };
+const N = (h: string) => parseInt(h.slice(1), 16);
+function driveArm(sw: Cont, g: Phaser.GameObjects.Graphics) {
+  if (!g.active || !sw.active) return;
+  if (sw.getData('free')) { g.clear(); return; }
+  {
+    const a = Phaser.Math.DegToRad(sw.angle);
+    sw.setPosition(Math.round(ARM.cx + Math.sin(a) * ARM.r), Math.round(ARM.cy - Math.cos(a) * ARM.r));
+  }
+  const { sx, sy, l1, l2 } = ARM, hx = sw.x, hy = sw.y;
+  const d = Phaser.Math.Clamp(Math.hypot(hx - sx, hy - sy), Math.abs(l1 - l2) + 1, l1 + l2 - 0.5);
+  const base = Math.atan2(hy - sy, hx - sx), k = Math.acos((l1 * l1 + d * d - l2 * l2) / (2 * l1 * d));
+  const ex = Math.round(sx + Math.cos(base + k) * l1), ey = Math.round(sy + Math.sin(base + k) * l1); // coude en arrière
+  const ln = (w: number, col: string, x0: number, y0: number, x1: number, y1: number) => g.lineStyle(w, N(col)).lineBetween(x0, y0, x1, y1);
+  g.clear();
+  // Contour, puis brassard de fer (haut) et avant-bras de cuir, cubitière de laiton.
+  ln(8, OUTLINE, sx, sy, ex, ey); ln(7, OUTLINE, ex, ey, hx, hy);
+  g.fillStyle(N(OUTLINE)).fillCircle(ex, ey, 4);
+  ln(6, H.i3, sx, sy, ex, ey); ln(2, H.i4, sx + 1, sy, ex + 1, ey);
+  ln(5, H.l2, ex, ey, hx, hy); ln(1, '#7a5e4c', ex + 1, ey - 1, hx + 1, hy - 1);
+  const wx = ex + (hx - ex) * 0.62, wy = ey + (hy - ey) * 0.62; // manchette de laiton au poignet
+  ln(6, H.b1, wx, wy, ex + (hx - ex) * 0.8, ey + (hy - ey) * 0.8); ln(2, H.b2, wx, wy - 1, ex + (hx - ex) * 0.8, ey + (hy - ey) * 0.8 - 1);
+  g.fillStyle(N(H.b1)).fillCircle(ex, ey, 2.5).fillStyle(N(H.b3)).fillRect(ex - 1, ey - 1, 1, 1);
+}
 /** Traînée pleine sur 3 frames, attachée au rig. */
 function smearFx(b: Boss, rev = false) {
   const rig = b.parts.rig as Cont, sc = b.scene, k = rev ? 'smearR' : 'smear';
-  const img = b.temp(sc.add.image(18, -44, k + '0').setBlendMode(ADD));
+  const sw = b.parts.sword as Cont, img = b.temp(sc.add.image(sw.x, sw.y, k + '0').setBlendMode(ADD));
   rig.add(img);
   sc.time.delayedCall(45, () => img.active && img.setTexture(k + '1'));
   sc.time.delayedCall(90, () => img.active && img.setTexture(k + '2'));
@@ -409,7 +432,7 @@ function* slam(b: Boss, double = false) {
   // Anticipation : l'épée tournoie deux fois dans sa main (traînée circulaire), puis il s'accroupit très bas.
   const spin = b.temp(sc.add.image(18, -44, 'smearR1').setBlendMode(ADD).setAlpha(0.55));
   (p.rig as Cont).add(spin);
-  b.tw(p.sword, { angle: REST.sword - 720, onUpdate: () => spin.setAngle(p.sword.angle + 75) }, tt * 0.7, 'Sine.inOut');
+  b.tw(p.sword, { angle: REST.sword - 720, onUpdate: () => { const sw = p.sword as Cont; spin.setAngle(sw.angle + 75).setPosition(sw.x, sw.y); } }, tt * 0.7, 'Sine.inOut');
   for (let i = 0; i < 3; i++) sc.time.delayedCall(i * tt * 240, () => b.state === 'pattern' && sfx.whoosh());
   b.tw(p.rig, { scaleX: 1.12, scaleY: 0.82, angle: 5 }, tt * 0.8, 'Quad.in');
   b.tw(p.head, { y: REST.headY + 6 }, tt * 0.8);
@@ -620,15 +643,20 @@ export const MORDREC: BossDef = {
     const blade = sc.add.image(0, 0, 'mord_sword').setOrigin(0.5, 70 / 84);
     const fist = sc.add.image(0, 0, 'mord_fist');
     const sword = sc.add.container(18, -44, [blade, fist]);
+    const arm = sc.add.graphics();
+    const pauldron = sc.add.image(0, -68, 'mord_pauldron').setOrigin(0);
     const headImg = sc.add.image(0, 0, 'mord_head').setOrigin(0.5, 1);
     const eyes = sc.add.image(4, -12, 'mord_eyes');
     const glow = sc.add.image(4, -12, 'glowW').setBlendMode(ADD).setScale(0.6);
     const head = sc.add.container(2, REST.headY, [headImg, glow, eyes]);
     // rig : inclinaison / écrasement autour des pieds ; root : position + orientation.
-    const rig = sc.add.container(0, 0, [body, head, sword]);
+    const rig = sc.add.container(0, 0, [body, head, arm, pauldron, sword]);
     b.root.add(rig);
     b.parts = { rig, body, sword, blade, head, headImg, eyes, glow };
-    b.flashParts = [body, headImg, blade, fist];
+    b.flashParts = [body, headImg, blade, fist, pauldron];
+    const drive = () => driveArm(sword, arm);
+    sc.events.on(Phaser.Scenes.Events.PRE_RENDER, drive);
+    sc.events.once(Phaser.Scenes.Events.SHUTDOWN, () => sc.events.off(Phaser.Scenes.Events.PRE_RENDER, drive));
     this.rest(b, 0);
     sc.tweens.add({ targets: headImg, y: 1, duration: 900, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
   },
@@ -670,6 +698,7 @@ export const MORDREC: BossDef = {
       { y: REST.headY - 26, angle: -40, duration: 350, ease: 'Quad.out' },
       { y: -8, x: -34, angle: -100, duration: 450, ease: 'Bounce.out' },
     ] });
+    (p.sword as Cont).setData('free', true); // le bras se défait, l'épée tombe
     sc.tweens.chain({ targets: p.sword, tweens: [{ angle: 60, duration: 300, ease: 'Quad.in' }, { angle: 92, y: -4, duration: 400, ease: 'Bounce.out' }] });
     sc.tweens.add({ targets: p.body, scaleY: 0.62, duration: 900, delay: 200, ease: 'Bounce.out' });
     sc.time.delayedCall(1700, () => {
