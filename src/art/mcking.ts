@@ -89,30 +89,41 @@ function torso(c: C) {
   poly(c, SLV, [11, 17, 24, 2, 60, 2, 73, 17, 72, 22, 64, 24, 20, 24, 12, 22]);
   R(c, SLVL, 26, 3, 32, 1);
   // Tee-shirt clair, remonté et roulé au-dessus du ventre.
-  poly(c, TEED, [28, 6, 56, 6, 69, 20, 70, 37, 14, 37, 15, 20]);
-  poly(c, TEE, [30, 6, 56, 6, 67, 21, 67, 36, 21, 36, 20, 20]);
+  poly(c, TEED, [28, 6, 56, 6, 69, 20, 70, 40, 14, 40, 15, 20]);
+  poly(c, TEE, [30, 6, 56, 6, 67, 21, 67, 39, 21, 39, 20, 20]);
   poly(c, TEEL, [48, 7, 56, 7, 64, 20, 60, 26, 50, 16]);
   ell(c, SLV, X, 5, 14, 4.5); ell(c, SKD, X, 3, 10, 3); // col
   for (let x = 13; x < 72; x++) {
-    const k = ((x - X) / 29) ** 2, y = 34 + Math.round(k * 3);
+    const k = ((x - X) / 29) ** 2, y = 37 + Math.round(k * 3);
     R(c, TEEL, x, y, 1, 1); R(c, TEE, x, y + 1, 1, 2); R(c, TEED, x, y + 3, 1, 1);
     if (x % 9 === 0) R(c, TEED, x, y, 1, 3);
   }
 }
 
-/** Flocage du tee-shirt, calque à part : le boss se retourne par miroir, le texte doit rester lisible. */
+/** Logo du langage Rust redessiné en 17×17 : roue dentée et R gras dont les empattements touchent l'anneau. */
+function rustLogo(c: C, ox: number, oy: number) {
+  for (let y = 0; y < 17; y++) for (let x = 0; x < 17; x++) {
+    const dx = x + 0.5 - 8.5, dy = y + 0.5 - 8.5, r = Math.hypot(dx, dy);
+    const tooth = r > 7 && r <= 8.7 && Math.cos(Math.atan2(dy, dx) * 12) > 0;
+    if (tooth || (r >= 6 && r <= 7.4)) R(c, INK, ox + x, oy + y);
+  }
+  const glyph = ['######..', '.##..##.', '.##..##.', '.##..##.', '.#####..', '.##.##..', '.##..##.', '.##..##.', '###..###'];
+  for (const [j, row] of glyph.entries()) for (const [i, v] of [...row].entries()) if (v === '#') R(c, INK, ox + 5 + i, oy + 4 + j);
+}
+
+/** Flocage du tee-shirt, calque à part : le boss se retourne par miroir, le texte et le logo doivent rester lisibles. */
 function teePrint(c: C) {
-  const line = (t: string, y: number, col: string) => {
-    const x0 = Math.floor((PRINT_W - (t.length * 6 - 1)) / 2);
+  const line = (t: string, x0: number, y: number, col: string) => {
     for (const [i, ch] of [...t].entries()) for (let r = 0; r < 7; r++) {
       const bits = glyphRow(ch, r);
       for (let k = 0; k < 5; k++) if (bits & (16 >> k)) R(c, col, x0 + i * 6 + k, y + r);
     }
   };
-  line('I LOVE', 0, INK);
-  line('RUST <3', 9, RUST);
+  line('I LOVE', 4, 1, INK);
+  rustLogo(c, 1, 9);
+  line('RUST', 20, 10, RUST);
+  line('<3', 26, 18, RUST);
 }
-const PRINT_W = 43;
 
 function belly(c: C) {
   const X = 38, Y = 27;
@@ -270,10 +281,10 @@ export function makeMcKingArt(s: Phaser.Scene) {
   canvasTex(s, 'mck_head_open', 60, 44, (c) => head(c, { mouth: 'open' }), OUTLINE);
   canvasTex(s, 'mck_head_mad', 60, 44, (c) => head(c, { mad: true }), OUTLINE);
   canvasTex(s, 'mck_head_mad_open', 60, 44, (c) => head(c, { mad: true, mouth: 'open' }), OUTLINE);
-  canvasTex(s, 'mck_torso', 84, 42, torso, OUTLINE);
+  canvasTex(s, 'mck_torso', 84, 45, torso, OUTLINE);
   canvasTex(s, 'mck_belly', 78, 54, belly, OUTLINE);
   canvasTex(s, 'mck_leg', 28, 36, leg, OUTLINE);
-  canvasTex(s, 'mck_tee_print', PRINT_W, 16, teePrint);
+  canvasTex(s, 'mck_tee_print', 44, 26, teePrint);
   canvasTex(s, 'mck_uparm', 24, 38, upperArm, OUTLINE);
   canvasTex(s, 'mck_forearm_f', 24, 40, (c) => foreArm(c, true), OUTLINE);
   canvasTex(s, 'mck_forearm_b', 24, 40, (c) => foreArm(c, false), OUTLINE);

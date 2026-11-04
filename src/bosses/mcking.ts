@@ -574,13 +574,13 @@ export const MCKING: BossDef = {
     const sc = b.scene, sprite = (k: string, x: number, y: number, ox = 0.5, oy = 1) => sc.add.image(x, y, k).setOrigin(ox, oy);
     const legL = sprite('mck_leg', -15, 1).setFlipX(true), legR = sprite('mck_leg', 15, 1);
     const belly = sprite('mck_belly', 0, BELLY_Y, 0.5, 0.5);
-    const torso = sprite('mck_torso', 0, -46);
+    const torso = sprite('mck_torso', 0, -43);
     const headImg = sprite('mck_head', 0, 0);
     const crown = sprite('mck_crown', 1, CROWN_Y).setAngle(-5);
     const eyes = sc.add.image(0, -25, 'mck_eyes');
     const glow = sc.add.image(0, -25, 'mck_eyes_glow').setBlendMode(Phaser.BlendModes.ADD);
     const head = sc.add.container(2, HEAD_Y, [headImg, glow, eyes, crown]);
-    const print = sc.add.image(0, -67, 'mck_tee_print');
+    const print = sc.add.image(0, -65, 'mck_tee_print');
     const upF = sprite('mck_uparm', 0, 0, 0.5, ARM_PIVOT.up), upB = sprite('mck_uparm', 0, 0, 0.5, ARM_PIVOT.up).setFlipX(true);
     const foImgF = sprite('mck_forearm_f', 0, 0, 0.5, ARM_PIVOT.fore), foImgB = sprite('mck_forearm_b', 0, 0, 0.5, ARM_PIVOT.fore).setFlipX(true);
     const held = sc.add.image(0, ARM_LEN.fore, 'burger').setVisible(false);
@@ -689,7 +689,7 @@ export const MCKING: BossDef = {
     return sc.add.container(0, 0, [
       ...arm(-45, SHOULDER_Y, 9, -1, 'mck_forearm_b'),
       im('mck_leg', -29, 1).setFlipX(true), im('mck_leg', 1, 1),
-      im('mck_belly', -14, -34, 0.5, 0.5), im('mck_torso', -14, -46), im('mck_tee_print', -14, -67, 0.5, 0.5),
+      im('mck_belly', -14, -34, 0.5, 0.5), im('mck_torso', -14, -43), im('mck_tee_print', -14, -65, 0.5, 0.5),
       im('mck_head_mad_open', -12, -82),
       im('mck_crown', -11, -119, 0.5, 1, -8),
       ...arm(17, SHOULDER_Y, -168, 1, 'mck_forearm_f'),
