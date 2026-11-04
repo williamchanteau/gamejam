@@ -182,8 +182,8 @@ export class UpgradeCards {
       }
     }
     if (!this.ready) return;
-    if (input.take('left')) this.select(0);
-    if (input.take('right')) this.select(1);
+    if (input.take('mleft')) this.select(0);
+    if (input.take('mright')) this.select(1);
     if (input.take('ok')) this.confirm();
   }
 }

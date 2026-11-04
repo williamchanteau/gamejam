@@ -4,7 +4,7 @@ import { ArenaScene } from './ArenaScene';
 import { txt } from '../art/font';
 import { sfx } from '../audio/sfx';
 import type { Target } from '../entities/types';
-import { input, keyLabel, getLayout } from '../input';
+import { input, keyLabel, moveLabel, bindVer } from '../input';
 import { Portal } from '../entities/Portal';
 import { iris } from '../ui/Iris';
 
@@ -53,7 +53,7 @@ export class TestScene extends ArenaScene {
   private dummy!: Dummy;
   private torches!: { img: Phaser.GameObjects.Image; glow: Phaser.GameObjects.Image }[];
   private flickT = 0;
-  private layout = getLayout();
+  private ver = bindVer();
   private portal!: Portal;
   private leaving = false;
   showControls = false;
@@ -64,7 +64,7 @@ export class TestScene extends ArenaScene {
 
   create(data?: { retry?: boolean }) {
     super.create(data);
-    this.layout = getLayout();
+    this.ver = bindVer();
     this.leaving = false;
     // Portail de retour au château, au bord gauche.
     this.portal = new Portal(this, 18, this.floorY);
@@ -78,8 +78,8 @@ export class TestScene extends ArenaScene {
     }));
     // Panneaux placés là où l'action sert : au sol, au-dessus des plateformes, suspendu au plafond.
     const A = keyLabel('attack'), Z = keyLabel('dash'), E = keyLabel('spell');
-    this.sign('post', 124, 192, '←→ : BOUGER\n↑/ESPACE : SAUTER');
-    this.sign('wall', 100, 128, '↓ : DESCENDRE\nDE LA PLATEFORME');
+    this.sign('post', 124, 192, `${moveLabel()} : BOUGER\n${keyLabel('jump')} : SAUTER`);
+    this.sign('wall', 100, 128, `${keyLabel('down')} : DESCENDRE\nDE LA PLATEFORME`);
     this.sign('post', 246, 180, `${A} : COMBO 3 COUPS\n+1 MANA PAR COUP`);
     this.sign('wall', 380, 128, `${Z} : DASH\n= ESQUIVE (INVINCIBLE)`);
     this.sign('hang', 240, 52, `MANA PLEINE ? ${E} : ÉCLAT LUNAIRE`);
@@ -123,7 +123,7 @@ export class TestScene extends ArenaScene {
   }
 
   tick(dt: number) {
-    if (this.layout !== getLayout()) { this.scene.restart({ retry: true }); return; } // panneaux à réécrire
+    if (this.ver !== bindVer()) { this.scene.restart({ retry: true }); return; } // panneaux à réécrire
     this.dummy.update(dt);
     if (!this.leaving && this.player.x < 24 && this.portal.holds(this.player.y) && input.isDown('left')) { // pas de sortie sur un recul
       this.leaving = true;

@@ -111,7 +111,7 @@ export class Menu {
   update() {
     if (!this.enabled) return;
     if (input.take('up')) this.select(this.i - 1);
-    if (input.take('down')) this.select(this.i + 1);
+    if (input.take('mdown')) this.select(this.i + 1);
     if (input.take('ok')) this.confirm();
   }
 }
