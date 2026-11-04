@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { COL } from '../config';
 import { txt } from '../art/font';
-import { input, goFullscreen } from '../input';
+import { input } from '../input';
 import { sfx } from '../audio/sfx';
 
 export type Item = { label: string; act: () => void; x?: number; y?: number; /** largeur de cadre propre */ w?: number };
@@ -101,7 +101,6 @@ export class Menu {
 
   confirm() {
     sfx.select();
-    goFullscreen();
     input.reset();
     // Coup d'estoc de la dague à la validation.
     this.scene.tweens.add({ targets: this.cursor, x: this.cursor.x + 6, duration: 60, yoyo: true });

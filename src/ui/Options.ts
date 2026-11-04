@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { W, H, COL } from '../config';
 import { txt } from '../art/font';
 import {
-  input, goFullscreen, getLayout, setLayout, BINDS, Bind, Layout, getBind, keyText,
+  input, setFullscreen, isFullscreen, getLayout, setLayout, BINDS, Bind, Layout, getBind, keyText,
   setBind, clearBind, resetBinds, captureKey, cancelCapture, isReserved,
 } from '../input';
 import { sfx } from '../audio/sfx';
@@ -11,7 +11,8 @@ import { vol, setVol, VolKey } from '../audio/core';
 const NAME: Record<Bind, string> = { left: 'GAUCHE', right: 'DROITE', jump: 'SAUTER', down: 'DESCENDRE', attack: 'ATTAQUE', dash: 'DASH', spell: 'SORT' };
 const VOLS: [VolKey, string][] = [['master', 'GÉNÉRAL'], ['music', 'MUSIQUE'], ['sfx', 'EFFETS']];
 const LAYOUTS: Layout[] = ['AZERTY', 'QWERTY'];
-const TABS = ['SON', 'TOUCHES'];
+const TABS = ['SON · ÉCRAN', 'TOUCHES'];
+const SCREENS = ['FENÊTRE', 'PLEIN ÉCRAN'];
 const PW = 360, PH = 252, PX = (W - PW) / 2, PY = Math.floor((H - PH) / 2);
 const LX = PX + 34;               // libellés
 const SX = [PX + 214, PX + 304];  // centres des 2 colonnes
@@ -20,13 +21,14 @@ const SW = 84, SH = 13, D = 55;
 const SL = PX + 172, SEG = 11, GAP = 2; // volume : 10 crans montants
 const BACK_Y = PY + 220;
 
-type Kind = 'tab' | 'layout' | 'bind' | 'vol' | 'reset' | 'back';
+type Kind = 'tab' | 'screen' | 'layout' | 'bind' | 'vol' | 'reset' | 'back';
 type Row = { y: number; kind: Kind; label: string; b?: Bind; v?: VolKey };
 let lastTab = 0;
 
 /** Panneau OPTIONS (menu titre et pause), 2 onglets : SON (volumes) et TOUCHES (2 par action, clavier affiché). Échap ou RETOUR ferme. */
 export class OptionsPanel {
   private tab = lastTab;
+  private fs = false; // affichage dessiné (Échap peut quitter le plein écran à tout moment)
   private rows: Row[] = [];
   private row = 0;
   private col = lastTab;
@@ -73,7 +75,10 @@ export class OptionsPanel {
     for (const o of this.page) o.destroy();
     this.page = []; this.labels = []; this.cells = [];
     const rows: Row[] = [{ y: PY + 33, kind: 'tab', label: '' }];
-    if (this.tab === 0) VOLS.forEach(([v, label], i) => rows.push({ y: PY + 72 + i * 24, kind: 'vol', v, label }));
+    if (this.tab === 0) {
+      VOLS.forEach(([v, label], i) => rows.push({ y: PY + 72 + i * 24, kind: 'vol', v, label }));
+      rows.push({ y: PY + 160, kind: 'screen', label: 'AFFICHAGE' });
+    }
     else {
       this.T(SX[0], PY + 52, 'TOUCHE 1', COL.uiDim).setOrigin(0.5, 0);
       this.T(SX[1], PY + 52, 'TOUCHE 2', COL.uiDim).setOrigin(0.5, 0);
@@ -89,10 +94,10 @@ export class OptionsPanel {
         return;
       }
       this.labels.push(this.T(LX, r.y - 6, r.label));
-      const two = r.kind === 'bind' || r.kind === 'layout';
+      const two = r.kind === 'bind' || r.kind === 'layout' || r.kind === 'screen';
       const w = two || r.kind === 'vol' ? SX[0] - SW / 2 - LX : PW - 60;
       this.zone(LX - 4 + w / 2, r.y, w, SH, i, -1);
-      if (two) this.cells.push(SX.map((x, c) => { this.zone(x, r.y, SW, SH, i, c); return this.T(x, r.y - 6, r.kind === 'layout' ? LAYOUTS[c] : '').setOrigin(0.5, 0); }));
+      if (two) this.cells.push(SX.map((x, c) => { this.zone(x, r.y, SW, SH, i, c); return this.T(x, r.y - 6, r.kind === 'layout' ? LAYOUTS[c] : r.kind === 'screen' ? SCREENS[c] : '').setOrigin(0.5, 0); }));
       else if (r.kind === 'vol') { this.slideZone(r, i); this.cells.push([this.T(PX + 324, r.y - 6, '').setOrigin(0.5, 0)]); }
       else this.cells.push([]);
     });
@@ -196,6 +201,7 @@ export class OptionsPanel {
   private draw() {
     this.g.clear();
     const lay = LAYOUTS.indexOf(getLayout());
+    this.fs = isFullscreen();
     this.rows.forEach((r, i) => {
       const rs = i === this.row;
       this.labels[i]?.setTint(rs ? COL.moonLight : r.kind === 'reset' || r.kind === 'back' ? COL.uiDim : COL.ui);
@@ -206,14 +212,14 @@ export class OptionsPanel {
         if (on) this.g.fillStyle(COL.ember, 0.7).fillRect(TX[c] - 12, r.y + 5, 24, 1);
       });
       else if (r.kind === 'vol') this.slider(r, i, rs);
-      else if (r.kind === 'bind' || r.kind === 'layout') for (let c = 0; c < 2; c++) {
+      else if (r.kind === 'bind' || r.kind === 'layout' || r.kind === 'screen') for (let c = 0; c < 2; c++) {
         const sel = rs && c === this.col, cap = sel && this.capturing;
         this.frame(SX[c], r.y, sel, cap && this.blink);
         const t = this.cells[i][c], k = r.b ? getBind(r.b, c) : null;
         if (r.b) t.setText(cap ? (this.blink ? '. . .' : '') : keyText(k) || '-');
-        const on = r.b ? !!k : c === lay;
+        const cur = r.kind === 'screen' ? +this.fs : lay, on = r.b ? !!k : c === cur;
         t.setTint(sel ? COL.moonLight : on ? COL.ui : COL.uiDim);
-        if (!r.b && c === lay) this.g.fillStyle(COL.ember, 0.7).fillRect(SX[c] - 14, r.y + 5, 28, 1); // clavier choisi
+        if (!r.b && c === cur) this.g.fillStyle(COL.ember, 0.7).fillRect(SX[c] - 14, r.y + 5, 28, 1); // clavier / affichage choisi
       }
     });
     this.drawFoot();
@@ -226,6 +232,7 @@ export class OptionsPanel {
       : k === 'tab' ? ["←→ : CHANGER D'ONGLET · ÉCHAP : RETOUR", COL.uiDim]
       : k === 'vol' ? ['←→ : RÉGLER · ENTRÉE : COUPER / REMETTRE', COL.uiDim]
       : k === 'layout' ? ['LETTRES AFFICHÉES POUR LES TOUCHES PAR DÉFAUT', COL.uiDim]
+      : k === 'screen' ? ['JOUER EN FENÊTRE OU EN PLEIN ÉCRAN', COL.uiDim]
       : k === 'bind' ? ['ENTRÉE : CHANGER · SUPPR : EFFACER · ÉCHAP : RETOUR', COL.uiDim]
       : k === 'reset' ? ['REMET TOUTES LES TOUCHES PAR DÉFAUT', COL.uiDim]
       : ['ÉCHAP : RETOUR', COL.uiDim];
@@ -233,14 +240,14 @@ export class OptionsPanel {
   }
 
   private activate() {
-    goFullscreen();
     const r = this.rows[this.row];
     if (r.kind === 'back') return this.close();
     if (r.kind === 'tab') return this.setTab(this.col);
     if (r.kind === 'vol') return this.setVolume(r.v!, vol[r.v!] ? 0 : this.unmuted[r.v!] || 10);
     sfx.select();
     this.msg = '';
-    if (r.kind === 'layout') setLayout(LAYOUTS[this.col]);
+    if (r.kind === 'screen') setFullscreen(this.col === 1);
+    else if (r.kind === 'layout') setLayout(LAYOUTS[this.col]);
     else if (r.kind === 'reset') { resetBinds(); this.say('TOUCHES PAR DÉFAUT RÉTABLIES'); }
     else this.listen(r.b!, this.col);
     this.draw();
@@ -283,6 +290,7 @@ export class OptionsPanel {
       if (b !== this.blink) { this.blink = b; this.draw(); }
       return;
     }
+    if (isFullscreen() !== this.fs) this.draw();
     if (this.msg && now > this.msgUntil) { this.msg = ''; this.drawFoot(); }
     if (input.take('pause')) return this.close();
     const n = this.rows.length, cur = this.rows[this.row];
@@ -296,7 +304,7 @@ export class OptionsPanel {
     if (dl || dr) {
       if (r.kind === 'tab') this.setTab(dl ? 0 : 1);
       else if (r.kind === 'vol') { const v = Phaser.Math.Clamp(vol[r.v!] + (dl ? -1 : 1), 0, 10); if (v !== vol[r.v!]) this.setVolume(r.v!, v); }
-      else if (r.kind === 'bind' || r.kind === 'layout') this.pick(this.row, dl ? 0 : 1);
+      else if (r.kind === 'bind' || r.kind === 'layout' || r.kind === 'screen') this.pick(this.row, dl ? 0 : 1);
     }
     if (input.take('clear') && r.kind === 'bind') {
       this.say(clearBind(r.b!, this.col) ? 'TOUCHE EFFACÉE' : 'IL FAUT AU MOINS UNE TOUCHE');

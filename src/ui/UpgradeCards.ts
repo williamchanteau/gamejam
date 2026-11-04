@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { W, H, COL } from '../config';
 import { txt } from '../art/font';
-import { input, goFullscreen } from '../input';
+import { input } from '../input';
 import { sfx } from '../audio/sfx';
 import { capeTex } from '../art/player';
 import type { Upgrade } from '../floors';
@@ -149,7 +149,7 @@ export class UpgradeCards {
 
   private confirm() {
     this.ready = false;
-    sfx.select(); goFullscreen(); input.reset();
+    sfx.select(); input.reset();
     const s = this.s, pick = this.cards[this.i], other = this.cards[1 - this.i];
     for (const l of this.loops) l.remove();
     s.tweens.killTweensOf(pick.c); s.tweens.killTweensOf(other.c);

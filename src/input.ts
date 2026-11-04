@@ -120,7 +120,6 @@ rebuild();
 
 addEventListener('keydown', (e) => {
   unlockAudio();
-  firstFullscreen();
   if (capture) {
     e.preventDefault();
     if (e.repeat) return;
@@ -141,17 +140,17 @@ addEventListener('keydown', (e) => {
 });
 addEventListener('keyup', (e) => held.delete(e.code));
 addEventListener('blur', () => held.clear());
-addEventListener('pointerdown', () => { unlockAudio(); firstFullscreen(); });
+addEventListener('pointerdown', () => unlockAudio());
 
-/** Plein écran (doit être appelé depuis un geste utilisateur). Échap verrouillé si possible. */
-export function goFullscreen() {
-  if (document.fullscreenElement || !document.documentElement.requestFullscreen) return;
-  document.documentElement.requestFullscreen()
+export const isFullscreen = () => !!document.fullscreenElement;
+/** Plein écran ou fenêtre, au choix du joueur (OPTIONS > AFFICHAGE ; juste après un geste utilisateur). Échap verrouillé si possible. */
+export function setFullscreen(on: boolean) {
+  if (on === isFullscreen()) return;
+  if (!on) { document.exitFullscreen?.().catch(() => {}); return; }
+  document.documentElement.requestFullscreen?.()
     .then(() => (navigator as unknown as { keyboard?: { lock?: (k: string[]) => Promise<void> } }).keyboard?.lock?.(['Escape']))
     .catch(() => {});
 }
-let fsTried = false;
-function firstFullscreen() { if (!fsTried) { fsTried = true; goFullscreen(); } }
 
 export const input = {
   isDown(a: Action) {

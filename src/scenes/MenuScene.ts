@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { W, H, COL } from '../config';
 import { txt } from '../art/font';
-import { input, goFullscreen } from '../input';
+import { input } from '../input';
 import { sfx } from '../audio/sfx';
 import { Menu } from '../ui/Menu';
 import { OptionsPanel } from '../ui/Options';
@@ -39,7 +39,6 @@ export class MenuScene extends Phaser.Scene {
     if (this.cheat < CHEAT.length) return;
     this.cheat = 0;
     sfx.select();
-    goFullscreen();
     this.bosses();
   };
 

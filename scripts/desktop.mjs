@@ -18,10 +18,11 @@ app.whenReady().then(() => {
   const page = path.join(__dirname, 'index.html');
   const ico = fs.readFileSync(page, 'utf8').match(/data:image\\/png;base64,[A-Za-z0-9+/=]+/);
   const win = new BrowserWindow({
-    width: 1280, height: 720, backgroundColor: '#0b0a14', title: 'Ashenborn', autoHideMenuBar: true,
+    width: 1280, height: 720, useContentSize: true, backgroundColor: '#0b0a14', title: 'Ashenborn', autoHideMenuBar: true,
     icon: ico ? nativeImage.createFromDataURL(ico[0]) : undefined,
     webPreferences: { devTools: false },
   });
+  win.setAspectRatio(16 / 9); // fenêtre redimensionnée sans bandes noires
   win.loadFile(page);
 });
 app.on('window-all-closed', () => app.quit());
