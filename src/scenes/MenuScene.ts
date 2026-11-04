@@ -30,7 +30,7 @@ export class MenuScene extends Phaser.Scene {
 
   constructor() { super('Menu'); }
 
-  /** Code caché : depuis QUITTER, ↓ ↓ → ↓ ouvre le menu de test des boss. */
+  /** DEV : code caché depuis QUITTER, ↓ ↓ → ↓ ouvre le menu de test des boss (absent du build final). */
   private onCheatKey = (e: KeyboardEvent) => {
     if (e.repeat) return;
     if (!this.menu.enabled) { this.cheat = 0; return; }
@@ -45,8 +45,10 @@ export class MenuScene extends Phaser.Scene {
   create() {
     input.reset();
     this.sub = null; this.opts = null; this.bossMenu = null; this.diff = null; this.diffNotes = []; this.cheat = 0;
-    addEventListener('keydown', this.onCheatKey);
-    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => removeEventListener('keydown', this.onCheatKey));
+    if (import.meta.env.DEV) {
+      addEventListener('keydown', this.onCheatKey);
+      this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => removeEventListener('keydown', this.onCheatKey));
+    }
     this.add.image(0, 0, 'bg_title').setOrigin(0);
     const [mx, my] = TITLE_MOON;
     const halo = this.add.image(mx, my, 'glowC').setBlendMode(Phaser.BlendModes.ADD).setScale(3.2).setAlpha(0.3);
