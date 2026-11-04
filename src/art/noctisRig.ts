@@ -285,6 +285,23 @@ export class NoctisRig {
     }
   }
 
+  /** Parties touchables, coordonnées monde : jambes, buste, tête (ni bras ni tentacules), selon la pose du moment. */
+  bodyRects() {
+    const k = this.sk, s = this.root.scaleX, a = rad(k.headA), sa = Math.sin(a), ca = Math.cos(a), nk = k.neck[0];
+    const box = (lo: number, hi: number, up: number, down: number) => {
+      const w = Math.max(24, Math.abs(s) * (hi - lo)); // le pivot de l'attaque dans le dos fait passer scaleX par 0
+      return new Phaser.Geom.Rectangle(this.root.x + (s * (lo + hi)) / 2 - w / 2, this.root.y + up, w, down - up);
+    };
+    const xs = [k.hip.x, ...k.legs.flatMap((l) => [l[1].x, l[2].x])];
+    const rx = 12 * Math.abs(ca) + 17 * Math.abs(sa), ry = 17 * Math.abs(ca) + 12 * Math.abs(sa); // tête inclinée, pivot en bas
+    const hx = k.headP.x + 18 * sa, hy = k.headP.y - 18 * ca;
+    return [
+      box(Math.min(...xs) - 8, Math.max(...xs) + 8, k.hip.y, 0),
+      box(Math.min(k.hip.x, nk.x) - 16, Math.max(k.hip.x, nk.x) + 16, nk.y, k.hip.y),
+      box(hx - rx, hx + rx, hy - ry, hy + ry),
+    ];
+  }
+
   /** Centre de la lanterne, coordonnées monde. */
   world(id: LampId): V {
     const l = this.lamps[id], c = id === 'rib' ? 0 : l.big ? 12 : 7;

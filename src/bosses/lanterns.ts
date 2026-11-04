@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { W, H, PLAYER, COL } from '../config';
+import { W, H, COL } from '../config';
 import { sfx } from '../audio/sfx';
 import { txt } from '../art/font';
 import { HOLES, LAMP_ON } from '../art/noctis';
@@ -10,7 +10,7 @@ export const NIGHT = {
   hp: 240,
   darkAlpha: 0.93, viewerDark: 0.45, // le viewer garde le boss lisible, le jeu est presque noir
   lanterns: [105, 255, 405, 555, 705, 855], lanternY: 196,
-  litLife: 3.2, exposeR: 92, // portée où une lanterne ou un feu rend Noctis vulnérable (> demi-écart : toujours couvert)
+  litLife: 3.2, exposeR: 92, // portée où une lanterne ou un feu révèle Noctis (> demi-écart : toujours couvert)
   fallTime: 0.35, fireDamage: 3, fireTick: 0.35, fireLife: 4.5, fireWidth: 132,
   pause: [0.42, 0.6], // entre deux attaques (plus court que la pause générique)
   seenAt: 150, // au-delà, hors de toute lumière, son corps a totalement disparu
@@ -36,7 +36,7 @@ export class Lanterns {
   trial: Trial | null = null;
   /** Lanternes du corps allumées (position monde) : seule lumière émise par le boss. */
   lights: () => { x: number; y: number }[] = () => [];
-  /** Lanternes lancées en vol : elles éclairent leur trajet, sans rendre le boss vulnérable. */
+  /** Lanternes lancées en vol : elles éclairent leur trajet. */
   flying = new Set<{ x: number; y: number }>();
   /** Charge de l'épreuve : invincible et doré, plus rien ne le blesse (coups, sort, feu). */
   shielded = false;
@@ -47,13 +47,10 @@ export class Lanterns {
   private cold: Phaser.GameObjects.Image;
   private t = 0;
   private alpha: number;
-  private hinted = false;
-  private viewer: boolean;
 
   constructor(private b: Boss) {
     const sc = b.scene;
-    this.viewer = sc.scene.key === 'Viewer';
-    this.alpha = this.viewer ? NIGHT.viewerDark : NIGHT.darkAlpha;
+    this.alpha = sc.scene.key === 'Viewer' ? NIGHT.viewerDark : NIGHT.darkAlpha;
     const chains = sc.add.graphics().setDepth(18);
     this.lamps = NIGHT.lanterns.map((x) => {
       for (let y = 0; y < NIGHT.lanternY; y += 4) chains.fillStyle(y % 8 ? 0x3d4052 : 0x6a6e88).fillRect(x - (y % 8 ? 0 : 1), y, y % 8 ? 1 : 3, 3);
@@ -135,27 +132,8 @@ export class Lanterns {
     this.burst(l.x, l.y + 12, 0xffc45c, 16); sfx.crack();
   }
 
-  /** Coup du joueur sur Noctis : hors de la lumière, il traverse la fumée (le sort, lui, éclaire et touche toujours). */
-  filterHit(dmg: number) {
-    const b = this.b;
-    if (this.shielded) { this.burst(b.x, b.y - 58, 0xffe9a0, 10); sfx.clank(); return false; }
-    if (b.root.alpha < 0.4) return false; // déjà effacé dans le noir
-    if (dmg >= PLAYER.spell.damage || this.exposed(b.x) || this.lights().length > 0) return true;
-    this.burst(b.x, b.y - 58, 0x8a80a8, 7);
-    b.scene.puffs(b.x, b.y - 40, 2);
-    sfx.crack();
-    this.hint();
-    return false;
-  }
-
-  private hint() {
-    if (this.hinted || this.viewer) return;
-    this.hinted = true;
-    const sc = this.b.scene;
-    const a = txt(sc, W / 2, 44, 'SEULE LA LUMIÈRE LE REND VULNÉRABLE', COL.moonLight).setOrigin(0.5, 0).setDepth(96).setScrollFactor(0);
-    const c = txt(sc, W / 2, 56, 'FRAPPE UNE LANTERNE ALLUMÉE : ELLE TOMBE ET BRÛLE', COL.ui).setOrigin(0.5, 0).setDepth(96).setScrollFactor(0);
-    sc.tweens.add({ targets: [a, c], alpha: 0, delay: 3200, duration: 600, onComplete: () => { a.destroy(); c.destroy(); } });
-  }
+  /** Coup du joueur pendant la charge de l'épreuve : paré, étincelles dorées. */
+  block() { this.burst(this.b.x, this.b.y - 58, 0xffe9a0, 10); sfx.clank(); }
 
   update(dt: number) {
     this.t += dt;
@@ -164,7 +142,7 @@ export class Lanterns {
       // La lumière revient : la salle se rallume et le chemin de l'escalier apparaît.
       this.alpha = Math.max(0.12, this.alpha - dt * 0.5);
       for (const l of this.lamps) if (l.fall <= 0 && l.fire <= 0) l.lit = 99;
-    } else if (!this.hinted && this.t > 1.4) this.hint(); // après « EN GARDE ! »
+    }
     const blink = Math.floor(this.t * 9) % 2;
     this.fireG.clear();
     for (const l of this.lamps) {

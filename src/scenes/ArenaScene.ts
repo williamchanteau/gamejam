@@ -144,9 +144,9 @@ export class ArenaScene extends Phaser.Scene {
       if (Math.random() < 0.5) this.sparks(s.img.x - s.dir * 9, s.img.y + Phaser.Math.Between(-15, 15), COL.moon, 1);
       const r = new Phaser.Geom.Rectangle(s.img.x - 12, s.img.y - 20, 24, 40);
       for (const t of this.targets) {
-        if (!t.alive() || s.hits.has(t) || !Phaser.Geom.Rectangle.Overlaps(r, t.hurtRect())) continue;
+        if (!t.alive() || s.hits.has(t) || !Phaser.Geom.Rectangle.Overlaps(r, t.hurtRect(r))) continue;
         s.hits.add(t);
-        t.hit(PLAYER.spell.damage, s.img.x - s.dir * 15);
+        if (t.hit(PLAYER.spell.damage, s.img.x - s.dir * 15) === false) continue;
         this.sparks(s.img.x, s.img.y, COL.moonLight, 14);
         this.hitstop(0.06);
         this.cameras.main.shake(120, 0.008);

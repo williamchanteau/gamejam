@@ -157,7 +157,7 @@ export class ViewerScene extends ArenaScene {
     const g = this.dbg.clear(), lw = 1 / V.zoom, b = this.boss, p = this.player;
     const box = (r: Phaser.Geom.Rectangle, c: number) => g.lineStyle(lw, c, 1).strokeRect(r.x, r.y, r.width, r.height);
     const cross = (x: number, y: number) => g.lineStyle(lw, 0xffe040, 1).lineBetween(x - 3, y, x + 3, y).lineBetween(x, y - 3, x, y + 3);
-    if (V.show.hurt) { box(p.rect(), 0x40ff90); if (b) box(b.hurtRect(), 0x40ff90); }
+    if (V.show.hurt) { box(p.rect(), 0x40ff90); if (b) for (const r of b.hurtRects()) box(r, 0x40ff90); }
     if (V.show.hit) {
       if (b?.hitbox) box(b.hitbox(), 0xff2a5a);
       for (const o of this.hazards.getChildren()) { const y = (o as Phaser.Physics.Arcade.Image).body as Phaser.Physics.Arcade.Body; box(new Phaser.Geom.Rectangle(y.x, y.y, y.width, y.height), 0xff2a5a); }

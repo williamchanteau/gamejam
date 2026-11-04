@@ -55,7 +55,9 @@ export class Boss implements Target {
   get x() { return this.root.x; }
   get y() { return this.root.y; }
   get player() { return this.scene.player; }
-  hurtRect() { const { w, h } = this.def.hurt; return new Phaser.Geom.Rectangle(this.x - w / 2, this.y - h, w, h); }
+  /** Parties touchables (par défaut une colonne). */
+  hurtRects() { const { w, h } = this.def.hurt; return [new Phaser.Geom.Rectangle(this.x - w / 2, this.y - h, w, h)]; }
+  hurtRect(q?: Phaser.Geom.Rectangle) { const a = this.hurtRects(); return (q && a.find((r) => Phaser.Geom.Rectangle.Overlaps(r, q))) || a[0]; }
   alive() { return this.state === 'idle' || this.state === 'pattern'; }
 
   /** Lance le combat après `delay` s. */
@@ -151,7 +153,7 @@ export class Boss implements Target {
     this.def.rest(this, 0);
   }
 
-  hit(dmg: number, _fromX: number) {
+  hit(dmg: number, _fromX: number): boolean | void {
     if (this.def.fireOnly) return;
     this.damage(dmg);
   }

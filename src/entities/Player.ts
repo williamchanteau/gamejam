@@ -177,11 +177,11 @@ export class Player {
   private checkHits(reach: number, dmg: number) {
     const r = new Phaser.Geom.Rectangle(this.facing > 0 ? this.x : this.x - reach, this.y - 21, reach, 33);
     for (const t of this.scene.targets) {
-      if (!t.alive() || this.swingHits.has(t) || !Phaser.Geom.Rectangle.Overlaps(r, t.hurtRect())) continue;
+      if (!t.alive() || this.swingHits.has(t) || !Phaser.Geom.Rectangle.Overlaps(r, t.hurtRect(r))) continue;
       this.swingHits.add(t);
-      t.hit(dmg, this.x);
+      if (t.hit(dmg, this.x) === false) continue;
       this.gainMana(C.manaPerHit);
-      const hr = t.hurtRect();
+      const hr = t.hurtRect(r);
       this.scene.sparks(Phaser.Math.Clamp(this.x + this.facing * reach * 0.6, hr.left, hr.right), this.y - 6, COL.moonLight, 6);
       this.scene.hitstop(C.hitstopOnHit);
       sfx.hit();

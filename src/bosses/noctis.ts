@@ -304,9 +304,12 @@ export const NOCTIS: BossDef = {
     b.eyes = (m) => eyes(m === 'on' ? 'off' : m);
     r.onBreak = (x, y) => { L.burst(x, y, 0xffbc51, 14); sc.puffs(x, y + 6, 2); sfx.crack(); };
     this.rest(b, 0);
-    // Coups filtrés par la lumière ; la salle et le corps avancent avec le boss.
+    // La zone touchable suit le corps dessiné ; effacé (disparition), il n'y a plus rien à toucher.
+    const nowhere = [new Phaser.Geom.Rectangle(-9999, -9999, 1, 1)];
+    b.hurtRects = () => (b.root.alpha < 0.4 ? nowhere : r.bodyRects());
+    // Paré seulement pendant la charge de l'épreuve ; la salle et le corps avancent avec le boss.
     const hit = b.hit.bind(b), up = b.update.bind(b), burn = b.burn.bind(b);
-    b.hit = (dmg, from) => { if (L.filterHit(dmg)) hit(dmg, from); };
+    b.hit = (dmg, from) => { if (!L.shielded) return hit(dmg, from); L.block(); return false; };
     b.burn = (dmg) => { if (!L.shielded) burn(dmg); };
     b.update = (dt) => {
       const was = b.state;
