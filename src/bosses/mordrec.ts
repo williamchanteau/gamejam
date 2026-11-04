@@ -300,12 +300,36 @@ function glint(b: Boss, a: number) {
 /** Bras avant articulé : la main suit l'angle de l'épée (arc autour de c), coude par IK à 2 os. */
 const ARM = { sx: 13, sy: -57, cx: 11, cy: -40, r: 8, l1: 13, l2: 12 };
 const N = (h: string) => parseInt(h.slice(1), 16);
-function driveArm(sw: Cont, g: Phaser.GameObjects.Graphics) {
+const BLADE = 68; // pivot (main) → pointe
+const TM = new Phaser.GameObjects.Components.TransformMatrix();
+function driveArm(b: Boss, sw: Cont, g: Phaser.GameObjects.Graphics) {
   if (!g.active || !sw.active) return;
   if (sw.getData('free')) { g.clear(); return; }
   {
-    const a = Phaser.Math.DegToRad(sw.angle);
+    // La pointe ne passe jamais sous le sol : elle s'y pose et traîne. Pointe (repère du rig) = c + (r + lame)·(sin a, −cos a) ;
+    // y monde = mb·x + md·y + ty ⇒ contrainte ρ·sin(a − φ) ≤ q, bornes résolues en tenant compte de l'inclinaison du rig.
+    const m = sw.parentContainer.getWorldTransformMatrix(TM), R = ARM.r + BLADE;
+    const rho = Math.hypot(m.b, m.d), phi = Math.atan2(m.d, m.b);
+    const q = (b.floorY - 1 - m.ty - m.b * ARM.cx - m.d * ARM.cy) / (R * rho);
+    let a = Phaser.Math.DegToRad(sw.angle), drag = false;
+    if (q > -1 && q < 1) {
+      const lo = phi + Math.asin(q), hi = phi + Math.PI - Math.asin(q), u = Phaser.Math.Angle.Normalize(a - lo);
+      if (u > 0 && u < hi - lo) { // dans la zone interdite : borne la plus proche
+        a = u < (hi - lo) / 2 ? lo : hi; drag = true;
+        sw.setAngle(Phaser.Math.RadToDeg(Phaser.Math.Angle.Wrap(a)));
+      }
+    }
     sw.setPosition(Math.round(ARM.cx + Math.sin(a) * ARM.r), Math.round(ARM.cy - Math.cos(a) * ARM.r));
+    const px = ARM.cx + Math.sin(a) * R, py = ARM.cy - Math.cos(a) * R;
+    const tipX = m.a * px + m.c * py + m.tx, now = b.scene.time.now;
+    // Étincelles (et raclement) quand la pointe frotte le sol en se déplaçant.
+    const moved = Math.abs(tipX - (sw.getData('tipX') ?? tipX)) > 0.4;
+    sw.setData('tipX', tipX);
+    if (drag && moved && now > (sw.getData('sparkT') ?? 0)) {
+      sw.setData('sparkT', now + 50);
+      b.scene.sparks(tipX, b.floorY - 1, 0xffd36a, 2);
+      if (now > (sw.getData('scrT') ?? 0)) { sw.setData('scrT', now + 220); sfx.scrape(); }
+    }
   }
   const { sx, sy, l1, l2 } = ARM, hx = sw.x, hy = sw.y;
   const d = Phaser.Math.Clamp(Math.hypot(hx - sx, hy - sy), Math.abs(l1 - l2) + 1, l1 + l2 - 0.5);
@@ -654,7 +678,7 @@ export const MORDREC: BossDef = {
     b.root.add(rig);
     b.parts = { rig, body, sword, blade, head, headImg, eyes, glow };
     b.flashParts = [body, headImg, blade, fist, pauldron];
-    const drive = () => driveArm(sword, arm);
+    const drive = () => driveArm(b, sword, arm);
     sc.events.on(Phaser.Scenes.Events.PRE_RENDER, drive);
     sc.events.once(Phaser.Scenes.Events.SHUTDOWN, () => sc.events.off(Phaser.Scenes.Events.PRE_RENDER, drive));
     this.rest(b, 0);
