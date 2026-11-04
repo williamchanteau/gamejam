@@ -41,6 +41,9 @@ export class BossBar {
     this.scene.tweens.add({ targets: this, shown: 1, trailW: 1, duration: sec * 1000, ease: 'Quad.out' });
   }
 
+  /** Éclat doré (le boss se soigne). */
+  flash(sec = 0.4) { this.glowT = Math.max(this.glowT, sec); }
+
   /** À 50 % : la barre brille en or 3 s et se recharge ; ensuite la moitié restante des PV remplit toute la barre. */
   private startP2() {
     this.p2 = 1; this.glowT = 3;

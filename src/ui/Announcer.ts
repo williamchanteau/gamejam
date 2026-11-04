@@ -73,7 +73,7 @@ export function announce(s: Phaser.Scene, def: BossDef, label: string, onDone: (
     s.time.delayedCall(1100 + i * 70, () => t.setTint(i % 2 ? 0xffe0c0 : 0xffffff));
   });
   // Titre + étiquette d'étage.
-  const ttl = keep(txt(s, -200, y0 + 44, def.title, 0xffb060).setScale(2));
+  const ttl = keep(txt(s, -200, y0 + 47, def.title, 0xffb060).setScale(2));
   s.time.delayedCall(700 + name.length * 70 + 80, () => { tw({ targets: ttl, x: x0 + 2, duration: 220, ease: 'Cubic.out' }); sfx.roar(); });
   const lab = keep(txt(s, x0 + 2, 40, label, COL.ui).setAlpha(0)); // au-dessus des bandeaux
   tw({ targets: lab, alpha: 1, delay: 600, duration: 200 });

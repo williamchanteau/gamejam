@@ -5,6 +5,7 @@ import { txt } from '../art/font';
 import { sfx } from '../audio/sfx';
 import { DOOR, OUT, PORTAL } from '../art/outside';
 import { Portal } from '../entities/Portal';
+import { run } from '../floors';
 
 /** Devant le château : on marche jusqu'à la porte, elle s'ouvre, on entre au rez-de-chaussée. */
 export class OutsideScene extends ArenaScene {
@@ -39,6 +40,7 @@ export class OutsideScene extends ArenaScene {
   }
 
   create(data?: { retry?: boolean; fromTuto?: boolean }) {
+    run.upgrade = ''; // nouvelle ascension : le banquet est encore à venir
     this.spawnX = data?.fromTuto ? PORTAL.x + 16 : 190; // avant super.create (le joueur y est construit)
     super.create(data);
     this.entering = false;

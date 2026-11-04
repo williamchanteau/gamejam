@@ -3,6 +3,7 @@ import { PLAYER as C, PHYS, COL, DEV } from '../config';
 import { input } from '../input';
 import { CAPE, capeTex } from '../art/player';
 import { sfx } from '../audio/sfx';
+import { run } from '../floors';
 import type { Target } from './types';
 import type { ArenaScene } from '../scenes/ArenaScene';
 
@@ -116,10 +117,13 @@ export class Player {
     this.jumpHeld = false;
     this.squash(1.35, 0.75, C.dashTime * 1000);
     sfx.dash();
+    this.swingHits.clear();
+    if (run.upgrade === 'dash') this.stabFx();
   }
 
   private updateDash(dt: number) {
     this.body.setVelocity(this.dashDir * (C.dashDist / C.dashTime), 0);
+    if (run.upgrade === 'dash' && this.stateT >= C.dashTime * C.dashStab.at) this.checkHits(C.dashStab.reach, C.dashStab.damage);
     this.afterT -= dt;
     if (this.afterT <= 0) {
       this.afterT = C.afterimageEvery;
@@ -131,6 +135,17 @@ export class Player {
       this.endDash();
       this.body.velocity.x = this.dashDir * C.runSpeed;
     }
+  }
+
+  /** Amélioration : les deux dagues montent puis plongent en croix, une entaille en X file devant le héros. */
+  private stabFx() {
+    const s = this.scene, place = (o: Phaser.GameObjects.Image) => o.setPosition(this.x + this.dashDir * 22, this.y - 3);
+    s.time.delayedCall(C.dashTime * C.dashStab.at * 1000, () => {
+      if (this.state !== 'dash') return;
+      sfx.blade();
+      const fx = place(s.add.image(0, 0, 'xslash')).setDepth(11).setFlipX(this.dashDir < 0);
+      s.tweens.add({ targets: fx, alpha: { from: 1, to: 0 }, scale: { from: 0.7, to: 1.15 }, duration: 210, ease: 'Quad.out', onUpdate: () => place(fx), onComplete: () => fx.destroy() });
+    });
   }
 
   private endDash() {
@@ -200,6 +215,11 @@ export class Player {
     this.scene.spawnSpell(this.x + this.facing * 15, this.y - 4, this.facing);
     this.squash(1.2, 0.85, 160);
     sfx.spell();
+    if (run.upgrade === 'wave') this.scene.time.delayedCall(C.spell.waveDelay * 1000, () => {
+      if (this.state === 'dead') return;
+      this.scene.spawnSpell(this.x + this.facing * 15, this.y - 4, this.facing);
+      sfx.spell();
+    });
   }
 
   hurt(fromX: number, hearts = 1) {
@@ -289,7 +309,7 @@ export class Player {
     s.setPosition(Math.round(this.x), Math.round(this.y + BH / 2 + 1)).setFlipX(this.facing < 0);
     if (this.state !== 'dead') {
       let k: string;
-      if (this.state === 'dash') k = 'dash';
+      if (this.state === 'dash') k = run.upgrade !== 'dash' ? 'dash' : this.stateT < C.dashTime * C.dashStab.at ? 'dstab0' : 'dstab1';
       else if (this.state === 'attack') { // armé → frappe (actif + 50 ms) → suite du geste
         const a = C.combo[this.combo], t = this.stateT;
         k = `atk${this.combo}_${t < a.windup ? 0 : t < a.windup + a.active + 0.05 ? 1 : 2}`;

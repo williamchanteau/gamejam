@@ -15,7 +15,8 @@ import { STAIRS } from '../art/outside';
 /** Salle de boss : annonceur (sauté au retry), barre nommée, victoire → grille levée → escalier. */
 export class BossScene extends ArenaScene {
   boss!: Boss;
-  private bar!: BossBar;
+  /** Absente tant que le combat n'est pas annoncé. */
+  bar?: BossBar;
   private won = false;
   protected def: BossDef = MORDREC;
   private room!: Room;
@@ -23,7 +24,8 @@ export class BossScene extends ArenaScene {
   private gate!: Phaser.GameObjects.Image;
   private gateOpen = false;
   private climbing = false;
-  private camX = 0;
+  protected camX = 0;
+  protected bossX = 440;
   worldW = ARENA.bossW;
   plats = ARENA.bossPlatforms;
   spawnX = 120;
@@ -36,11 +38,17 @@ export class BossScene extends ArenaScene {
     super.create(data);
     this.won = false; this.gateOpen = false; this.climbing = false;
     this.gate = this.add.image(STAIRS.x, this.floorY - 62, 'gate').setOrigin(0.5, 0).setDepth(4.5);
-    this.boss = new Boss(this, this.def, 440, this.floorY);
+    this.bar = undefined;
+    this.boss = new Boss(this, this.def, this.bossX, this.floorY);
     this.targets.push(this.boss);
-    this.bar = new BossBar(this, this.boss);
     this.camX = this.camTarget();
     this.cameras.main.setScroll(Math.round(this.camX), 0);
+    this.intro(data);
+  }
+
+  /** Barre + annonceur (sauté au retry), puis begin(). */
+  protected intro(data?: { retry?: boolean }) {
+    this.bar = new BossBar(this, this.boss);
     if (data?.retry) {
       this.bar.fillUp(0);
       this.boss.start(BOSS.retryDelay);
@@ -49,14 +57,16 @@ export class BossScene extends ArenaScene {
       this.bar.fillUp(1.6);
       this.time.delayedCall(450, () => { this.boss.eyes('tele'); sfx.warn(); });
       const f = FLOORS[this.floor];
-      announce(this, this.def, `${f.name} · ${f.place}`, () => { this.frozen = false; this.boss.start(BOSS.pauseMin); });
+      announce(this, this.def, `${f.name} · ${f.place}`, () => this.begin());
     }
   }
+
+  protected begin() { this.frozen = false; this.boss.start(BOSS.pauseMin); }
 
   tick(dt: number) {
     if (DEV && input.take('debug1') && this.boss.alive()) this.boss.hp = 1;
     this.boss.update(dt);
-    this.bar.update(dt);
+    this.bar?.update(dt);
     this.room.update(dt);
     // Caméra : centre joueur/boss, le joueur reste à ≥ camEdge px des bords.
     this.camX += (this.camTarget() - this.camX) * Math.min(1, dt * BOSS.camLerp);
@@ -71,7 +81,7 @@ export class BossScene extends ArenaScene {
     if (this.gateOpen && !this.climbing && this.player.x > STAIRS.x - 6) this.climb();
   }
 
-  private camTarget() {
+  protected camTarget() {
     const p = this.player.x, b = this.boss.state === 'dead' ? p : this.boss.x;
     let t = (p + b) / 2 - W / 2;
     t = Phaser.Math.Clamp(t, p - (W - BOSS.camEdge), p - BOSS.camEdge);

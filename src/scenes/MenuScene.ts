@@ -7,6 +7,7 @@ import { OptionsPanel } from '../ui/Options';
 import { FLOORS, run } from '../floors';
 import { MORDREC } from '../bosses/mordrec';
 import { NOCTIS } from '../bosses/noctis';
+import { MCKING } from '../bosses/mcking';
 import { TITLE_MOON } from '../art/title';
 
 const LX = 26; // bord gauche du logo et des boutons
@@ -120,9 +121,9 @@ export class MenuScene extends Phaser.Scene {
     const backdrop = this.add.rectangle(0, 0, W, H, 0x06050c, 0.94).setOrigin(0);
     const title = txt(this, W / 2, 45, 'TESTER LES BOSS', COL.moonLight).setOrigin(0.5, 0).setScale(2);
     this.sub = this.add.container(0, 0, [backdrop, title]).setDepth(100);
-    const defs = [MORDREC, NOCTIS];
+    const defs = [MORDREC, NOCTIS, MCKING];
     this.bossMenu = new Menu(this, W / 2, 100, [
-      ...FLOORS.map((f, i) => ({ label: defs[i]?.name ?? f.place, act: () => { run.hard = false; this.go(f.scene); } })),
+      ...FLOORS.map((f, i) => ({ label: defs[i]?.name ?? f.place, act: () => { run.hard = false; run.upgrade = ''; this.go(f.scene); } })),
       { label: 'RETOUR', act: () => this.closeSub() },
     ], { framed: 220, gap: 38, depth: 110 });
   }

@@ -79,6 +79,12 @@ export const sfx = {
   crack: () => noise(0.07, 0.22, 1300, 1.5),
   scrape: () => noise(0.22, 0.1, 3600, 4),
   death: () => { tone(300, 40, 0.7, 'sawtooth', 0.25); noise(0.5, 0.3, 300); },
+  chomp: () => { noise(0.07, 0.4, 900, 1.2); tone(240, 130, 0.07, 'square', 0.1); },
+  gulp: () => tone(320, 90, 0.24, 'sine', 0.24),
+  burp: () => { tone(92, 58, 0.8, 'sawtooth', 0.32); tone(130, 74, 0.7, 'square', 0.1); noise(0.7, 0.2, 220, 0.8); },
+  splat: () => { noise(0.13, 0.36, 620, 0.7); tone(170, 60, 0.1, 'sine', 0.16); },
+  bell: () => { tone(1320, 1300, 0.5, 'triangle', 0.14); tone(1980, 1960, 0.32, 'sine', 0.07); },
+  powerUp: () => [392, 523, 659, 784, 1047].forEach((f, i) => tone(f, f * 1.02, 0.22, 'triangle', 0.15, i * 0.07)),
   /** GAME OVER : impact au claquement du titre, glas grave, motif mineur descendant. */
   gameOver: () => {
     tone(90, 30, 0.6, 'square', 0.25, 0.4); noise(0.5, 0.4, 160, 0.6, 0.4);

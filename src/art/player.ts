@@ -56,6 +56,12 @@ const POSES: Record<string, Pose> = {
     arms: [{ s: [16, 15], h: [18, 21], deg: 90, len: 5 }] },
   cast: { ...A0, arms: [{ s: [16, 15], h: [21, 16], open: true }] },
   hurt: { bob: 0, lean: -1, legs: [[6, 29, 6], [13, 28, 6]], flare: 1, hem: 1 },
+  // Dash amélioré : les deux dagues levées en prise inversée, puis plantées en croix devant.
+  dstab0: { bob: 1, lean: 2, legs: [[3, 28, 5], [8, 29, 5]], flare: 3, hem: 0, arms: [{ s: [12, 15], h: [10, 7], deg: 35, len: 7, back: true }, { s: [16, 15], h: [17, 6], deg: 35, len: 7 }] },
+  dstab1: { bob: 1, lean: 2, legs: [[3, 28, 5], [8, 29, 5]], flare: 3, hem: 1, arms: [{ s: [12, 15], h: [20, 12], deg: 38, len: 8, back: true }, { s: [16, 15], h: [20, 22], deg: -38, len: 8 }] },
+  // À table : la main porte le burger à la bouche (sans dague).
+  eat0: { bob: 0, lean: 0, legs: [[8, 29, 6], [13, 29, 6]], flare: 0, hem: 0, arms: [{ s: [16, 15], h: [20, 14] }] },
+  eat1: { bob: 1, lean: 0, legs: [[8, 29, 6], [13, 29, 6]], flare: 0, hem: 1, arms: [{ s: [16, 15], h: [19, 11] }] },
 };
 
 function px(c: CanvasRenderingContext2D, col: string, x: number, y: number, w = 1, h = 1) {

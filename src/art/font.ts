@@ -12,6 +12,7 @@ export const G: Record<string, string> = {
   "'": '4480000', '-': '000E000', '+': '044V440', '/': '11248GG', '(': '2488842', ')': '8422248',
   '·': '00CC000', '%': 'OP248J3', '=': '00V0V00', '>': '8421248', '<': '248G842', '←': '048V840',
   '→': '042V240', '↑': '4EL4444', '↓': '4444LE4', '"': 'AA00000', '*': '04LEL40',
+  'ᶜ': '00EGGHE', // petit c de « MᶜKING » (txt() met tout en majuscules, celui-ci n'a pas de majuscule)
 };
 // Accents : pixels [x, y] dans la cellule (glyphe aux lignes 3..9).
 const AC = [[3, 0], [2, 1]], GR = [[1, 0], [2, 1]], CI = [[2, 0], [1, 1], [3, 1]], TR = [[1, 1], [3, 1]], CE = [[2, 10], [1, 11]];

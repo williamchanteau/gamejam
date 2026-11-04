@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { DarkBossScene } from './scenes/DarkBossScene';
+import { BurgerScene } from './scenes/BurgerScene';
 import { W, H, PHYS } from './config';
 import { BootScene } from './scenes/BootScene';
 import { TestScene } from './scenes/TestScene';
@@ -10,7 +11,7 @@ import { OutsideScene } from './scenes/OutsideScene';
 import { TransitScene } from './scenes/TransitScene';
 import { GameOverScene } from './scenes/GameOverScene';
 
-const scenes = [BootScene, MenuScene, TestScene, OutsideScene, BossScene, DarkBossScene, TransitScene, PauseScene, GameOverScene];
+const scenes = [BootScene, MenuScene, TestScene, OutsideScene, BossScene, DarkBossScene, BurgerScene, TransitScene, PauseScene, GameOverScene];
 function start(extra: Phaser.Types.Scenes.SceneType[] = []) {
 const game = new Phaser.Game({
   type: Phaser.AUTO,
