@@ -25,22 +25,22 @@ export function pluck(o: Out, f: number, at: number, vol: number, kind: keyof ty
   s.connect(g); s.start(at);
 }
 
-/** Cloche d'église : partiels inharmoniques (bourdon, fondamentale, tierce mineure, quinte, nominale…). */
-const BELL = [[0.5, 0.9, 1], [1, 0.7, 0.75], [1.19, 0.55, 0.55], [1.5, 0.3, 0.45], [2, 0.45, 0.35], [2.5, 0.22, 0.25], [2.66, 0.2, 0.22], [3.01, 0.16, 0.16], [4.17, 0.1, 0.1]];
-/** Verre / cristal (lame libre) : partiels très aigus, courts. */
-const GLASS = [[1, 1, 1], [2.76, 0.4, 0.5], [5.4, 0.2, 0.3], [8.93, 0.1, 0.2]];
+/** Cloche : bourdon, fondamentale, harmoniques presque justes (son rond, pas de tierce qui frise). */
+const BELL = [[0.5, 0.7, 1], [1, 1.2, 0.8], [2, 0.45, 0.5], [3, 0.2, 0.32], [4.2, 0.1, 0.2], [5.4, 0.05, 0.12]];
+/** Cristal : fondamentale pure, deux harmoniques discrètes. */
+const GLASS = [[1, 1, 1], [2, 0.22, 0.5], [3, 0.08, 0.3]];
 export function bell(o: Out, f: number, at: number, vol: number, dur = 4, wet = 0.5, P = BELL, np = P.length) {
   const g = gain(1); route(g, o, wet);
   for (const [r, a, k] of P.slice(0, np)) {
     const e = env(at, 0.002, vol * a, 0, dur * k); e.connect(g);
     osc('sine', f * r * (1 + rnd(-0.002, 0.002)), at, at + dur * k + 0.05, e);
   }
-  const n = env(at, 0.001, vol * 0.5, 0, 0.035); n.connect(g);
-  noise(at, at + 0.05, filt('highpass', 2500, 0.7, n));
+  const n = env(at, 0.001, vol * 0.2, 0, 0.03); n.connect(g);
+  noise(at, at + 0.04, filt('highpass', 3000, 0.7, n));
 }
 export const glass = (o: Out, f: number, at: number, vol: number, dur = 1.2, wet = 0.6) => bell(o, f, at, vol, dur, wet, GLASS);
 
-/** Formants de voyelles (fréquence, gain, Q). */
+/** Formants de voyelles (fréquence, gain, Q) pour les voix parlées. */
 const VOW = {
   a: [[730, 1, 8], [1090, 0.5, 10], [2440, 0.2, 12]],
   o: [[480, 1, 8], [830, 0.45, 10], [2600, 0.1, 12]],
@@ -53,16 +53,18 @@ function formants(v: Vow, out: AudioNode) {
   return bus;
 }
 
-/** Chœur : 3 voix légèrement désaccordées par note, chacune son vibrato, souffle ; attaque lente. */
+/** Couleur du chœur selon la voyelle : [coupure du passe-bas, bosse de présence] (u sombre → a clair). */
+const PAD = { u: [800, 380], o: [1300, 560], a: [2000, 850] };
+/** Chœur / nappe de cordes : 2 scies désaccordées par note, passe-bas doux, léger vibrato, attaque et release lentes. */
 export function choir(o: Out, fs: number[], at: number, dur: number, vol: number, vw: Vow = 'o', wet = 0.6) {
-  const out = gain(1); route(out, o, wet);
-  const a = Math.min(1.2, dur * 0.35), end = at + dur + 1.4, e = env(at, a, vol, Math.max(0, dur - a), 1.2);
-  e.connect(formants(vw, out));
+  const [cut, bump] = PAD[vw], a = Math.min(1.4, dur * 0.4), end = at + dur + 1.6;
+  const e = env(at, a, vol * 0.45, Math.max(0, dur - a), 1.4); route(e, o, wet);
+  const pk = filt('peaking', bump, 1, e); pk.gain.value = 4;
+  const lp = filt('lowpass', cut, 0.5, pk);
   for (const f of fs) {
-    const ox = [-10, 9].map((d) => osc('sawtooth', f, at, end, e, 0, 0, d + rnd(-4, 4)));
-    lfo(4.8 + rnd(-0.5, 0.5), 9, ox[0].detune, at, end, 0.8).g.connect(ox[1].detune);
+    const ox = [-7, 6].map((d) => osc('sawtooth', f, at, end, lp, 0, 0, d));
+    lfo(4.6 + rnd(-0.3, 0.3), 5, ox[0].detune, at, end, 1).g.connect(ox[1].detune);
   }
-  const br = gain(0.08); br.connect(e); noise(at, end, br);
 }
 
 let orgW: PeriodicWave | null = null, orgC: BaseAudioContext | null = null;
@@ -92,11 +94,12 @@ export function bow(o: Out, f: number, at: number, dur: number, vol: number, p: 
   if (!short && p.vib !== 0) lfo(5.3 + rnd(-0.3, 0.3), p.vib ?? 12, ox[0].detune, at, end, 0.4).g.connect(ox[1].detune);
 }
 
-/** Cuivre : le filtre s'ouvre à l'attaque (le « blat »), retombe, vibrato léger. */
-export function brass(o: Out, f: number, at: number, dur: number, vol: number, wet = 0.35) {
-  const e = env(at, 0.035, vol, Math.max(0, dur - 0.035), 0.16); route(e, o, wet);
-  const lp = filt('lowpass', f * 1.2, 1.4, e), fr = lp.frequency, end = at + dur + 0.2;
-  fr.setValueAtTime(f * 1.2, at); fr.exponentialRampToValueAtTime(Math.min(9000, f * 7), at + 0.06); fr.exponentialRampToValueAtTime(Math.min(6000, f * 3.5), at + 0.25);
+/** Cuivre : le filtre s'ouvre à l'attaque (le « blat »), retombe, vibrato léger. horn = cor sombre (attaque douce, son couvert). */
+export function brass(o: Out, f: number, at: number, dur: number, vol: number, wet = 0.35, horn = false) {
+  const a = horn ? Math.min(0.25, dur * 0.3) : 0.035, [o1, o2] = horn ? [3, 2] : [7, 3.5];
+  const e = env(at, a, vol, Math.max(0, dur - a), horn ? 0.4 : 0.16); route(e, o, wet);
+  const lp = filt('lowpass', f * 1.2, horn ? 0.7 : 1.4, e), fr = lp.frequency, end = at + dur + 0.5;
+  fr.setValueAtTime(f * 1.2, at); fr.exponentialRampToValueAtTime(Math.min(9000, f * o1), at + a + 0.03); fr.exponentialRampToValueAtTime(Math.min(6000, f * o2), at + a + 0.3);
   const ox = [-6, 5].map((d) => osc('sawtooth', f, at, end, lp, 0, 0, d));
   if (dur > 0.5) lfo(5.5, 7, ox[0].detune, at, end, 0.5).g.connect(ox[1].detune);
 }

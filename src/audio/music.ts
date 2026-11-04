@@ -8,8 +8,8 @@ import { pluck, bell, choir, organ, bow, brass, timp, drum } from './inst';
 type St = { phase: number };
 interface Track { bar: number; /** niveau relatif de la piste */ vol?: number; play(o: Out, t: number, i: number, s: St): void; amb?(o: Out, t: number): (at: number) => void }
 
-const hum = (s = 0.02) => rnd(-s, s);
-const vel = (x: number) => x * rnd(0.75, 1.15);
+const hum = (s = 0.01) => rnd(-s, s);
+const vel = (x: number) => x * rnd(0.9, 1.08);
 const F = (ms: number[]) => ms.map(mtof);
 
 /** Thème (ré mineur), 8 mesures : [temps, note midi, durée en temps]. */
@@ -33,8 +33,8 @@ const MAJ = (m: number) => ([5, 10, 0].includes(m % 12) ? m + 1 : m);
 
 /** Accord brisé lent et clairsemé à la harpe (jamais deux fois pareil). */
 function arp(o: Out, bass: number, ch: number[], t: number, q: number, vol: number, kind: 'harp' | 'lute' = 'harp') {
-  const ns = [bass + 12, ...ch, ch[1] + 12], pos = [0, 0.5, 1, 1.75, 2.5, 3.25];
-  pos.forEach((p, j) => { if (j && Math.random() < 0.3) return; pluck(o, mtof(ns[Math.min(j, ns.length - 1)]), t + p * q + hum(0.03), vel(vol), kind, 0.5); });
+  const ns = [bass + 12, ...ch, ch[1] + 12], pos = [0, 0.5, 1, 2, 2.5, 3];
+  pos.forEach((p, j) => pluck(o, mtof(ns[Math.min(j, ns.length - 1)]), t + p * q + hum(), vel(vol * (j ? 0.75 : 1)), kind, 0.45));
 }
 
 /** Vent de nuit : bruit filtré dont la couleur et le souffle ondulent lentement. */
@@ -44,16 +44,6 @@ function wind(o: Out, t: number) {
   const ls = [lfo(0.07, 260, f.frequency, t, t + 3600).o, lfo(0.11, 0.03, g.gain, t, t + 3600).o, noise(t, t + 3600, f, 0.7)];
   return (at: number) => ls.forEach((n) => n.stop(at));
 }
-/** Chouette lointaine. */
-function owl(o: Out, t: number) {
-  for (const [d, f, l] of [[0, 400, 0.25], [0.42, 380, 0.5]]) {
-    const g = gain(0); g.connect(o.d); g.connect(gain(1.5)).connect(o.w);
-    g.gain.setValueAtTime(0, t + d); g.gain.linearRampToValueAtTime(0.012, t + d + 0.06); g.gain.linearRampToValueAtTime(0, t + d + l);
-    const x = ac!.createOscillator(); x.frequency.setValueAtTime(f, t + d); x.frequency.linearRampToValueAtTime(f * 0.93, t + d + l);
-    x.connect(filt('lowpass', 900, 0.7, g)); x.start(t + d); x.stop(t + d + l + 0.05);
-  }
-}
-
 const TRACKS: Record<string, Track> = {
   /** Menu : orgue, chœur, cloche lointaine ; le thème à la harpe puis au violoncelle. */
   menu: {
@@ -68,7 +58,7 @@ const TRACKS: Record<string, Track> = {
       else arp(o, bass, ch, t, q, 0.06);
     },
   },
-  /** Dehors, la nuit : vent, bourdon d'orgue, luth, chouette, cloche du château. */
+  /** Dehors, la nuit : vent, bourdon d'orgue, luth, cloche du château. */
   night: {
     vol: 1.5,
     bar: 4.6,
@@ -77,9 +67,8 @@ const TRACKS: Record<string, Track> = {
       const k = i % 8, [bass, ch] = CH[k], q = this.bar / 4;
       if (k % 2 === 0) organ(o, F([38, 45]), t, this.bar * 2 + 0.2, 0.016, 0.7);
       if (i % 16 === 0) bell(o, mtof(50), t + 1, 0.035, 6, 0.9);
-      if (i % 16 >= 8 && k < 4) THEME[k].forEach(([b, m]) => pluck(o, mtof(m - 12), t + b * q + hum(0.04), vel(0.09), 'lute', 0.4));
-      else if (Math.random() < 0.65) arp(o, bass - 12, ch.map((m) => m - 12), t, q, 0.06, 'lute');
-      if (Math.random() < 0.3) owl(o, t + rnd(0.5, 3));
+      if (i % 16 >= 8 && k < 4) THEME[k].forEach(([b, m]) => pluck(o, mtof(m - 12), t + b * q + hum(), vel(0.09), 'lute', 0.4));
+      else if (k % 2 === 0) arp(o, bass - 12, ch.map((m) => m - 12), t, q, 0.06, 'lute');
     },
   },
   /** Tuto : ostinato de luth, violoncelle tenu, notes de harpe éparses (ré dorien). */
@@ -91,7 +80,6 @@ const TRACKS: Record<string, Track> = {
       const [bass, ch] = PR[i % 4], e = this.bar / 8;
       [0, 1, 2, 3, 2, 1, 2, 1].forEach((n, j) => pluck(o, mtof(ch[n]), t + j * e + hum(0.012), vel(j % 4 ? 0.045 : 0.07), 'lute', 0.3));
       bow(o, mtof(bass), t, this.bar, 0.035, { a: 0.4, wet: 0.4, vib: 8, bright: 3 });
-      if (Math.random() < 0.5) pluck(o, mtof(ch[1 + Math.floor(Math.random() * 3)] + 24), t + Math.floor(rnd(2, 7)) * e, 0.04, 'harp', 0.6);
     },
   },
   /** Ysolde : ostinato de cordes (3+3+2), timbales, chœur, le thème à l'alto ; phase 2 : tambours, cuivres, cloche. */
@@ -106,12 +94,12 @@ const TRACKS: Record<string, Track> = {
       const tp = mtof(BB < 36 ? BB + 12 : BB);
       timp(o, tp, t, 0.22); timp(o, tp, t + 3 * e, 0.11);
       if (k === 3) for (let j = 12; j < 16; j++) timp(o, tp, t + j * e / 2, 0.05 + j * 0.01);
-      choir(o, F(ch), t, this.bar, p2 ? 0.026 : 0.018, 'a', 0.5);
-      if (sec >= 8 || (p2 && sec >= 4)) THEME[k].forEach(([b, m, d]) => (p2 && sec >= 8
-        ? brass(o, mtof(m - 12), t + b * q, d * q * 0.92, 0.04, 0.4)
-        : bow(o, mtof(m), t + b * q + hum(0.01), d * q * 0.95, 0.05, { a: 0.06, wet: 0.45, vib: 14, bright: 7 })));
+      choir(o, F(ch), t, this.bar, p2 ? 0.026 : 0.018, 'o', 0.5);
+      if (k % 2 === 0) for (const m of [BB + 12, BB + 19]) brass(o, mtof(m), t, this.bar * 2, 0.03, 0.4, true);
+      if (sec >= 8) THEME[k].forEach(([b, m, d]) => brass(o, mtof(m - 12), t + b * q + hum(0.006), d * q * 0.95, 0.045, 0.4, true));
+      if (p2 && sec >= 4) THEME[k].forEach(([b, m, d]) => bow(o, mtof(m), t + b * q + hum(0.006), d * q * 0.95, 0.045, { a: 0.06, wet: 0.45, vib: 10, bright: 6 }));
       if (p2) {
-        for (let j = 0; j < 16; j++) if (j % 4 === 0 || j === 10) drum(o, t + j * e / 2, 0.2, 'low'); else if (Math.random() < 0.55) drum(o, t + j * e / 2, j % 2 ? 0.035 : 0.06, 'tak');
+        for (let j = 0; j < 16; j++) if (j % 4 === 0 || j === 10) drum(o, t + j * e / 2, 0.2, 'low'); else if ([2, 6, 7, 11, 14, 15].includes(j)) drum(o, t + j * e / 2, j % 2 ? 0.035 : 0.06, 'tak');
         for (const m of ch) brass(o, mtof(m - 12), t, e * 1.4, 0.022, 0.4);
         if (k === 0) bell(o, mtof(74), t, 0.025, 2.5, 0.6);
       }
@@ -149,8 +137,7 @@ const TRACKS: Record<string, Track> = {
       ][k];
       brass(o, mtof(BS), t, e * 1.5, 0.06, 0.15); brass(o, mtof(BS + 7), t + 2 * e, e * 1.5, 0.05, 0.15);
       for (const at of [1, 3]) for (const m of CF) pluck(o, mtof(m - 12), t + at * e + hum(0.005), 0.03, 'harpsi', 0.15);
-      const rest = i % 16 >= 8 && Math.random() < 0.25;
-      if (!rest) for (const [b, m, d = 1] of MEL) {
+      for (const [b, m, d = 1] of MEL) {
         pluck(o, mtof(m), t + b * e + hum(0.005), vel(0.075), 'harpsi', 0.2);
         if (p2) brass(o, mtof(m - 12), t + b * e, d * e * 0.85, 0.03, 0.3);
       }
@@ -176,7 +163,7 @@ const TRACKS: Record<string, Track> = {
       const ch = i % 2 ? [50, 58, 62, 67] : [50, 57, 62, 66];
       organ(o, F([38]), t, this.bar + 0.2, 0.02, 0.7);
       choir(o, F(ch), t, this.bar + 0.5, 0.016, 'o', 0.8);
-      if (Math.random() < 0.7) arp(o, 38, ch.slice(1), t, this.bar / 4, 0.045);
+      arp(o, 38, ch.slice(1), t, this.bar / 4, 0.045);
     },
   },
   /** Aube, couronnement : le thème en ré majeur à la harpe, orgue et chœur doux. */

@@ -16,7 +16,7 @@ function tn(at: number, a: number, r: number, vol: number, type: OscillatorType,
 }
 /** Métal frappé : partiels inharmoniques à décroissances différentes. */
 const ARMOR = [[1, 1, 1], [1.47, 0.6, 0.7], [2.09, 0.5, 0.55], [2.56, 0.35, 0.4], [3.37, 0.25, 0.3]];
-const GLINT = [[1, 1, 1], [2.4, 0.4, 0.5], [3.9, 0.2, 0.3]];
+const GLINT = [[1, 1, 1], [2, 0.3, 0.5], [3, 0.1, 0.3]];
 function metal(at: number, f: number, vol: number, dur: number, wet = 0.3, P = ARMOR) {
   const g = gain(1); route(g, fx(), wet);
   for (const [r, a, k] of P) { const e = env(at, 0.001, vol * a, 0, dur * k); e.connect(g); osc('sine', f * r, at, at + dur * k + 0.05, e); }
@@ -46,27 +46,29 @@ export const sfx = {
   }, 1.25),
   hit: go((t) => { tn(t, 0.002, 0.09, 0.22, 'sine', v(170), 55, 0.1); nz(t, 0.001, 0.06, 0.28, 'lowpass', 2200, 700, 0.8, 0.1); nz(t, 0.001, 0.025, 0.09, 'bandpass', 4200, 4200, 2.5, 0); }, 2.5),
   hurt: go((t) => {
-    tn(t, 0.002, 0.16, 0.3, 'sine', 130, 42, 0.12); nz(t, 0.001, 0.13, 0.3, 'lowpass', 1200, 300, 0.8, 0.15);
-    voice(fx(), t + 0.01, v(210), 150, 0.15, 0.05, 'a', 0.2); tn(t + 0.05, 0.05, 0.5, 0.005, 'sine', 3700, 3650, 0.1);
+    tn(t, 0.002, 0.18, 0.34, 'sine', 140, 40, 0.12); nz(t, 0.001, 0.12, 0.3, 'lowpass', 1500, 280, 0.7, 0.15);
+    nz(t, 0.001, 0.02, 0.1, 'highpass', 3500, 3500, 0.7, 0);
   }, 1.4),
   spell: go((t) => {
     nz(t, 0.08, 0.35, 0.13, 'bandpass', 500, 5200, 1.1, 0.4); tn(t, 0.005, 0.3, 0.14, 'sine', 210, 85, 0.2);
     glass(fx(), 1175, t, 0.04, 1.8); glass(fx(), 1568, t + 0.03, 0.045, 1.6); glass(fx(), 2093, t + 0.07, 0.03, 1.4);
   }),
   manaFull: go((t) => { glass(fx(), 1760, t, 0.045, 1.2); glass(fx(), 2637, t + 0.1, 0.04, 1.5); }),
-  /** Télégraphe : reflet de lame (« tsiing ») + pouls grave. */
+  /** Télégraphe : pouls grave (gong sourd) + reflet net, souffle qui monte. */
   warn: go((t) => {
-    metal(t, v(1480, 0.03), 0.028, 0.45, 0.45, GLINT); nz(t, 0.09, 0.05, 0.05, 'highpass', 3000, 6000, 0.7, 0.3);
-    tn(t, 0.01, 0.25, 0.06, 'triangle', 110, 104, 0.3);
+    tn(t, 0.004, 0.32, 0.075, 'sine', 98, 92, 0.35); tn(t, 0.004, 0.22, 0.03, 'sine', 196, 186, 0.35);
+    glass(fx(), v(1760, 0.02), t + 0.01, 0.022, 0.5, 0.5); nz(t, 0.08, 0.06, 0.04, 'highpass', 4000, 7000, 0.7, 0.3);
   }, 0.8),
   shoot: go((t) => { tn(t, 0.005, 0.14, 0.09, 'sine', v(380), 170, 0.3); nz(t, 0.005, 0.1, 0.08, 'bandpass', 1100, 500, 1, 0.2); }, 1.4),
   tick: go((t) => { nz(t, 0.001, 0.025, 0.16, 'bandpass', v(2300, 0.04), 2300, 7, 0.08); tn(t, 0.001, 0.02, 0.025, 'triangle', 1250, 1250, 0); }, 6),
   select: go((t) => { pluck(fx(), mtof(74), t, 0.12, 'harp', 0.3); pluck(fx(), mtof(81), t + 0.05, 0.08, 'harp', 0.3); tn(t, 0.002, 0.1, 0.08, 'sine', 140, 70, 0.1); }),
-  /** Rugissement : deux voix rauques (modulation d'amplitude) dans les formants, souffle, infra. */
+  /** Rugissement : grondement (souffle grave haché), cors très sombres en quinte, infra. */
   roar: go((t) => {
-    voice(fx(), t, 84, 56, 1.1, 0.16, 'a', 0.35, 0.12, 30); voice(fx(), t + 0.02, 125, 80, 1, 0.07, 'o', 0.35, 0.15, 23);
-    nz(t, 0.15, 0.9, 0.22, 'bandpass', 500, 260, 0.9, 0.35); tn(t, 0.1, 0.9, 0.2, 'sine', 55, 38, 0.2);
-  }),
+    const g = env(t, 0.2, 0.2, 0.4, 0.6); route(g, fx(), 0.35);
+    const am = gain(0.55); lfo(17, 0.45, am.gain, t, t + 1.3); am.connect(g); noise(t, t + 1.3, filt('lowpass', 260, 1.2, am, 640, t, 0.5));
+    brass(fx(), mtof(38), t + 0.05, 0.9, 0.1, 0.4, true); brass(fx(), mtof(33), t + 0.05, 1, 0.1, 0.4, true);
+    tn(t, 0.15, 1, 0.2, 'sine', 50, 36, 0.2);
+  }, 0.6),
   slam: go((t) => { impact(t, 1); debris(t + 0.04, 6, 0.4, 0.05); }),
   clank: go((t) => { metal(t, v(560, 0.08), 0.05, 0.28); nz(t, 0.001, 0.02, 0.18, 'highpass', 2500, 2500, 0.7, 0.05); }, 1.4),
   whoosh: go((t) => { const f = v(380, 0.15); nz(t, 0.09, 0.2, 0.36, 'bandpass', f, f * 2.6, 1.1, 0.2); nz(t, 0.06, 0.2, 0.14, 'lowpass', 500, 220, 0.7, 0.1); }),
@@ -100,11 +102,11 @@ export const sfx = {
     g.gain.setValueCurveAtTime(Float32Array.from({ length: 24 }, (_, i) => (0.3 + Math.random() * 0.7) * 0.11 * (1 - i / 24)), t, 0.24);
     noise(t, t + 0.26, filt('bandpass', v(3400), 3, g));
   }, 1.2),
-  /** Mort du joueur : choc, souffle qui s'éteint, cendres qui crépitent, corde grave. */
+  /** Mort du joueur : choc, cendres qui s'envolent et crépitent, quinte vide aux cordes graves. */
   death: go((t) => {
-    tn(t, 0.002, 0.2, 0.25, 'sine', 110, 45, 0.2); voice(fx(), t + 0.05, 180, 120, 0.6, 0.035, 'o', 0.4, 0.05);
-    nz(t + 0.25, 0.4, 0.9, 0.1, 'highpass', 4000, 8000, 0.7, 0.4); debris(t + 0.3, 10, 0.9, 0.03);
-    bow(fx(), mtof(38), t + 0.1, 1.2, 0.04, { a: 0.3, wet: 0.6, vib: 5, bright: 3 });
+    tn(t, 0.002, 0.25, 0.25, 'sine', 110, 40, 0.2);
+    nz(t + 0.2, 0.5, 1, 0.07, 'bandpass', 2500, 6000, 0.6, 0.5); debris(t + 0.3, 8, 0.9, 0.025);
+    bow(fx(), mtof(38), t + 0.1, 1.4, 0.045, { a: 0.4, wet: 0.5, vib: 4, bright: 3 }); bow(fx(), mtof(45), t + 0.15, 1.3, 0.03, { a: 0.4, wet: 0.5, vib: 4, bright: 3 });
   }),
   chomp: go((t) => { nz(t, 0.001, 0.05, 0.38, 'bandpass', v(1000), 700, 1.2, 0.08); debris(t + 0.02, 3, 0.07, 0.07); tn(t, 0.001, 0.06, 0.1, 'sine', 190, 100, 0.05); }, 1.8),
   gulp: go((t) => { tn(t, 0.01, 0.17, 0.22, 'sine', v(280), 105, 0.1); tn(t + 0.12, 0.003, 0.05, 0.06, 'sine', 480, 900, 0.1); }),
@@ -114,11 +116,13 @@ export const sfx = {
     nz(t + 0.01, 0.002, 0.08, 0.1, 'bandpass', 1800, 700, 4, 0.1); debris(t + 0.02, 4, 0.12, 0.04);
   }, 1.6),
   bell: go((t) => bell(fx(), v(mtof(67), 0.01), t, 0.1, 4, 0.5), 0.6),
-  /** Foule : voix qui montent (« hourra ») + rumeur. */
+  /** Foule : rumeur de voix mêlées (bruit en 3 bandes qui ondulent), sans voix synthétiques. */
   crowd: go((t, vol: number = 1) => {
-    for (let i = 0; i < 9; i++) { const f = rnd(150, 330); voice(fx(), t + rnd(0, 0.9), f, f * rnd(1.15, 1.4), rnd(0.35, 0.6), 0.02 * vol, Math.random() < 0.5 ? 'a' : 'o', 0.35, 0.08); }
-    nz(t, 0.2, 0.9, 0.08 * vol, 'bandpass', 900, 1200, 0.6, 0.35);
-  }),
+    for (const [f, a] of [[500, 1], [1100, 0.6], [2200, 0.25]]) {
+      const e = env(t, 0.25, 0.07 * vol * a, 0.4, 0.6); route(e, fx(), 0.4);
+      const am = gain(0.6); lfo(rnd(5, 8), 0.4, am.gain, t, t + 1.4); am.connect(e); noise(t, t + 1.4, filt('bandpass', f, 1.2, am));
+    }
+  }, 3),
   rooster: go((t) => {
     voice(fx(), t, 520, 760, 0.12, 0.05, 'a', 0.3); voice(fx(), t + 0.14, 740, 660, 0.1, 0.05, 'a', 0.3);
     voice(fx(), t + 0.26, 680, 980, 0.32, 0.06, 'o', 0.3); voice(fx(), t + 0.6, 960, 560, 0.38, 0.05, 'a', 0.3);
@@ -134,13 +138,14 @@ export const sfx = {
     [67, 72, 76, 79, 84].forEach((m, i) => pluck(fx(), mtof(m), t + i * 0.06, 0.08, 'harp', 0.5));
     glass(fx(), mtof(91), t + 0.32, 0.03, 1.5); nz(t, 0.2, 0.3, 0.06, 'bandpass', 800, 5000, 1, 0.5);
   }),
-  /** GAME OVER : choc au claquement du titre, glas, chœur dissonant (ré + mi bémol) qui se résout en ré mineur. */
+  /** GAME OVER : choc au claquement du titre, glas, cordes graves (si bémol → ré mineur), cor sombre. */
   gameOver: go((t) => {
     const s = t + 0.4;
     impact(s, 1); debris(s, 6, 0.4, 0.04);
-    bell(fx(), mtof(50), s + 0.05, 0.16, 7, 0.8); bell(fx(), mtof(50), s + 2.6, 0.08, 6, 0.9);
-    choir(fx(), [50, 57, 62, 63].map(mtof), s + 0.5, 2.2, 0.026, 'o', 0.8);
-    choir(fx(), [50, 57, 62, 65].map(mtof), s + 2.4, 2.8, 0.022, 'u', 0.85);
-    bow(fx(), mtof(38), s + 0.3, 4.5, 0.05, { a: 0.6, wet: 0.6, vib: 5, bright: 3 });
+    bell(fx(), mtof(50), s + 0.05, 0.14, 7, 0.7);
+    choir(fx(), [46, 53, 58, 62].map(mtof), s + 0.4, 2, 0.05, 'u', 0.6);
+    choir(fx(), [50, 57, 62, 65].map(mtof), s + 2.2, 3, 0.05, 'o', 0.7);
+    brass(fx(), mtof(38), s + 2.2, 2.6, 0.05, 0.5, true);
+    bow(fx(), mtof(38), s + 0.3, 5, 0.05, { a: 0.8, wet: 0.5, vib: 4, bright: 3 });
   }, 0.75),
 };

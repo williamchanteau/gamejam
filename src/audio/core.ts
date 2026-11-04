@@ -22,10 +22,9 @@ function impulse(c: BaseAudioContext, sec: number, k: number) {
     let lp = 0;
     for (let i = 0; i < n; i++) {
       const t = i / n;
-      lp += (Math.random() * 2 - 1 - lp) * (0.9 - 0.84 * t);
-      d[i] = lp * Math.pow(1 - t, k);
+      lp += (Math.random() * 2 - 1 - lp) * (0.7 - 0.62 * t);
+      d[i] = lp * Math.pow(1 - t, k) * Math.min(1, i / (sr * 0.03)); // montée douce : pas d'écho « métallique »
     }
-    for (let j = 0; j < 10; j++) d[Math.floor(sr * (0.006 + Math.random() * 0.08))] += (Math.random() < 0.5 ? -1 : 1) * (0.6 - j * 0.05);
   }
   return b;
 }
@@ -41,8 +40,12 @@ export function setup(c: BaseAudioContext) {
   musLP = c.createBiquadFilter(); musLP.type = 'lowpass'; musLP.frequency.value = 18000; musLP.Q.value = 0.5;
   musBus = gain(AUDIO.music); musBus.connect(musLP).connect(master);
   const pre = c.createDelay(0.1); pre.delayTime.value = 0.022;
-  const conv = c.createConvolver(); conv.buffer = impulse(c, 3.6, 3);
-  verbIn = gain(AUDIO.reverb); verbIn.connect(pre).connect(conv).connect(master);
+  const conv = c.createConvolver(); conv.buffer = impulse(c, 3.2, 3.4);
+  // Réverb nettoyée : ni grave (boue) ni aigu (sifflement) dans la queue.
+  verbIn = gain(AUDIO.reverb);
+  const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 220;
+  const lpv = c.createBiquadFilter(); lpv.type = 'lowpass'; lpv.frequency.value = 6000;
+  verbIn.connect(hp).connect(lpv).connect(pre).connect(conv).connect(master);
   musVerb = gain(AUDIO.music); musVerb.connect(verbIn);
   noiseBuf = c.createBuffer(1, c.sampleRate * 2, c.sampleRate);
   const d = noiseBuf.getChannelData(0);
