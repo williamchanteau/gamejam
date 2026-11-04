@@ -94,7 +94,8 @@ src/
     Player.ts      déplacement, saut, dash, combo, mana, sort
     Boss.ts        boss générique piloté par données (patterns en coroutines)
   bosses/
-    mordrec.ts     boss 1 : graphismes, poses, patterns
+    ysolde.ts      boss 1 : graphismes, poses, patterns
+    nycthor.ts     boss 2 : poses, patterns (lanterns.ts : lanternes, obscurité)
   art/             textures générées par code (joueur, nef, extérieur, titre, police)
   ui/              HUD, barre du boss, annonceur, menus, options
   audio/sfx.ts     bruitages synthétisés
@@ -130,7 +131,7 @@ src/
 - Combo 3 coups. Chaque coup touché donne +1 mana. Mana pleine → sort « Éclat lunaire » (croissant perforant).
 - 3 PV, recul et hit-stop quand on est touché.
 
-**Boss 1 – Mordrec, le Chevalier Creux (140 PV)**
+**Boss 1 – Ysolde, la Dame d'Argent (200 PV)**
 
 | Phase | Attaques |
 |---|---|
@@ -184,16 +185,16 @@ On avance une étape à la fois. À chaque étape : `bun run build` + `bun run c
 - [x] **0** Setup (Bun, Phaser, Vite, build `file://`)
 - [x] **1** Salle de test, joueur, HUD
 - [x] **1b** Rendu 480×270, art détaillé, menu titre, pause, tuto
-- [x] **2** Boss générique + Mordrec + nef en parallaxe + barre nommée + intro/victoire
+- [x] **2** Boss générique + Ysolde + nef en parallaxe + barre nommée + intro/victoire
 - [x] **2c** Plein écran, arène ×2, animations lourdes, annonceur, château/escalier
 - [x] **2d** Contrôles flèches + A/Z/E, option clavier, écran de mort, panneaux du tuto
 - [x] **2e** GAME OVER, options en pause, barre à 50 %, pics propres, nef cohérente, nouveau menu titre
 - [ ] **2f** Château extérieur refait + lames spectrales plus propres
-- [ ] **3** Boss 2 « Corvina, la Veuve aux Corbeaux » (~100 PV, flotte), à l'étage 1 :
-  - salle aux vitraux pourpres + rosace ;
-  - patterns : éventail de 5 plumes, colonnes d'ombre, disparition puis faux en arc ;
-  - phase 2 : orbes en orbite, colonnes en vague, feinte ;
-  - victoire finale.
+- [x] **3** Boss 2 « Nycthor, le Porteur de Lanternes » (260 PV), à l'étage 1 :
+  - la Crypte des Lanternes, salle plongée dans l'obscurité ;
+  - patterns : rush, ombre, lancer ;
+  - phase 2 : moulinet, épreuve des 3 lanternes.
+- [ ] **Victoire finale**
 - [ ] **Plus tard**
   - options supplémentaires (à discuter) ;
   - musique / son d'ambiance ;

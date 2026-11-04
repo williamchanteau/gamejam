@@ -1,9 +1,9 @@
 import { BossScene } from './BossScene';
-import { NOCTIS } from '../bosses/noctis';
+import { NYCTHOR } from '../bosses/nycthor';
 
-/** Salle de Noctis : l'obscurité et les lanternes vivent avec le boss (bosses/lanterns.ts). */
+/** Salle de Nycthor : l'obscurité et les lanternes vivent avec le boss (bosses/lanterns.ts). */
 export class DarkBossScene extends BossScene {
-  protected def = NOCTIS;
+  protected def = NYCTHOR;
   protected floor = 1;
   constructor() { super('Boss2'); }
 }

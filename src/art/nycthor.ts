@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { canvasTex, crescent, OUTLINE } from './pixel';
 
-// Noctis : créature sombre aux membres trop longs ; ces pièces fixes sont assemblées par art/noctisRig.ts.
+// Nycthor : créature sombre aux membres trop longs ; ces pièces fixes sont assemblées par art/nycthorRig.ts.
 type Ctx = CanvasRenderingContext2D;
 export const px = (c: Ctx, col: string, x: number, y: number, w = 1, h = 1) => { c.fillStyle = col; c.fillRect(x, y, w, h); };
 export const N = {
@@ -151,27 +151,27 @@ function hole(c: Ctx, r: number) {
   c.putImageData(img, 0, 0);
 }
 
-export const LAMP_ON = ['noc_lamp1', 'noc_lamp2'];
-export const LAMPS_ON = ['noc_lampS1', 'noc_lampS2'];
+export const LAMP_ON = ['nyc_lamp1', 'nyc_lamp2'];
+export const LAMPS_ON = ['nyc_lampS1', 'nyc_lampS2'];
 export const HOLES = [20, 62, 96, 130];
 
-export function makeNoctisArt(s: Phaser.Scene) {
-  if (s.textures.exists('noc_torso')) return;
-  canvasTex(s, 'noc_torso', 32, 44, drawTorso, OUTLINE);
-  canvasTex(s, 'noc_ribs', 23, 17, drawRibs);
-  canvasTex(s, 'noc_head', 26, 38, drawHead, OUTLINE);
-  canvasTex(s, 'noc_lamp0', 15, 24, (c) => drawLamp(c, 0), OUTLINE);
+export function makeNycthorArt(s: Phaser.Scene) {
+  if (s.textures.exists('nyc_torso')) return;
+  canvasTex(s, 'nyc_torso', 32, 44, drawTorso, OUTLINE);
+  canvasTex(s, 'nyc_ribs', 23, 17, drawRibs);
+  canvasTex(s, 'nyc_head', 26, 38, drawHead, OUTLINE);
+  canvasTex(s, 'nyc_lamp0', 15, 24, (c) => drawLamp(c, 0), OUTLINE);
   LAMP_ON.forEach((k, i) => canvasTex(s, k, 15, 24, (c) => drawLamp(c, i + 1), OUTLINE));
-  canvasTex(s, 'noc_lampS0', 9, 15, (c) => drawLampS(c, 0), OUTLINE);
+  canvasTex(s, 'nyc_lampS0', 9, 15, (c) => drawLampS(c, 0), OUTLINE);
   LAMPS_ON.forEach((k, i) => canvasTex(s, k, 9, 15, (c) => drawLampS(c, i + 1), OUTLINE));
-  canvasTex(s, 'noc_flame0', 5, 8, (c) => flame(c, 0));
-  canvasTex(s, 'noc_flame1', 5, 8, (c) => flame(c, 1));
-  canvasTex(s, 'noc_eyes', 7, 2, (c) => { px(c, '#fff', 0, 0, 2, 2); px(c, '#fff', 5, 0, 2, 2); });
+  canvasTex(s, 'nyc_flame0', 5, 8, (c) => flame(c, 0));
+  canvasTex(s, 'nyc_flame1', 5, 8, (c) => flame(c, 1));
+  canvasTex(s, 'nyc_eyes', 7, 2, (c) => { px(c, '#fff', 0, 0, 2, 2); px(c, '#fff', 5, 0, 2, 2); });
   // Sillage de la lanterne : bord de danger, cœur de flamme, de plus en plus fin.
-  canvasTex(s, 'noc_slash', 112, 104, (c) => {
+  canvasTex(s, 'nyc_slash', 112, 104, (c) => {
     crescent(c, 44, 52, 50, 12, 46, '#c0144a', '#ff2a5a');
     crescent(c, 44, 52, 48, 12, 47, '#ff8a2a', '#ff8a2a');
     crescent(c, 44, 52, 46, 12, 48, '#ffd08a', '#fff0b0');
   });
-  for (const r of HOLES) canvasTex(s, `noc_hole${r}`, r * 2, r * 2, (c) => hole(c, r));
+  for (const r of HOLES) canvasTex(s, `nyc_hole${r}`, r * 2, r * 2, (c) => hole(c, r));
 }

@@ -6,7 +6,7 @@ import { BossBar } from '../ui/BossBar';
 import { txt } from '../art/font';
 import { input } from '../input';
 import { sfx } from '../audio/sfx';
-import { MORDREC } from '../bosses/mordrec';
+import { YSOLDE } from '../bosses/ysolde';
 import { buildNave, type Room } from './rooms';
 import { announce } from '../ui/Announcer';
 import { FLOORS } from '../floors';
@@ -18,7 +18,7 @@ export class BossScene extends ArenaScene {
   /** Absente tant que le combat n'est pas annoncé. */
   bar?: BossBar;
   private won = false;
-  protected def: BossDef = MORDREC;
+  protected def: BossDef = YSOLDE;
   private room!: Room;
   protected floor = 0;
   private gate!: Phaser.GameObjects.Image;

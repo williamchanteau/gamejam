@@ -4,7 +4,7 @@ import { canvasTex, OUTLINE, poly, beam, ell } from '../art/pixel';
 import { sfx } from '../audio/sfx';
 import type { Boss, BossDef } from '../entities/Boss';
 
-// Réglages de Mordrec (durées en s avant ×vitesse de phase 2, distances en px).
+// Réglages d'Ysolde (durées en s avant ×vitesse de phase 2, distances en px).
 const M = {
   hp: 200,
   slash: { tele: 0.65, dash: 0.28, minDist: 70, maxDist: 250, overshoot: 50, recover: 0.5, reach: 64, height: 54 },
@@ -251,26 +251,26 @@ function smear(c: Ctx, a0: number, a1: number, rIn: number, rOut: number, rev = 
     }
 }
 
-export function makeMordrecArt(scene: Phaser.Scene) {
-  canvasTex(scene, 'mord_body', 60, 82, drawBody, OUTLINE);
-  canvasTex(scene, 'mord_head', 26, 36, drawHead, OUTLINE);
-  canvasTex(scene, 'mord_hair', HAIR.w, HAIR.cut, (c) => drawHair(c, 0, HAIR.cut), OUTLINE);
-  canvasTex(scene, 'mord_hair2', HAIR.w, HAIR.len - HAIR.join + 3, (c) => drawHair(c, HAIR.join, HAIR.len), OUTLINE);
-  canvasTex(scene, 'mord_sword', 16, 84, (c) => drawSword(c), OUTLINE);
-  canvasTex(scene, 'mord_sword_r', 16, 84, (c) => drawSword(c, true), OUTLINE);
-  canvasTex(scene, 'mord_splash', 100, 124, drawSplash, OUTLINE);
+export function makeYsoldeArt(scene: Phaser.Scene) {
+  canvasTex(scene, 'ysol_body', 60, 82, drawBody, OUTLINE);
+  canvasTex(scene, 'ysol_head', 26, 36, drawHead, OUTLINE);
+  canvasTex(scene, 'ysol_hair', HAIR.w, HAIR.cut, (c) => drawHair(c, 0, HAIR.cut), OUTLINE);
+  canvasTex(scene, 'ysol_hair2', HAIR.w, HAIR.len - HAIR.join + 3, (c) => drawHair(c, HAIR.join, HAIR.len), OUTLINE);
+  canvasTex(scene, 'ysol_sword', 16, 84, (c) => drawSword(c), OUTLINE);
+  canvasTex(scene, 'ysol_sword_r', 16, 84, (c) => drawSword(c, true), OUTLINE);
+  canvasTex(scene, 'ysol_splash', 100, 124, drawSplash, OUTLINE);
   // Poing ganté qui enserre la fusée (dessiné par-dessus la lame, tourne avec elle).
-  canvasTex(scene, 'mord_fist', 11, 11, (c) => {
+  canvasTex(scene, 'ysol_fist', 11, 11, (c) => {
     px(c, H.i1, 2, 1, 7, 9); px(c, H.i1, 1, 2, 9, 7); // bloc arrondi
     for (let i = 0; i < 4; i++) { px(c, i ? H.i3 : H.i4, 3, 2 + i * 2, 5, 1); px(c, A.k, 3, 3 + i * 2, 5, 1); } // doigts repliés
     px(c, H.b2, 8, 2, 1, 7); px(c, H.i2, 1, 3, 2, 4); px(c, H.b3, 1, 4, 1, 2); // jointures dorées, pouce
   }, OUTLINE);
-  canvasTex(scene, 'mord_pauldron', 22, 15, (c) => {
+  canvasTex(scene, 'ysol_pauldron', 22, 15, (c) => {
     dome(c, 11, 6, 9, 5, [H.i1, H.i3, H.i4]);
     px(c, H.b2, 2, 9, 18, 1); px(c, H.i2, 4, 10, 15, 2); px(c, H.i3, 12, 10, 5, 1); px(c, H.b1, 5, 12, 13, 1); // lame inférieure plus étroite, liserés d'or
     px(c, H.b3, 13, 3, 2, 2); // rivet d'or
   }, OUTLINE);
-  canvasTex(scene, 'mord_eyes', 9, 3, (c) => { px(c, '#fff', 1, 1, 2, 1); px(c, '#fff', 6, 1, 2, 1); });
+  canvasTex(scene, 'ysol_eyes', 9, 3, (c) => { px(c, '#fff', 1, 1, 2, 1); px(c, '#fff', 6, 1, 2, 1); });
   // Danger (rouge/magenta, cœur blanc) : traînées, pics de roche, épée fantôme, repère au sol.
   canvasTex(scene, 'smear0', 146, 146, (c) => smear(c, -75, 125, 26, 72));
   canvasTex(scene, 'smear1', 146, 146, (c) => smear(c, 20, 125, 40, 72));
@@ -279,7 +279,7 @@ export function makeMordrecArt(scene: Phaser.Scene) {
   canvasTex(scene, 'smearR1', 146, 146, (c) => smear(c, -75, 30, 40, 72, true));
   canvasTex(scene, 'smearR2', 146, 146, (c) => smear(c, -75, -30, 56, 72, true));
   // Pics de roche à facettes (face éclairée / ombre), fissure rouge incandescente, pointe chauffée à blanc.
-  for (const [k, hgt, hw0, lean] of [['mord_spike', 26, 6, 0], ['mord_spike2', 20, 5, 2], ['mord_spike3', 30, 7, -1]] as [string, number, number, number][])
+  for (const [k, hgt, hw0, lean] of [['ysol_spike', 26, 6, 0], ['ysol_spike2', 20, 5, 2], ['ysol_spike3', 30, 7, -1]] as [string, number, number, number][])
     canvasTex(scene, k, 18, 32, (c) => {
       const top = 31 - hgt;
       for (let y = top; y < 31; y++) {
@@ -291,15 +291,15 @@ export function makeMordrecArt(scene: Phaser.Scene) {
       }
       px(c, '#3a3448', 9 - hw0 - 1, 30, hw0 * 2 + 3, 1); // éboulis à la base
     }, OUTLINE);
-  canvasTex(scene, 'mord_crack', 12, 3, (c) => { px(c, '#ff2a5a', 0, 1, 12, 1); px(c, '#ffd6e0', 3, 1, 5, 1); px(c, '#c0144a', 2, 0, 3, 1); px(c, '#c0144a', 7, 2, 3, 1); });
-  canvasTex(scene, 'mord_ghost', 58, 14, (c) => {
+  canvasTex(scene, 'ysol_crack', 12, 3, (c) => { px(c, '#ff2a5a', 0, 1, 12, 1); px(c, '#ffd6e0', 3, 1, 5, 1); px(c, '#c0144a', 2, 0, 3, 1); px(c, '#c0144a', 7, 2, 3, 1); });
+  canvasTex(scene, 'ysol_ghost', 58, 14, (c) => {
     for (let x = 6; x < 56; x++) {
       const hw = x > 46 ? Math.round((56 - x) * 0.33) : 3;
       for (let y = 7 - hw; y <= 7 + hw; y++) px(c, y === 7 - hw ? '#ffd6e0' : y === 7 ? '#ffffff' : y === 7 + hw ? '#c0144a' : '#ff6a90', x, y);
     }
     px(c, '#ff6a90', 3, 1, 3, 12); px(c, '#ffd6e0', 3, 1, 1, 12); px(c, '#c0144a', 0, 6, 3, 3);
   });
-  canvasTex(scene, 'mord_mark', 56, 10, (c) => {
+  canvasTex(scene, 'ysol_mark', 56, 10, (c) => {
     for (let y = 0; y < 10; y++)
       for (let x = 0; x < 56; x++) {
         const d = ((x + 0.5 - 28) / 28) ** 2 + ((y + 0.5 - 5) / 5) ** 2;
@@ -414,7 +414,7 @@ function smearFx(b: Boss, rev = false) {
 }
 /** Image rémanente lilas pendant la ruée. */
 function ghostTrail(b: Boss) {
-  const g = b.scene.add.image(b.x, b.y, 'mord_body').setOrigin(0.5, 1).setFlipX(b.dir < 0).setTintFill(0xd8d0ff).setAlpha(0.35).setDepth(6);
+  const g = b.scene.add.image(b.x, b.y, 'ysol_body').setOrigin(0.5, 1).setFlipX(b.dir < 0).setTintFill(0xd8d0ff).setAlpha(0.35).setDepth(6);
   b.scene.tweens.add({ targets: g, alpha: 0, duration: 220, onComplete: () => g.destroy() });
 }
 function ring(b: Boss, x: number, y: number, scale: number) {
@@ -434,9 +434,9 @@ function impact(b: Boss, x: number, y: number, power: number) {
  *  tiennent un instant puis se rétractent dans le sol (échelle, jamais à travers le dallage) en lâchant des gravillons. */
 function spikeWave(b: Boss, x: number, dir: number) {
   const sc = b.scene, fy = b.floorY;
-  const o = b.hazard('mord_spike', x, fy, dir * M.slam.waveSpeed * b.speed, 18, 15, 3).setAlpha(0);
+  const o = b.hazard('ysol_spike', x, fy, dir * M.slam.waveSpeed * b.speed, 18, 15, 3).setAlpha(0);
   const halo = sc.add.image(x, fy - 2, 'glowR').setBlendMode(ADD).setDepth(10).setScale(0.9, 0.5).setAlpha(0.7);
-  const keys = ['mord_spike3', 'mord_spike', 'mord_spike2'];
+  const keys = ['ysol_spike3', 'ysol_spike', 'ysol_spike2'];
   let lastX = x - dir * 12, n = 0;
   o.on('destroy', () => halo.destroy());
   o.setData('tick', () => {
@@ -445,7 +445,7 @@ function spikeWave(b: Boss, x: number, dir: number) {
     lastX = o.x;
     const k = n++ % 3, sx = o.x + Phaser.Math.Between(-1, 1);
     // Fissure au sol qui s'éteint.
-    const cr = sc.add.image(sx, fy + 1, 'mord_crack').setDepth(6).setFlipX(dir < 0);
+    const cr = sc.add.image(sx, fy + 1, 'ysol_crack').setDepth(6).setFlipX(dir < 0);
     sc.tweens.add({ targets: cr, alpha: 0, delay: 250, duration: 400, onComplete: () => cr.destroy() });
     const sp = sc.add.image(sx, fy + 1, keys[k]).setOrigin(0.5, 1).setDepth(11).setFlipX(dir < 0).setScale(1.25, 0);
     sc.tweens.chain({
@@ -533,7 +533,7 @@ function* slam(b: Boss, double = false) {
   // Repère au sol sous le joueur.
   const tx = b.clampX(b.player.x);
   b.root.x = tx; b.face();
-  const mark = b.temp(sc.add.image(tx, b.floorY + 1, 'mord_mark').setDepth(6).setScale(1.3, 1.2));
+  const mark = b.temp(sc.add.image(tx, b.floorY + 1, 'ysol_mark').setDepth(6).setScale(1.3, 1.2));
   const halo = b.temp(sc.add.image(tx, b.floorY - 4, 'glowR').setDepth(6).setBlendMode(ADD).setScale(2, 0.8));
   const col = b.temp(sc.add.rectangle(tx, 0, 36, b.floorY, COL.danger, 0.18).setOrigin(0.5, 0).setDepth(6));
   b.tw([mark, halo], { alpha: 0.55, repeat: -1, yoyo: true }, 0.12, 'Linear');
@@ -603,7 +603,7 @@ function* swings(b: Boss, tele = M.slash.tele, recover = M.slash.recover, last =
 /** Épée spectrale lancée : elle traque le joueur (virage borné) puis file droit. */
 function homingBlade(b: Boss, x: number, y: number, a0: number) {
   const sc = b.scene, s = M.flurry, v = s.speed * b.speed;
-  const o = b.hazard('mord_ghost', x, y, 0, 14, 14, s.life).setOrigin(0.5).setFlipX(false).setBlendMode(ADD).setData('once', true);
+  const o = b.hazard('ysol_ghost', x, y, 0, 14, 14, s.life).setOrigin(0.5).setFlipX(false).setBlendMode(ADD).setData('once', true);
   (o.body as Phaser.Physics.Arcade.Body).setOffset((o.width - 14) / 2, (o.height - 14) / 2);
   let a = a0, t = 0, fx = 0;
   const aim = () => o.setRotation(a).setVelocity(Math.cos(a) * v, Math.sin(a) * v);
@@ -619,7 +619,7 @@ function homingBlade(b: Boss, x: number, y: number, a0: number) {
     fx -= dt;
     if (fx > 0) return;
     fx = 0.045;
-    const g = sc.add.image(o.x, o.y, 'mord_ghost').setRotation(a).setBlendMode(ADD).setAlpha(0.3).setDepth(14);
+    const g = sc.add.image(o.x, o.y, 'ysol_ghost').setRotation(a).setBlendMode(ADD).setAlpha(0.3).setDepth(14);
     sc.tweens.add({ targets: g, alpha: 0, duration: 150, onComplete: () => g.destroy() });
     sc.sparks(o.x, o.y, COL.danger, 1);
   });
@@ -635,7 +635,7 @@ function* flurry(b: Boss, count = M.flurry.count) {
   for (let i = 0; i < 4; i++) sc.time.delayedCall(i * tt * 250, () => b.state === 'pattern' && sfx.whoosh());
   const ghosts = [...Array(count)].map((_, i) => {
     const k = i - (count - 1) / 2;
-    const g = b.temp(sc.add.image(b.x + k * 34, b.y - 118 + Math.abs(k) * 10, 'mord_ghost').setBlendMode(ADD).setAlpha(0).setScale(0.3).setDepth(14));
+    const g = b.temp(sc.add.image(b.x + k * 34, b.y - 118 + Math.abs(k) * 10, 'ysol_ghost').setBlendMode(ADD).setAlpha(0).setScale(0.3).setDepth(14));
     b.tw(g, { alpha: 0.9, scale: 1, onUpdate: () => g.setRotation(Math.atan2(b.player.rect().centerY - g.y, b.player.x - g.x)) }, tt, 'Back.out');
     sc.sparks(g.x, g.y, COL.danger, 4);
     return g;
@@ -695,7 +695,7 @@ function* warp(b: Boss) {
   let tx = b.clampX(b.player.x + side * s.behind);
   if (Math.abs(tx - b.player.x) < 40) tx = b.clampX(b.player.x - side * s.behind);
   b.root.x = tx;
-  const mark = b.temp(sc.add.image(tx, b.floorY + 1, 'mord_mark').setDepth(6));
+  const mark = b.temp(sc.add.image(tx, b.floorY + 1, 'ysol_mark').setDepth(6));
   const col = b.temp(sc.add.rectangle(tx, b.floorY - 90, 40, 90, COL.danger, 0.15).setOrigin(0.5, 0).setDepth(6));
   b.tw([mark, col], { alpha: 0.4, yoyo: true, repeat: -1 }, 0.1, 'Linear');
   yield b.tele(s.mark);
@@ -713,25 +713,25 @@ function* combo(b: Boss) {
   yield* slash(b, t[1], 0.25, false);
   yield* slash(b, t[2], M.combo.recover, true);
 }
-export const MORDREC: BossDef = {
+export const YSOLDE: BossDef = {
   name: 'YSOLDE',
   title: "LA DAME D'ARGENT",
   hp: M.hp,
   hurt: { w: 40, h: 86 },
   build(b) {
     const sc = b.scene;
-    const body = sc.add.image(0, 0, 'mord_body').setOrigin(0.5, 1);
-    const blade = sc.add.image(0, 0, 'mord_sword').setOrigin(0.5, 70 / 84);
-    const fist = sc.add.image(0, 0, 'mord_fist');
+    const body = sc.add.image(0, 0, 'ysol_body').setOrigin(0.5, 1);
+    const blade = sc.add.image(0, 0, 'ysol_sword').setOrigin(0.5, 70 / 84);
+    const fist = sc.add.image(0, 0, 'ysol_fist');
     const sword = sc.add.container(18, -44, [blade, fist]);
     const arm = sc.add.graphics();
-    const pauldron = sc.add.image(0, -68, 'mord_pauldron').setOrigin(0);
-    const headImg = sc.add.image(0, 0, 'mord_head').setOrigin(0.5, 1);
-    const eyes = sc.add.image(4, -12, 'mord_eyes');
+    const pauldron = sc.add.image(0, -68, 'ysol_pauldron').setOrigin(0);
+    const headImg = sc.add.image(0, 0, 'ysol_head').setOrigin(0.5, 1);
+    const eyes = sc.add.image(4, -12, 'ysol_eyes');
     const glow = sc.add.image(4, -12, 'glowW').setBlendMode(ADD).setScale(0.35);
-    const hairTop = sc.add.image(0, 0, 'mord_hair').setOrigin(HAIR.ox / HAIR.w, 0);
+    const hairTop = sc.add.image(0, 0, 'ysol_hair').setOrigin(HAIR.ox / HAIR.w, 0);
     const jx = Math.round(hairX(HAIR.join + 1));
-    const hairLow = sc.add.image(0, 0, 'mord_hair2').setOrigin((HAIR.ox + jx) / HAIR.w, 0);
+    const hairLow = sc.add.image(0, 0, 'ysol_hair2').setOrigin((HAIR.ox + jx) / HAIR.w, 0);
     const hairEnd = sc.add.container(jx, HAIR.join, [hairLow]);
     const hair = sc.add.container(-5, -20, [hairEnd, hairTop]);
     const head = sc.add.container(2, REST.headY, [hair, headImg, glow, eyes]);
@@ -767,7 +767,7 @@ export const MORDREC: BossDef = {
     sc.tweens.add({ targets: p.head, y: REST.headY - 4, duration: 200 });
     sc.tweens.add({ targets: p.sword, angle: -30, duration: 250, ease: 'Back.out' });
     // L'épée s'embrase de rouge sombre : ses coups deviennent plus lourds.
-    (p.blade as Img).setTexture('mord_sword_r');
+    (p.blade as Img).setTexture('ysol_sword_r');
     sc.sparks(b.x + b.dir * 18, b.y - 90, COL.danger, 20);
     for (let i = 0; i < 3; i++) sc.time.delayedCall(i * 220, () => ring(b, b.x, b.y - 60, 3 + i));
     sc.puffs(b.x - 20, b.floorY, 5); sc.puffs(b.x + 20, b.floorY, 5); sc.debris(b.x, b.floorY, 8);
@@ -795,7 +795,7 @@ export const MORDREC: BossDef = {
   },
   /** Splash art (×2 à l'écran : l'annonceur agrandit le portrait ×3). */
   portrait(sc) {
-    return sc.add.container(0, 0, [sc.add.image(0, 0, 'mord_splash').setOrigin(0.5, 1).setScale(2 / 3)]);
+    return sc.add.container(0, 0, [sc.add.image(0, 0, 'ysol_splash').setOrigin(0.5, 1).setScale(2 / 3)]);
   },
   patterns: [
     { name: 'swings', weight: 3, phase: 0, run: (b) => swings(b) },

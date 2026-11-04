@@ -5,8 +5,8 @@ import { input } from '../input';
 import { Menu } from '../ui/Menu';
 import { OptionsPanel } from '../ui/Options';
 import { FLOORS, run } from '../floors';
-import { MORDREC } from '../bosses/mordrec';
-import { NOCTIS } from '../bosses/noctis';
+import { YSOLDE } from '../bosses/ysolde';
+import { NYCTHOR } from '../bosses/nycthor';
 import { MCKING } from '../bosses/mcking';
 import { TITLE_MOON } from '../art/title';
 
@@ -121,7 +121,7 @@ export class MenuScene extends Phaser.Scene {
     const backdrop = this.add.rectangle(0, 0, W, H, 0x06050c, 0.94).setOrigin(0);
     const title = txt(this, W / 2, 45, 'TESTER LES BOSS', COL.moonLight).setOrigin(0.5, 0).setScale(2);
     this.sub = this.add.container(0, 0, [backdrop, title]).setDepth(100);
-    const defs = [MORDREC, NOCTIS, MCKING];
+    const defs = [YSOLDE, NYCTHOR, MCKING];
     this.bossMenu = new Menu(this, W / 2, 100, [
       ...FLOORS.map((f, i) => ({ label: defs[i]?.name ?? f.place, act: () => { run.hard = false; run.upgrade = ''; this.go(f.scene); } })),
       { label: 'RETOUR', act: () => this.closeSub() },

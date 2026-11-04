@@ -2,13 +2,13 @@ import Phaser from 'phaser';
 import type { Boss, BossDef } from '../entities/Boss';
 import { BOSS, COL } from '../config';
 import { sfx } from '../audio/sfx';
-import { LAMP_ON, makeNoctisArt } from '../art/noctis';
-import { bakeNoctis, FULL, NoctisRig, REST, restPoints, type LampId, type Pose } from '../art/noctisRig';
+import { LAMP_ON, makeNycthorArt } from '../art/nycthor';
+import { bakeNycthor, FULL, NycthorRig, REST, restPoints, type LampId, type Pose } from '../art/nycthorRig';
 import { Lanterns, NIGHT } from './lanterns';
 
 const ADD = Phaser.BlendModes.ADD;
 type Cont = Phaser.GameObjects.Container;
-// Poses (voir art/noctisRig.ts) : ce qui n'est pas cité reprend sa valeur de repos.
+// Poses (voir art/nycthorRig.ts) : ce qui n'est pas cité reprend sa valeur de repos.
 const P: Record<string, Partial<Pose>> = {
   raise: { lean: -6, crouch: 8, head: -8, neck: 3, a1: 150, a2: 18, b1: -64, b2: -40, reach: 10, rise: 0.7 },
   lance: { lean: 32, crouch: 16, head: 26, a1: 82, a2: 8, b1: -120, b2: -16, reach: 8, rise: 1 },
@@ -27,7 +27,7 @@ const P: Record<string, Partial<Pose>> = {
   cry: { lean: -14, crouch: -2, head: -30, neck: 6, a1: 130, a2: 30, b1: -130, b2: -30, reach: 12, rise: 1 },
 };
 const full = (name: string): Pose => ({ ...REST, ...P[name] });
-const fields = new WeakMap<Boss, { L: Lanterns; R: NoctisRig }>();
+const fields = new WeakMap<Boss, { L: Lanterns; R: NycthorRig }>();
 const F = (b: Boss) => fields.get(b)!.L;
 const R = (b: Boss) => fields.get(b)!.R;
 
@@ -55,13 +55,13 @@ function* recover(b: Boss, sec: number, name = 'droop') {
   F(b).ignite(F(b).nearest(b.x));
   b.eyes('off'); pose(b, name, 0.2);
   yield b.t(sec);
-  b.eyes('on'); NOCTIS.rest(b, 0.25);
+  b.eyes('on'); NYCTHOR.rest(b, 0.25);
 }
 
 /** Image rémanente : silhouette sombre qui s'efface sur place. */
 function ghost(b: Boss, col = 0x463c66) {
   const sc = b.scene;
-  const g = sc.add.image(b.x, b.y, 'noc_full').setOrigin(FULL.ox / FULL.w, FULL.oy / FULL.h).setScale(b.dir, 1).setTintFill(col).setAlpha(0.45).setDepth(62);
+  const g = sc.add.image(b.x, b.y, 'nyc_full').setOrigin(FULL.ox / FULL.w, FULL.oy / FULL.h).setScale(b.dir, 1).setTintFill(col).setAlpha(0.45).setDepth(62);
   sc.tweens.add({ targets: g, alpha: 0, duration: 260, onComplete: () => g.destroy() });
 }
 
@@ -116,7 +116,7 @@ function* ombre(b: Boss) {
   pose(b, 'backhand', b.t(O.turn + 0.07), 'Quad.in');
   yield b.t(O.turn);
   sfx.blade();
-  const fx = b.temp(sc.add.image(x0 + dir * 44, b.floorY - 60, 'noc_slash').setScale(dir, 1).setAngle(dir * -32).setDepth(70));
+  const fx = b.temp(sc.add.image(x0 + dir * 44, b.floorY - 60, 'nyc_slash').setScale(dir, 1).setAngle(dir * -32).setDepth(70));
   b.tw(fx, { alpha: 0 }, b.t(O.active) + 0.14, 'Quad.in');
   b.hitbox = () => new Phaser.Geom.Rectangle(zx, zy, O.reach, O.height);
   yield b.t(0.07);
@@ -166,7 +166,7 @@ function* moulinet(b: Boss) {
 /** La lanterne jetée : file au ras du sol en tournant sur elle-même, éclaire sa route, éclate sur toi ou contre le mur. Elle se saute. */
 function throwLamp(b: Boss, x: number, dir: number) {
   const sc = b.scene, T = NIGHT.lancer, L = F(b), y = b.floorY - T.height;
-  const o = b.hazard('noc_lamp1', x, y, dir * T.speed * b.speed, T.hit, T.hit, T.life);
+  const o = b.hazard('nyc_lamp1', x, y, dir * T.speed * b.speed, T.hit, T.hit, T.life);
   o.setOrigin(0.5).setFlipX(false).setDepth(70).setData('once', true);
   (o.body as Phaser.Physics.Arcade.Body).setOffset((o.width - T.hit) / 2, (o.height - T.hit) / 2);
   const glow = sc.add.image(x, y, 'glowO').setBlendMode(ADD).setDepth(69).setScale(1.8).setAlpha(0.5);
@@ -226,7 +226,7 @@ function* attempt(b: Boss): Generator<number, boolean, unknown> {
   for (let i = 0; i < lamps.length; i++) {
     const l = lamps[i], q = r.world('t1');
     pose(b, i % 2 ? 'conductA' : 'conductB', 0.1);
-    const f = b.temp(sc.add.image(q.x, q.y, 'noc_flame0').setScale(2).setDepth(66));
+    const f = b.temp(sc.add.image(q.x, q.y, 'nyc_flame0').setScale(2).setDepth(66));
     b.tw(f, { x: l.x, y: l.y + 12 }, E.fly, 'Sine.in');
     L.burst(q.x, q.y, 0xffc45c, 6); sfx.whoosh();
     yield E.fly;
@@ -288,14 +288,14 @@ function* fauche(b: Boss) {
   yield* recover(b, E.recover);
 }
 
-const art = (sc: Phaser.Scene) => { makeNoctisArt(sc); bakeNoctis(sc); };
+const art = (sc: Phaser.Scene) => { makeNycthorArt(sc); bakeNycthor(sc); };
 
-export const NOCTIS: BossDef = {
+export const NYCTHOR: BossDef = {
   name: 'NYCTHOR', title: 'LE PORTEUR DE LANTERNES', hp: NIGHT.hp, hurt: { w: 46, h: 108 },
   build(b) {
     const sc = b.scene;
     art(sc);
-    const r = new NoctisRig(sc, b.root);
+    const r = new NycthorRig(sc, b.root);
     b.parts = { rig: r.rig, torso: r.torso, head: r.head, eyes: r.eyes, glow: r.glowEye };
     b.flashParts = r.flashParts;
     const L = new Lanterns(b);
@@ -377,9 +377,9 @@ export const NOCTIS: BossDef = {
     art(sc);
     // À plat : l'annonceur teinte les images directes du conteneur. Remonté pour garder le masque à l'écran (×3).
     const y = 40;
-    const body = sc.add.image(0, y, 'noc_full').setOrigin(FULL.ox / FULL.w, FULL.oy / FULL.h);
+    const body = sc.add.image(0, y, 'nyc_full').setOrigin(FULL.ox / FULL.w, FULL.oy / FULL.h);
     const q = restPoints();
-    const eyes = sc.add.image(q.eye.x, y + q.eye.y, 'noc_eyes').setTint(COL.danger);
+    const eyes = sc.add.image(q.eye.x, y + q.eye.y, 'nyc_eyes').setTint(COL.danger);
     const glow = (gx: number, gy: number, s: number) => sc.add.image(gx, y + gy, 'glowO').setBlendMode(ADD).setScale(s).setAlpha(0.4);
     return sc.add.container(0, 0, [glow(q.main.x, q.main.y, 1.6), glow(q.off.x, q.off.y, 1.6), glow(q.rib.x, q.rib.y, 1.2), body, eyes]);
   },

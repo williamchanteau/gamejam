@@ -1,8 +1,8 @@
 import Phaser from 'phaser';
 import { canvasTex } from './pixel';
-import { N, LAMP_ON, LAMPS_ON, drawHead, drawLamp, drawLampS, drawRibs, drawTorso } from './noctis';
+import { N, LAMP_ON, LAMPS_ON, drawHead, drawLamp, drawLampS, drawRibs, drawTorso } from './nycthor';
 
-// Squelette de Noctis : membres et tentacules rastérisés au pixel à chaque image, pieds plantés au sol,
+// Squelette de Nycthor : membres et tentacules rastérisés au pixel à chaque image, pieds plantés au sol,
 // lanternes pendulaires. Repère local : y = 0 au sol, +x vers l'avant ; angle 0 = bas, 90 = avant, 180 = haut.
 export interface Pose {
   lean: number; crouch: number; head: number; flip: number; neck: number;
@@ -178,7 +178,7 @@ export const FULL = { w: 190, h: 170, ox: 95, oy: 166 };
 
 interface BodyLamp { id: LampId; big: boolean; x: number; y: number; px: number; py: number; ang: number; lit: boolean; free: boolean; gone: boolean; img: Phaser.GameObjects.Image; glow: Phaser.GameObjects.Image }
 
-export class NoctisRig {
+export class NycthorRig {
   p: Pose = { ...REST };
   rig: Phaser.GameObjects.Container;
   torso: Phaser.GameObjects.Image; ribs: Phaser.GameObjects.Image; head: Phaser.GameObjects.Image;
@@ -204,23 +204,23 @@ export class NoctisRig {
     this.gB = sc.add.graphics(); this.gF = sc.add.graphics();
     const lamp = (id: LampId, big: boolean): BodyLamp => ({
       id, big, x: 0, y: 0, px: 0, py: 0, ang: 0, lit: false, free: false, gone: false,
-      img: sc.add.image(0, 0, big ? 'noc_lamp0' : 'noc_lampS0').setOrigin(0.5, id === 'rib' ? 0.5 : 0),
+      img: sc.add.image(0, 0, big ? 'nyc_lamp0' : 'nyc_lampS0').setOrigin(0.5, id === 'rib' ? 0.5 : 0),
       glow: sc.add.image(0, 0, 'glowO').setBlendMode(Phaser.BlendModes.ADD).setDepth(61).setVisible(false),
     });
     this.lamps = {
       main: lamp('main', true), off: lamp('off', true), rib: lamp('rib', false),
       t1: lamp('t1', false), t2: lamp('t2', false), f1: lamp('f1', false), f2: lamp('f2', false),
     };
-    this.torso = sc.add.image(0, 0, 'noc_torso').setOrigin(0.5, 41 / 44);
-    this.ribs = sc.add.image(0, 0, 'noc_ribs');
-    this.head = sc.add.image(0, 0, 'noc_head').setOrigin(0.5, 36 / 38);
+    this.torso = sc.add.image(0, 0, 'nyc_torso').setOrigin(0.5, 41 / 44);
+    this.ribs = sc.add.image(0, 0, 'nyc_ribs');
+    this.head = sc.add.image(0, 0, 'nyc_head').setOrigin(0.5, 36 / 38);
     this.glowEye = sc.add.image(0, 0, 'glowW').setBlendMode(Phaser.BlendModes.ADD).setScale(0.25);
     // Yeux au-dessus de l'obscurité : deux points, sans lumière projetée.
-    this.eyes = sc.add.image(0, 0, 'noc_eyes').setDepth(62);
+    this.eyes = sc.add.image(0, 0, 'nyc_eyes').setDepth(62);
     const L_ = this.lamps;
     // Doublures additives du buste et de la tête : elles les font briller sans repeindre les textures.
     this.over = [this.torso, this.ribs, this.head].map((o) => sc.add.image(0, 0, o.texture.key).setOrigin(o.originX, o.originY).setBlendMode(Phaser.BlendModes.ADD).setTintFill(GOLD).setVisible(false));
-    this.halo = sc.add.image(0, 0, 'noc_hole96').setBlendMode(Phaser.BlendModes.ADD).setTint(GOLD).setDepth(61).setVisible(false);
+    this.halo = sc.add.image(0, 0, 'nyc_hole96').setBlendMode(Phaser.BlendModes.ADD).setTint(GOLD).setDepth(61).setVisible(false);
     this.rig = sc.add.container(0, 0, [
       this.gB, ...LAYER_BACK.map((i) => L_[i].img), this.torso, L_.rib.img, this.ribs, this.head, this.glowEye, ...this.over,
       this.gF, ...LAYER_FRONT.map((i) => L_[i].img),
@@ -396,7 +396,7 @@ export class NoctisRig {
     for (const id of this.ids) {
       const l = L_[id];
       l.img.setVisible(!l.gone).setPosition(Math.round(l.x), Math.round(l.y)).setRotation(l.ang);
-      l.img.setTexture(l.big ? (l.lit ? LAMP_ON[blink] : 'noc_lamp0') : l.lit ? LAMPS_ON[blink] : 'noc_lampS0');
+      l.img.setTexture(l.big ? (l.lit ? LAMP_ON[blink] : 'nyc_lamp0') : l.lit ? LAMPS_ON[blink] : 'nyc_lampS0');
       l.glow.setVisible(l.lit);
       if (l.lit) { const w = this.world(id); l.glow.setPosition(w.x, w.y).setScale(l.big ? 2.4 : 1.8).setAlpha(0.3 * flick); }
     }
@@ -412,9 +412,9 @@ export function restPoints() {
 }
 
 /** Corps entier à plat (annonceur, images rémanentes) : mêmes tracés, lanternes allumées. */
-export function bakeNoctis(s: Phaser.Scene) {
-  if (s.textures.exists('noc_full')) return;
-  canvasTex(s, 'noc_full', FULL.w, FULL.h, (c) => {
+export function bakeNycthor(s: Phaser.Scene) {
+  if (s.textures.exists('nyc_full')) return;
+  canvasTex(s, 'nyc_full', FULL.w, FULL.h, (c) => {
     const k = flat();
     const sink: Sink = { c: (col) => { c.fillStyle = `#${col.toString(16).padStart(6, '0')}`; }, r: (x, y, w, h) => c.fillRect(x, y, w, h) };
     const at = (x: number, y: number, draw: () => void) => { c.save(); c.translate(Math.round(x), Math.round(y)); draw(); c.restore(); };

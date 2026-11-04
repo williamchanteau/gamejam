@@ -4,7 +4,7 @@ import { makePlayerArt } from '../art/player';
 import { makeFxArt } from '../art/fx';
 import { makeRoomArt } from '../art/room';
 import { makeTitleArt } from '../art/title';
-import { makeMordrecArt } from '../bosses/mordrec';
+import { makeYsoldeArt } from '../bosses/ysolde';
 import { makeNaveArt } from '../art/nave';
 import { makeOutsideArt } from '../art/outside';
 import { makeTowerArt } from '../art/tower';
@@ -19,7 +19,7 @@ export class BootScene extends Phaser.Scene {
     makeFxArt(this);
     makeRoomArt(this);
     makeTitleArt(this);
-    makeMordrecArt(this);
+    makeYsoldeArt(this);
     makeOutsideArt(this);
     makeNaveArt(this);
     makeTowerArt(this);

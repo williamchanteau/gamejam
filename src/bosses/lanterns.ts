@@ -1,15 +1,15 @@
 import Phaser from 'phaser';
 import { W, H, COL } from '../config';
 import { sfx } from '../audio/sfx';
-import { HOLES, LAMP_ON } from '../art/noctis';
+import { HOLES, LAMP_ON } from '../art/nycthor';
 import type { Boss } from '../entities/Boss';
 
-// Réglages de Noctis et de sa salle (durées en s avant ×vitesse de phase 2, distances en px).
+// Réglages de Nycthor et de sa salle (durées en s avant ×vitesse de phase 2, distances en px).
 export const NIGHT = {
   hp: 260,
   darkAlpha: 0.93, viewerDark: 0.45, // le viewer garde le boss lisible, le jeu est presque noir
   lanterns: [105, 255, 405, 555, 705, 855], lanternY: 196,
-  litLife: 3.2, exposeR: 92, // portée où une lanterne ou un feu révèle Noctis (> demi-écart : toujours couvert)
+  litLife: 3.2, exposeR: 92, // portée où une lanterne ou un feu révèle Nycthor (> demi-écart : toujours couvert)
   fallTime: 0.35, fireDamage: 3, fireTick: 0.35, fireLife: 4.5, fireWidth: 132,
   pause: [0.42, 0.6], // entre deux attaques (plus court que la pause générique)
   seenAt: 150, // au-delà, hors de toute lumière, son corps a totalement disparu
@@ -53,7 +53,7 @@ export class Lanterns {
       for (let y = 0; y < NIGHT.lanternY; y += 4) chains.fillStyle(y % 8 ? 0x3d4052 : 0x6a6e88).fillRect(x - (y % 8 ? 0 : 1), y, y % 8 ? 1 : 3, 3);
       return {
         x, y: NIGHT.lanternY, lit: 0, charged: false, fall: 0, fire: 0, tick: 0, ember: 0,
-        img: sc.add.image(x, NIGHT.lanternY, 'noc_lamp0').setOrigin(0.5, 0).setDepth(18),
+        img: sc.add.image(x, NIGHT.lanternY, 'nyc_lamp0').setOrigin(0.5, 0).setDepth(18),
         glow: sc.add.image(x, NIGHT.lanternY + 12, 'glowO').setBlendMode(Phaser.BlendModes.ADD).setDepth(61).setScale(3).setVisible(false),
       };
     });
@@ -61,7 +61,7 @@ export class Lanterns {
     this.fx = sc.add.particles(0, 0, 'px', { speed: { min: 40, max: 160 }, lifespan: { min: 180, max: 420 }, scale: { start: 1, end: 0 }, gravityY: -40, emitting: false }).setDepth(66);
     this.cold = sc.add.image(0, 0, 'glowC').setBlendMode(Phaser.BlendModes.ADD).setDepth(61).setScale(2).setAlpha(0.16);
     this.dark = sc.add.renderTexture(0, 0, W, H).setOrigin(0).setScrollFactor(0).setDepth(60);
-    for (const r of HOLES) this.stamps[r] = sc.make.image({ key: `noc_hole${r}`, add: false });
+    for (const r of HOLES) this.stamps[r] = sc.make.image({ key: `nyc_hole${r}`, add: false });
     for (const l of this.lamps) sc.targets.push({
       hurtRect: () => new Phaser.Geom.Rectangle(l.x - 10, l.y - 2, 20, 28),
       alive: () => l.lit > 0 && b.alive(),
@@ -109,7 +109,7 @@ export class Lanterns {
       return;
     }
     l.lit = 0; this.charge(l, false); l.fall = NIGHT.fallTime;
-    l.img.setTexture('noc_lamp0');
+    l.img.setTexture('nyc_lamp0');
     this.burst(l.x, l.y + 12, 0xffc45c, 16); sfx.crack();
   }
 
@@ -148,7 +148,7 @@ export class Lanterns {
         if (l.lit === 0) { this.burst(l.x, l.y + 8, 0x6a6f8e, 4); this.charge(l, false); }
       }
       const on = l.lit > 0;
-      l.img.setTexture(on ? LAMP_ON[blink] : 'noc_lamp0').setDepth(on ? 62 : 18);
+      l.img.setTexture(on ? LAMP_ON[blink] : 'nyc_lamp0').setDepth(on ? 62 : 18);
       const flick = 1 + Math.sin(this.t * 11 + l.x) * 0.05 + Math.sin(this.t * 23 + l.x * 2) * 0.03;
       const burning = l.fire > 0;
       l.glow.setVisible(on || burning).setPosition(l.x, burning ? floor - 18 : l.y + 12)
