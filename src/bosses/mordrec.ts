@@ -31,169 +31,210 @@ function dome(c: Ctx, cx: number, cy: number, rx: number, ry: number, [dk, md, l
     }
 }
 
-// Chasseur nocturne : fer noirci, manteau prune, laiton, cuir, col de fourrure, lanterne de braise à la hanche.
+// Guerrière en armure : acier clair, filigrane d'or, cape et tabard violets, longs cheveux blancs (gris chaud, jamais bleutés).
 const H = {
-  i0: '#1c1e2e', i1: '#2c3148', i2: '#444c6a', i3: '#6a7494', i4: '#a4aecb',
-  c0: '#1a1226', c1: '#2a1c3a', c2: '#3e2a52', c3: '#56406e',
-  b0: '#5a3e1e', b1: '#8a6430', b2: '#c8984a', b3: '#f0d088',
-  l0: '#2a1e1a', l1: '#46322a', l2: '#5e463a', f0: '#2a2630', f1: '#4a4450', f2: '#6e6878',
-  e0: '#ff8a2a', e1: '#ffd36a', e2: '#fff4c8', w: '#a0461e',
+  i0: '#262838', i1: '#42465c', i2: '#666b84', i3: '#9499ae', i4: '#d2d5e2',
+  c0: '#1a1430', c1: '#2a2050', c2: '#3e3070', c3: '#584a94',
+  b0: '#6a4a1c', b1: '#a47c30', b2: '#d8ac52', b3: '#fae8a8',
+  g0: '#221a36', g1: '#3c2e5a',
+  w0: '#7a7288', w1: '#a69fb2', w2: '#d0cad6', w3: '#ece8ee', w4: '#fffdf8',
 };
 
 function drawBody(c: Ctx) {
-  // Long manteau évasé derrière (dos = gauche), plis, ourlet en lambeaux.
-  for (let y = 12; y < 81; y++) {
-    const t = (y - 12) / 68, l = Math.round(20 - t * 17 + Math.sin(y * 0.35) * 1.5), r = Math.round(40 + t * 9);
+  // Cape royale derrière (dos = gauche) : plis, ourlet d'or.
+  for (let y = 16; y < 80; y++) {
+    const t = (y - 16) / 63, l = Math.round(25 - t * 21 + Math.sin(y * 0.3) * 1.2), r = Math.round(38 + t * 8);
     for (let x = l; x < r; x++) {
-      if (y > 70 && (x * 5 + y * 3) % 7 < y - 70) continue;
-      const u = (x - l) / (r - l);
-      px(c, x === l ? A.k : u < 0.12 || (x - l) % 7 === 3 ? H.c0 : u < 0.55 ? H.c1 : H.c2, x, y);
+      const f = (x - l) % 8;
+      px(c, y > 77 ? H.b1 : y === 77 ? H.b2 : x === l || f === 3 ? H.c0 : f === 4 || (x - l) / (r - l) > 0.5 ? H.c2 : H.c1, x, y);
     }
   }
-  // Jambes : cuissards de cuir, genouillères de laiton, grèves, solerets.
-  for (const [lx, back] of [[21, 1], [33, 0]]) {
-    const d = back ? H.i1 : H.i2, m = back ? H.i2 : H.i3;
-    px(c, H.l0, lx, 54, 8, 12); px(c, back ? H.l0 : H.l1, lx + 1, 54, 2, 12);
-    px(c, d, lx, 66, 8, 12); px(c, m, lx + 1, 66, 2, 12);
-    px(c, H.b1, lx, 64, 8, 3); px(c, H.b2, lx + 1, 64, 3, 1);
-    px(c, d, lx, 77, 12, 4); px(c, m, lx, 77, 12, 1);
+  // Longues jambes : cuissots, genouillères à arête d'or, grèves évasées, solerets pointus.
+  for (const [lx, back] of [[22, 1], [34, 0]]) {
+    const d = back ? H.i0 : H.i1, m = back ? H.i1 : H.i2, l = back ? H.i2 : H.i3, g = back ? H.b1 : H.b2;
+    px(c, d, lx, 52, 8, 25); px(c, m, lx + 2, 52, 4, 25); px(c, l, lx + 5, 52, 1, 25);
+    px(c, d, lx - 1, 59, 10, 5); px(c, m, lx, 60, 8, 3); px(c, l, lx + 4, 60, 3, 1); px(c, g, lx - 1, 59, 10, 1); px(c, g, lx + 3, 63, 3, 1);
+    px(c, d, lx - 1, 71, 10, 6); px(c, m, lx + 1, 71, 5, 5); px(c, l, lx + 5, 71, 1, 5); px(c, g, lx - 1, 71, 10, 1);
+    px(c, d, lx, 77, 10, 1); px(c, d, lx, 78, 12, 1); px(c, d, lx, 79, 14, 2); px(c, m, lx + 1, 77, 8, 1); px(c, l, lx + 5, 78, 6, 1); px(c, g, lx + 2, 79, 2, 1);
   }
-  // Tassettes.
-  for (let i = 0; i < 2; i++) {
-    const y = 51 + i * 4, l = 18 - i, w = 28 + 2 * i;
-    px(c, H.i1, l, y, w, 4); px(c, H.i2, l, y, w, 1); px(c, A.k, l, y + 3, w, 1);
+  // Faudes : trois lames évasées sur les hanches, liseré d'or.
+  for (let i = 0; i < 3; i++) {
+    const y = 44 + i * 4, l = 22 - Math.round(i * 1.6), w = 19 + Math.round(i * 3);
+    px(c, H.i1, l, y, w, 4); px(c, H.i2, l + 3, y, w - 5, 3); px(c, H.i3, l + w - 9, y, 5, 1);
+    px(c, i === 2 ? H.b2 : H.b1, l, y + 3, w, 1);
   }
-  // Cuirasse de fer noirci, lames horizontales, arête claire.
-  for (let y = 18; y < 50; y++) {
-    const hw = Math.round(11 - Math.abs((y - 18) / 32 - 0.3) * 5);
-    for (let x = 31 - hw; x < 32 + hw; x++) {
-      const u = (x - (31 - hw)) / (2 * hw + 1);
-      px(c, u < 0.15 ? H.i0 : u < 0.45 ? H.i1 : u < 0.75 ? H.i2 : u < 0.9 ? H.i3 : H.i1, x, y);
+  // Tabard frontal en pointe, losange d'or.
+  for (let y = 44; y < 68; y++) {
+    const hw = y > 64 ? 68 - y : 3;
+    for (let x = 35 - hw; x <= 35 + hw; x++) px(c, Math.abs(x - 35) === hw ? H.b2 : x > 35 ? H.c3 : H.c2, x, y);
+  }
+  px(c, H.b3, 35, 48, 1, 5); px(c, H.b2, 34, 49, 3, 3); px(c, H.b3, 35, 50, 1, 1);
+  // Cuirasse : poitrine large, taille fine.
+  for (let y = 19; y < 41; y++) {
+    const hw = y < 26 ? 10 + Math.round((y - 19) * 0.28) : Math.round(12 - (y - 26) * 0.33);
+    for (let x = 31 - hw; x <= 31 + hw; x++) {
+      const u = (x - (31 - hw)) / (2 * hw);
+      px(c, u < 0.12 ? H.i0 : u < 0.4 ? H.i1 : u < 0.7 ? H.i2 : u < 0.88 ? H.i3 : H.i1, x, y);
     }
   }
-  for (const y of [34, 39, 44]) px(c, H.i0, 22, y, 20, 1);
-  px(c, H.i4, 35, 20, 1, 13);
-  // Baudrier (épaule avant → hanche arrière), boucle de laiton.
-  for (let i = 0; i < 24; i++) px(c, i % 5 === 0 ? H.l0 : H.l1, 40 - Math.round(i * 0.85), 22 + i, 2, 2);
-  px(c, H.b2, 29, 33, 3, 3); px(c, H.b3, 29, 33, 1, 1);
-  // Ceinture.
-  px(c, A.k, 18, 48, 28, 3); px(c, H.l1, 18, 49, 28, 1); px(c, H.b2, 33, 48, 3, 3);
-  // Lanterne de braise à la hanche arrière : chaîne, cage de laiton, flamme.
-  px(c, H.b1, 15, 46, 1, 5);
-  px(c, H.b1, 13, 50, 5, 1); px(c, H.b0, 12, 51, 7, 1);
-  px(c, H.e0, 13, 52, 5, 8); px(c, H.e1, 14, 53, 3, 6); px(c, H.e2, 15, 55, 1, 3);
-  px(c, H.b0, 12, 52, 1, 8); px(c, H.b0, 18, 52, 1, 8); px(c, H.b0, 13, 56, 5, 1);
-  px(c, H.b1, 12, 60, 7, 1); px(c, H.b0, 14, 61, 3, 1);
-  // Col de fourrure sur les épaules.
-  for (let x = 15; x < 46; x++) {
-    const top = 13 + Math.round(Math.abs(x - 31) * 0.18) - ((x * 7) % 3 === 0 ? 1 : 0), bot = 21 + ((x * 5) % 4);
-    for (let y = top; y < bot; y++) px(c, y === top ? H.f2 : y > bot - 3 || (x + y) % 4 === 0 ? H.f0 : H.f1, x, y);
+  // Galbe de la poitrine, arête centrale, filigrane d'or (encolure, plastron en V, losange).
+  px(c, H.i4, 36, 24, 5, 2); px(c, H.i4, 37, 26, 3, 1); px(c, H.i0, 29, 29, 12, 1); px(c, H.i4, 35, 31, 1, 9);
+  for (let i = 0; i < 6; i++) { px(c, H.b2, 26 + i, 20 + i); px(c, H.b2, 39 - i, 20 + i); }
+  for (let i = 0; i < 7; i++) { px(c, H.b1, 27 + i, 33 + i); if (i < 5) px(c, H.b2, 38 - i, 35 + i); }
+  px(c, H.b3, 34, 30, 2, 3); px(c, H.b2, 33, 31, 4, 1);
+  // Ceinture d'or, gemme violette.
+  px(c, H.b1, 23, 41, 17, 3); px(c, H.b2, 23, 41, 17, 1); px(c, H.b3, 33, 41, 4, 3); px(c, H.c3, 34, 42, 2, 1);
+  // Spalière arrière, liseré d'or.
+  dome(c, 19, 23, 8, 6, [A.k, H.i0, H.i1]); px(c, H.b1, 12, 26, 15, 1);
+  // Gorgerin montant, bord d'or.
+  for (let y = 12; y < 20; y++) {
+    const hw = 8 + Math.round((y - 12) * 0.5);
+    for (let x = 32 - hw; x <= 32 + hw; x++) px(c, y === 12 ? H.b2 : x > 35 ? H.i3 : x > 28 ? H.i2 : H.i1, x, y);
   }
-  dome(c, 18, 23, 7, 5, [A.k, H.i0, H.i1]);
-  // Bras avant jusqu'à la main (48, 38) : épaulière, brassard de cuir, gantelet.
+  px(c, H.b1, 24, 19, 17, 1);
+  // Mèche blanche tombée sur l'épaule.
+  for (let y = 14; y < 38; y++) {
+    const x = Math.round(27 + Math.sin(y * 0.35) - (y - 14) * 0.06);
+    px(c, H.w1, x - 1, y); px(c, H.w3, x, y);
+    if (y < 34) px(c, H.w2, x + 1, y);
+  }
+  // Sous l'épaulière avant (le bras part de (43, 25)).
   dome(c, 41, 21, 9, 6, [H.i1, H.i3, H.i4]);
 }
 
+/** Heaume (26×36) : crête effilée, couronne d'or, visière à fente (centre x 17, y 24 : yeux du rig). */
 function drawHead(c: Ctx) {
-  // Plume à l'arrière du chapeau.
-  for (let i = 0; i < 8; i++) px(c, i % 3 ? H.f1 : H.f2, 7 - i, 7 - Math.round(i * 0.6), 3, 1);
-  // Calotte de feutre (penchée en arrière), bandeau de laiton.
-  for (let y = 1; y < 10; y++) {
-    const off = Math.round((10 - y) * 0.25), l = 8 - off + (y < 3 ? 2 : 0), r = 19 - off - (y < 3 ? 1 : 0);
-    for (let x = l; x < r; x++) px(c, x === l ? H.l0 : x > r - 4 ? H.l2 : H.l1, x, y);
+  // Crête balayée vers l'arrière, arête d'or.
+  for (let x = 4; x < 20; x++) {
+    const top = Math.round(3 + (x - 4) * 0.38), bot = Math.round(top + 1 + (x - 4) * 0.2);
+    for (let y = top; y <= bot; y++) px(c, y === top ? H.b2 : x > 12 ? H.i4 : H.i3, x, y);
   }
-  px(c, H.l0, 12, 1, 3, 1);
-  px(c, H.b1, 7, 8, 12, 2); px(c, H.b2, 12, 8, 3, 1); px(c, H.b3, 13, 8, 1, 1);
-  // Large bord, plus bas devant.
-  for (let x = 0; x < 26; x++) {
-    const y = 10 + (x > 20 || x < 3 ? 1 : 0);
-    px(c, x > 14 ? H.l2 : H.l1, x, y); px(c, H.l0, x, y + 1);
+  // Calotte.
+  for (let y = 10; y <= 27; y++)
+    for (let x = 7; x <= 24; x++) {
+      if (((x - 15.5) / 8) ** 2 + ((y - 18.5) / 8) ** 2 > 1) continue;
+      px(c, x > 19 && y < 16 ? H.i4 : x > 17 ? H.i3 : x > 12 ? H.i2 : H.i1, x, y);
+    }
+  // Couvre-nuque à lames.
+  px(c, H.i1, 7, 21, 5, 3); px(c, H.i0, 6, 24, 6, 3); px(c, H.i1, 6, 27, 7, 2); px(c, H.b1, 6, 29, 7, 1);
+  // Visière en pointe de bec, fente sombre, ventail percé.
+  for (let y = 20; y < 32; y++) {
+    const r = y < 27 ? 24 : Math.round(24 - (y - 26) * 1.2), l = 11 + Math.max(0, y - 25);
+    for (let x = l; x <= r; x++) px(c, x > 20 ? H.i3 : x > 15 ? H.i2 : H.i1, x, y);
   }
-  // Masque de fer dans l'ombre du bord, fente des yeux.
-  for (let y = 12; y < 23; y++) for (let x = 8; x < 21; x++) px(c, y < 14 ? A.k : x > 17 ? H.i2 : x > 12 ? H.i1 : H.i0, x, y);
-  px(c, A.k, 12, 15, 10, 2); px(c, H.i3, 20, 17, 1, 4);
-  // Col montant.
-  for (let y = 21; y < 28; y++)
-    for (let x = 4 + (y - 21); x < 22; x++) px(c, x === 4 + (y - 21) || (x + y) % 5 === 0 ? H.c0 : x > 17 ? H.c3 : H.c2, x, y);
+  px(c, H.i4, 12, 21, 12, 1); px(c, H.i4, 23, 26, 1, 2);
+  px(c, A.k, 12, 23, 13, 2);
+  for (const [x, y] of [[18, 27], [21, 27], [17, 29], [20, 29]]) px(c, A.k, x, y);
+  // Couronne d'or sur le front : bandeau et trois pointes.
+  px(c, H.b1, 8, 19, 16, 1); px(c, H.b2, 8, 18, 16, 1);
+  for (const [x, h] of [[11, 2], [15, 3], [19, 4]]) { px(c, H.b2, x, 18 - h, 2, h); px(c, H.b3, x + 1, 18 - h, 1, 1); }
+  // Col.
+  px(c, H.i1, 10, 31, 12, 5); px(c, H.i2, 13, 31, 7, 5); px(c, H.i3, 17, 31, 2, 5); px(c, H.b2, 10, 32, 12, 1);
+}
+
+/** Cheveux : mèches de longueurs inégales, de la nuque (v = 0) aux pointes, découpées en deux textures articulées.
+ *  Le bord coupé touche le bord de la texture : pas de contour à la jointure. */
+const HAIR = { ox: 22, w: 30, cut: 28, join: 26, len: 60 };
+const hairX = (v: number) => -v * 0.2 + Math.sin(v * 0.12) * 1.5;
+// [décalage, amplitude, phase, demi-largeur, longueur, teintes ombre/milieu/clair] : de la plus lointaine à la plus proche.
+const LOCKS: [number, number, number, number, number, string[]][] = [
+  [-5.5, 1.6, 0.5, 2.6, 52, [H.w0, H.w1, H.w2]],
+  [5, 1.2, 2.4, 2.4, 46, [H.w0, H.w1, H.w2]],
+  [-2.5, 1.8, 2, 3, 60, [H.w1, H.w2, H.w3]],
+  [2.2, 1.5, 4, 3, 56, [H.w1, H.w3, H.w4]],
+];
+function drawHair(c: Ctx, v0: number, v1: number) {
+  for (const [off, amp, ph, wid, len, [t0, t1, t2]] of LOCKS)
+    for (let v = v0; v < Math.min(v1, len); v++) {
+      const t = v / len, cx = hairX(v) + off * (0.35 + t * 0.9) + amp * Math.sin(v * 0.22 + ph) * Math.min(1, v / 12);
+      const hw = wid * Math.min(1, 0.25 + v / 10) * (t > 0.7 ? (1 - t) / 0.3 : 1);
+      for (let x = Math.round(cx - hw); x <= Math.round(cx + hw); x++) {
+        const u = (x - cx) / Math.max(hw, 1) + 0.3 * Math.sin(v * 0.45 + ph); // reflets ondulés, pas de bandes droites
+        px(c, u < -0.45 ? t0 : u > 0.4 ? t2 : t1, HAIR.ox + x, v - v0);
+      }
+    }
 }
 
 function drawSword(c: Ctx, red = false) {
-  const S = red ? { e: '#ffd6e0', m: '#ff2a5a', d: '#7a0a30', f: '#c0144a' } : { e: '#e8ecff', m: '#a8b4d8', d: '#5a6386', f: '#7a86ac' };
+  const S = red ? { e: '#ffd6e0', m: '#ff2a5a', d: '#7a0a30', f: '#c0144a' } : { e: '#f4f4fa', m: '#b4b9ca', d: '#5e6378', f: '#7f8499' };
   for (let y = 2; y < 62; y++) {
     const hw = y < 9 ? Math.ceil((y - 1) / 2.5) : 3;
     for (let x = 8 - hw; x < 8 + hw; x++) px(c, x === 8 - hw ? S.d : x === 8 + hw - 1 ? S.e : x === 7 && y > 10 && y < 56 ? S.f : S.m, x, y);
   }
-  // Garde à quillons recourbés, fusée de cuir, pommeau.
-  px(c, H.b1, 1, 62, 14, 2); px(c, H.b2, 2, 62, 12, 1); px(c, H.b1, 0, 59, 2, 4); px(c, H.b1, 14, 59, 2, 4); px(c, H.b3, 7, 62, 2, 1);
-  px(c, H.l0, 6, 64, 4, 12);
-  for (let y = 65; y < 76; y += 2) px(c, H.l1, 6, y, 4, 1);
-  px(c, H.b1, 5, 76, 6, 4); px(c, H.b2, 6, 76, 3, 1); px(c, H.b3, 6, 76, 1, 1);
+  // Damasquinure à la base de la lame, garde dorée à quillons relevés, fusée violette, pommeau à gemme.
+  px(c, red ? S.e : H.b2, 7, 48, 2, 14); px(c, red ? S.m : H.b3, 7, 52, 1, 2);
+  px(c, H.b1, 1, 62, 14, 2); px(c, H.b2, 2, 62, 12, 1); px(c, H.b1, 0, 59, 2, 4); px(c, H.b1, 14, 59, 2, 4); px(c, H.b3, 0, 59, 1, 1); px(c, H.b3, 15, 59, 1, 1); px(c, H.b3, 7, 62, 2, 1);
+  px(c, H.g0, 6, 64, 4, 12);
+  for (let y = 65; y < 76; y += 2) px(c, H.g1, 6, y, 4, 1);
+  px(c, H.b1, 5, 76, 6, 4); px(c, H.b2, 6, 76, 3, 1); px(c, H.c3, 7, 77, 2, 2);
 }
 
-/** Splash art de l'annonceur (100×124, tourné vers la gauche) : halo de braise, manteau au vent, épée levée. */
+/** Splash art de l'annonceur (100×124, tournée vers la gauche) : halo doré, cheveux et cape au vent, épée levée. */
 function drawSplash(c: Ctx) {
   for (let y = 0; y < 80; y++)
     for (let x = 18; x < 98; x++) {
       const d = Math.hypot(x - 58, y - 38);
-      if (d < 36 && d > 33.5) px(c, H.w, x, y);
-      else if (d <= 33.5 && (x + y) % 2 === 0) px(c, d < 22 ? '#3a1a14' : '#24121a', x, y);
+      if (d < 36 && d > 33.5) px(c, H.b1, x, y);
+      else if (d <= 33.5 && (x + y) % 2 === 0) px(c, d < 22 ? H.c1 : H.c0, x, y);
     }
-  // Manteau qui claque au vent, ourlet déchiré.
-  poly(c, H.c0, [44, 44, 72, 42, 88, 70, 99, 112, 92, 118, 86, 111, 80, 122, 72, 114, 64, 124, 40, 124, 34, 116, 28, 124, 24, 100, 34, 62]);
-  poly(c, H.c1, [48, 46, 70, 44, 83, 72, 91, 108, 85, 105, 78, 113, 70, 107, 64, 116, 44, 116, 38, 96, 39, 64]);
+  // Cape, plis, ourlet d'or.
+  poly(c, H.c0, [44, 44, 74, 42, 88, 70, 97, 116, 80, 120, 62, 124, 40, 124, 30, 122, 26, 100, 34, 62]);
+  poly(c, H.c1, [48, 46, 70, 44, 83, 72, 90, 112, 78, 116, 62, 120, 44, 120, 34, 104, 39, 64]);
   for (const [x0, y0, x1, y1] of [[60, 50, 74, 112], [67, 48, 86, 104], [52, 54, 54, 112]]) beam(c, H.c2, x0, y0, x1, y1, 1.5);
-  beam(c, H.w, 72, 46, 90, 104, 1);
-  // Jambes, genouillères.
-  poly(c, H.i0, [44, 100, 52, 100, 50, 124, 40, 124]); poly(c, H.i1, [46, 101, 51, 101, 49, 122, 43, 122]);
-  poly(c, H.i0, [56, 100, 64, 100, 68, 124, 58, 124]); poly(c, H.i1, [57, 101, 62, 101, 64, 122, 59, 122]);
-  px(c, H.b1, 43, 108, 8, 3); px(c, H.b2, 44, 108, 3, 1); px(c, H.b1, 58, 110, 8, 3); px(c, H.b2, 59, 110, 3, 1);
-  // Tassettes, cuirasse, baudrier, ceinture.
-  poly(c, H.i1, [41, 92, 67, 90, 69, 101, 39, 103]); beam(c, H.i3, 42, 93, 52, 92, 1); beam(c, A.k, 40, 97, 68, 95, 1);
-  poly(c, H.i0, [40, 48, 66, 48, 64, 88, 44, 90]);
-  poly(c, H.i1, [44, 50, 62, 50, 60, 86, 46, 88]);
-  poly(c, H.i2, [44, 50, 52, 50, 50, 86, 46, 88]);
-  for (const y of [62, 70, 78]) beam(c, H.i0, 44, y, 62, y - 1, 1);
-  beam(c, H.i4, 47, 52, 46, 84, 1); beam(c, H.w, 64, 50, 62, 86, 1);
-  beam(c, H.l1, 64, 54, 44, 84, 3); px(c, H.b2, 52, 67, 3, 3); px(c, H.b3, 52, 67, 1, 1);
-  poly(c, H.l0, [42, 86, 66, 84, 66, 90, 42, 92]); px(c, H.b2, 51, 86, 4, 4); px(c, H.b3, 51, 86, 1, 1);
-  // Lanterne de braise à la hanche, halo tramé.
-  for (let y = 84; y < 118; y++)
-    for (let x = 62; x < 96; x++) {
-      const d = Math.hypot(x - 78, y - 101);
-      if (d < 15 && d > 8 && (x + y) % 3 === 0) px(c, H.e0, x, y);
+  beam(c, H.b2, 97, 116, 80, 120, 2); beam(c, H.b2, 80, 120, 62, 124, 2); beam(c, H.b2, 40, 123, 30, 121, 2);
+  // Jambes, genouillères dorées, solerets pointus.
+  poly(c, H.i0, [56, 100, 66, 100, 68, 118, 72, 124, 56, 124, 58, 118]); poly(c, H.i1, [58, 101, 64, 101, 66, 118, 60, 118]);
+  poly(c, H.i1, [42, 100, 54, 100, 52, 118, 50, 124, 32, 124, 40, 118]); poly(c, H.i2, [44, 101, 50, 101, 48, 118, 42, 118]);
+  px(c, H.i3, 44, 102, 2, 16); px(c, H.b1, 42, 108, 11, 3); px(c, H.b2, 43, 108, 5, 1); px(c, H.b1, 57, 110, 9, 3); px(c, H.b2, 58, 110, 3, 1);
+  // Faudes à lames, tabard.
+  poly(c, H.i1, [42, 82, 66, 82, 72, 104, 36, 104]); poly(c, H.i2, [44, 83, 54, 83, 50, 103, 39, 103]);
+  for (const [y, l, r] of [[88, 40, 68], [94, 38, 70], [100, 37, 71]]) { beam(c, H.b1, l, y, r, y, 1); beam(c, H.i3, l + 2, y + 1, l + 12, y + 1, 1); }
+  poly(c, H.c2, [48, 82, 58, 82, 57, 108, 53, 114, 49, 108]); beam(c, H.c3, 54, 84, 54, 108, 2);
+  beam(c, H.b2, 48, 82, 49, 108, 1); beam(c, H.b2, 58, 82, 57, 108, 1); beam(c, H.b2, 49, 108, 53, 114, 1); beam(c, H.b2, 57, 108, 53, 114, 1);
+  px(c, H.b3, 52, 92, 2, 7); px(c, H.b3, 50, 94, 6, 3);
+  // Cuirasse à taille fine, filigrane d'or, ceinture.
+  poly(c, H.i0, [38, 48, 68, 48, 62, 80, 46, 80]);
+  poly(c, H.i1, [42, 50, 65, 50, 60, 78, 47, 78]);
+  poly(c, H.i2, [42, 50, 54, 50, 52, 78, 47, 78]);
+  poly(c, H.i3, [43, 52, 49, 52, 48, 62, 44, 62]);
+  beam(c, H.i4, 51, 52, 50, 76, 1); beam(c, H.i0, 42, 66, 64, 66, 1);
+  beam(c, H.b2, 42, 50, 51, 60, 1); beam(c, H.b2, 63, 50, 51, 60, 1); beam(c, H.b2, 46, 69, 52, 78, 1); beam(c, H.b1, 60, 69, 52, 78, 1);
+  px(c, H.b3, 50, 62, 3, 3);
+  poly(c, H.b1, [44, 78, 64, 78, 65, 83, 43, 83]); beam(c, H.b3, 44, 79, 60, 79, 1); px(c, H.b3, 51, 79, 5, 4); px(c, H.c3, 52, 80, 3, 2);
+  // Spalière arrière, puis longs cheveux blancs emportés par le vent.
+  ell(c, H.i0, 70, 54, 10, 8); ell(c, H.i1, 71, 52, 7, 5);
+  const shade = [H.w2, H.w3, H.w1, H.w4, H.w2, H.w3, H.w0, H.w2, H.w3, H.w1, H.w2, H.w0, H.w3, H.w1];
+  for (let s = 0; s < shade.length; s++) {
+    const x1 = 95 - s * 2.1, y1 = 74 + s * 2, y0 = 26 + s * 1.3;
+    for (let i = 0; i <= 200; i++) {
+      const t = i / 200, w = t > 0.85 ? 1 : t > 0.55 ? 2 : 3;
+      px(c, shade[s], Math.round(60 + (x1 - 60) * t ** 0.85 + Math.sin(t * 5 + s * 0.45) * 3 * t), Math.round(y0 + (y1 - y0) * t), w, w);
     }
-  beam(c, H.b1, 68, 87, 77, 94, 1);
-  poly(c, H.b1, [73, 93, 83, 93, 85, 96, 71, 96]);
-  px(c, H.e0, 72, 96, 12, 11); px(c, H.e1, 74, 98, 8, 7); px(c, H.e2, 77, 100, 2, 3);
-  px(c, H.b0, 71, 96, 1, 11); px(c, H.b0, 84, 96, 1, 11); px(c, H.b0, 75, 96, 1, 11); px(c, H.b0, 80, 96, 1, 11);
-  px(c, H.b1, 71, 107, 14, 2); px(c, H.b0, 75, 109, 6, 1);
-  // Col de fourrure, épaulière avant.
-  poly(c, H.f0, [33, 47, 48, 38, 64, 38, 75, 46, 70, 55, 39, 57]);
-  for (let i = 0; i < 12; i++) px(c, i % 2 ? H.f2 : H.f1, 36 + i * 3, 41 + (i % 3), 2, 3);
-  ell(c, H.i1, 38, 55, 10, 8); ell(c, H.i3, 36, 52, 6, 4); px(c, H.i4, 34, 49, 3, 1);
-  for (const y of [57, 60]) beam(c, H.i0, 29, y, 47, y, 1);
-  // Tête : col, masque, yeux rouges, chapeau à large bord, plume.
-  poly(c, H.c1, [40, 40, 64, 38, 66, 48, 42, 50]); beam(c, H.c3, 42, 42, 62, 40, 1);
-  poly(c, H.i0, [44, 26, 62, 26, 62, 42, 52, 46, 44, 42]);
-  poly(c, H.i1, [46, 30, 52, 30, 52, 44, 46, 41]);
-  px(c, A.k, 44, 33, 18, 3);
-  px(c, '#ff2a5a', 46, 34, 3, 1); px(c, '#ff2a5a', 54, 34, 3, 1); px(c, '#ffd6e0', 47, 34, 1, 1); px(c, '#ffd6e0', 55, 34, 1, 1);
-  poly(c, H.l0, [14, 33, 30, 24, 74, 20, 92, 24, 78, 28, 32, 30]);
-  poly(c, H.l2, [24, 29, 32, 25, 72, 21, 82, 23, 70, 24, 32, 27]);
-  poly(c, H.l1, [38, 26, 40, 8, 50, 2, 62, 4, 68, 22]);
-  poly(c, H.l2, [41, 24, 42, 10, 50, 4, 51, 22]);
-  beam(c, H.l0, 51, 4, 55, 22, 1);
-  poly(c, H.b1, [38, 22, 68, 19, 68, 23, 38, 26]); beam(c, H.b3, 42, 23, 52, 22, 1);
-  poly(c, H.f1, [64, 18, 78, 6, 95, 2, 85, 10, 70, 20]); beam(c, H.f2, 68, 16, 90, 4, 1);
+  }
+  // Gorgerin, épaulière avant à lames et liseré d'or.
+  poly(c, H.i1, [40, 42, 66, 40, 68, 50, 38, 50]); beam(c, H.i3, 42, 45, 56, 44, 2); beam(c, H.b2, 40, 42, 66, 40, 1); beam(c, H.b1, 38, 50, 68, 50, 1);
+  ell(c, H.i0, 36, 56, 14, 10); ell(c, H.i2, 35, 54, 12, 8); ell(c, H.i3, 33, 51, 8, 5); px(c, H.i4, 29, 48, 6, 1);
+  beam(c, H.b2, 24, 60, 48, 60, 1); beam(c, H.i1, 25, 63, 47, 63, 2); beam(c, H.b1, 26, 65, 46, 65, 1);
+  // Heaume : crête effilée, calotte, couronne d'or, visière en bec, yeux lilas.
+  poly(c, H.i3, [46, 20, 50, 13, 62, 8, 86, 2, 74, 9, 62, 18]); beam(c, H.b2, 48, 17, 52, 12, 1); beam(c, H.b3, 52, 12, 84, 3, 1);
+  ell(c, H.i1, 51, 29, 11, 11); ell(c, H.i2, 50, 28, 10, 10); ell(c, H.i3, 47, 25, 6, 6); px(c, H.i4, 44, 21, 4, 2);
+  beam(c, H.b2, 40, 30, 61, 27, 2);
+  for (const [x, h] of [[43, 5], [48, 4], [53, 3]]) { px(c, H.b2, x, 29 - h, 2, h); px(c, H.b3, x, 29 - h, 1, 1); }
+  poly(c, H.i2, [39, 33, 61, 31, 61, 40, 52, 47, 45, 45, 39, 39]);
+  poly(c, H.i3, [39, 33, 49, 32, 49, 44, 45, 45, 39, 39]);
+  beam(c, H.i4, 40, 33, 58, 32, 1);
+  px(c, A.k, 39, 35, 20, 3);
+  px(c, '#d8d0ff', 42, 36, 4, 1); px(c, '#d8d0ff', 50, 36, 4, 1); px(c, '#ffffff', 43, 36, 2, 1); px(c, '#ffffff', 51, 36, 2, 1);
+  for (const [x, y] of [[43, 40], [47, 40], [45, 43], [49, 43]]) px(c, A.k, x, y, 2, 1);
   // Bras et épée levée en travers : lame, fil, garde, gantelet, pommeau.
-  beam(c, H.i1, 40, 60, 33, 76, 6); beam(c, H.l1, 37, 68, 33, 76, 6); beam(c, H.b1, 38, 70, 35, 71, 6);
-  beam(c, '#5a6386', 31, 72, 6, 4, 5); beam(c, '#a8b4d8', 31, 72, 6, 4, 3); beam(c, '#e8ecff', 30, 71, 6, 5, 1);
-  beam(c, H.b1, 25, 78, 39, 73, 3); px(c, H.b3, 31, 75, 2, 1);
+  beam(c, H.i1, 40, 62, 33, 76, 6); beam(c, H.i3, 38, 64, 32, 75, 2); beam(c, H.b2, 38, 70, 35, 71, 6);
+  beam(c, '#5e6378', 31, 72, 6, 4, 5); beam(c, '#b4b9ca', 31, 72, 6, 4, 3); beam(c, '#f4f4fa', 30, 71, 6, 5, 1); beam(c, H.b2, 28, 66, 24, 54, 1);
+  beam(c, H.b1, 25, 78, 39, 73, 3); px(c, H.b3, 31, 75, 2, 1); px(c, H.b3, 25, 77, 1, 1); px(c, H.b3, 39, 73, 1, 1);
   ell(c, H.i2, 34, 79, 4, 4); px(c, H.i3, 32, 77, 2, 1);
-  ell(c, H.b1, 36, 86, 2, 2);
-  // Éclat sur la pointe, braises qui volent.
+  ell(c, H.b1, 36, 86, 2, 2); px(c, H.c3, 36, 86, 1, 1);
+  // Éclat sur la pointe, poussière d'or qui vole.
   for (let i = -4; i <= 4; i++) { px(c, '#ffffff', 9 + i, 13); px(c, '#ffffff', 9, 13 + i); }
-  for (let i = 0; i < 16; i++) px(c, i % 3 ? H.e0 : H.e1, ((i * 37) % 80) + 16, ((i * 53) % 100) + 6);
+  for (let i = 0; i < 16; i++) px(c, i % 3 ? H.b2 : H.b3, ((i * 37) % 80) + 16, ((i * 53) % 100) + 6);
 }
 
 /** Traînée d'épée : secteur d'anneau autour de la main, de l'angle a0 à a1 (0 = haut, horaire). */
@@ -212,7 +253,9 @@ function smear(c: Ctx, a0: number, a1: number, rIn: number, rOut: number, rev = 
 
 export function makeMordrecArt(scene: Phaser.Scene) {
   canvasTex(scene, 'mord_body', 60, 82, drawBody, OUTLINE);
-  canvasTex(scene, 'mord_head', 26, 28, drawHead, OUTLINE);
+  canvasTex(scene, 'mord_head', 26, 36, drawHead, OUTLINE);
+  canvasTex(scene, 'mord_hair', HAIR.w, HAIR.cut, (c) => drawHair(c, 0, HAIR.cut), OUTLINE);
+  canvasTex(scene, 'mord_hair2', HAIR.w, HAIR.len - HAIR.join + 3, (c) => drawHair(c, HAIR.join, HAIR.len), OUTLINE);
   canvasTex(scene, 'mord_sword', 16, 84, (c) => drawSword(c), OUTLINE);
   canvasTex(scene, 'mord_sword_r', 16, 84, (c) => drawSword(c, true), OUTLINE);
   canvasTex(scene, 'mord_splash', 100, 124, drawSplash, OUTLINE);
@@ -220,9 +263,13 @@ export function makeMordrecArt(scene: Phaser.Scene) {
   canvasTex(scene, 'mord_fist', 11, 11, (c) => {
     px(c, H.i1, 2, 1, 7, 9); px(c, H.i1, 1, 2, 9, 7); // bloc arrondi
     for (let i = 0; i < 4; i++) { px(c, i ? H.i3 : H.i4, 3, 2 + i * 2, 5, 1); px(c, A.k, 3, 3 + i * 2, 5, 1); } // doigts repliés
-    px(c, H.i4, 8, 2, 1, 6); px(c, H.i2, 1, 3, 2, 4); px(c, H.b1, 1, 4, 1, 2); // jointures, pouce
+    px(c, H.b2, 8, 2, 1, 7); px(c, H.i2, 1, 3, 2, 4); px(c, H.b3, 1, 4, 1, 2); // jointures dorées, pouce
   }, OUTLINE);
-  canvasTex(scene, 'mord_pauldron', 22, 13, (c) => dome(c, 11, 7, 9, 6, [H.i1, H.i3, H.i4]), OUTLINE);
+  canvasTex(scene, 'mord_pauldron', 22, 15, (c) => {
+    dome(c, 11, 6, 9, 5, [H.i1, H.i3, H.i4]);
+    px(c, H.b2, 2, 9, 18, 1); px(c, H.i2, 4, 10, 15, 2); px(c, H.i3, 12, 10, 5, 1); px(c, H.b1, 5, 12, 13, 1); // lame inférieure plus étroite, liserés d'or
+    px(c, H.b3, 13, 3, 2, 2); // rivet d'or
+  }, OUTLINE);
   canvasTex(scene, 'mord_eyes', 9, 3, (c) => { px(c, '#fff', 1, 1, 2, 1); px(c, '#fff', 6, 1, 2, 1); });
   // Danger (rouge/magenta, cœur blanc) : traînées, pics de roche, épée fantôme, repère au sol.
   canvasTex(scene, 'smear0', 146, 146, (c) => smear(c, -75, 125, 26, 72));
@@ -337,14 +384,24 @@ function driveArm(b: Boss, sw: Cont, g: Phaser.GameObjects.Graphics) {
   const ex = Math.round(sx + Math.cos(base + k) * l1), ey = Math.round(sy + Math.sin(base + k) * l1); // coude en arrière
   const ln = (w: number, col: string, x0: number, y0: number, x1: number, y1: number) => g.lineStyle(w, N(col)).lineBetween(x0, y0, x1, y1);
   g.clear();
-  // Contour, puis brassard de fer (haut) et avant-bras de cuir, cubitière de laiton.
+  // Contour, puis brassard (haut) et canon d'avant-bras d'acier, cubitière et manchette dorées.
   ln(8, OUTLINE, sx, sy, ex, ey); ln(7, OUTLINE, ex, ey, hx, hy);
   g.fillStyle(N(OUTLINE)).fillCircle(ex, ey, 4);
   ln(6, H.i3, sx, sy, ex, ey); ln(2, H.i4, sx + 1, sy, ex + 1, ey);
-  ln(5, H.l2, ex, ey, hx, hy); ln(1, '#7a5e4c', ex + 1, ey - 1, hx + 1, hy - 1);
-  const wx = ex + (hx - ex) * 0.62, wy = ey + (hy - ey) * 0.62; // manchette de laiton au poignet
-  ln(6, H.b1, wx, wy, ex + (hx - ex) * 0.8, ey + (hy - ey) * 0.8); ln(2, H.b2, wx, wy - 1, ex + (hx - ex) * 0.8, ey + (hy - ey) * 0.8 - 1);
+  ln(5, H.i2, ex, ey, hx, hy); ln(1, H.i4, ex + 1, ey - 1, hx + 1, hy - 1);
+  const wx = ex + (hx - ex) * 0.62, wy = ey + (hy - ey) * 0.62; // manchette dorée au poignet
+  ln(6, H.b1, wx, wy, ex + (hx - ex) * 0.8, ey + (hy - ey) * 0.8); ln(2, H.b3, wx, wy - 1, ex + (hx - ex) * 0.8, ey + (hy - ey) * 0.8 - 1);
   g.fillStyle(N(H.b1)).fillCircle(ex, ey, 2.5).fillStyle(N(H.b3)).fillRect(ex - 1, ey - 1, 1, 1);
+}
+/** Cheveux : balancement lent, ils traînent derrière elle selon sa vitesse (angle > 0 = pointes vers le dos). */
+function driveHair(b: Boss, top: Cont, low: Cont) {
+  if (!top.active) return;
+  const t = b.scene.time.now / 1000, dx = (b.x - (top.getData('x') ?? b.x)) * b.dir;
+  top.setData('x', b.x);
+  const lag = Phaser.Math.Linear(top.getData('lag') ?? 0, Phaser.Math.Clamp(dx * 9, -15, 45), 0.12);
+  top.setData('lag', lag);
+  top.setAngle(1.5 * Math.sin(t * 1.7) + lag);
+  low.setAngle(3 * Math.sin(t * 1.7 - 1) + lag * 0.5);
 }
 /** Traînée pleine sur 3 frames, attachée au rig. */
 function smearFx(b: Boss, rev = false) {
@@ -671,14 +728,19 @@ export const MORDREC: BossDef = {
     const pauldron = sc.add.image(0, -68, 'mord_pauldron').setOrigin(0);
     const headImg = sc.add.image(0, 0, 'mord_head').setOrigin(0.5, 1);
     const eyes = sc.add.image(4, -12, 'mord_eyes');
-    const glow = sc.add.image(4, -12, 'glowW').setBlendMode(ADD).setScale(0.6);
-    const head = sc.add.container(2, REST.headY, [headImg, glow, eyes]);
+    const glow = sc.add.image(4, -12, 'glowW').setBlendMode(ADD).setScale(0.35);
+    const hairTop = sc.add.image(0, 0, 'mord_hair').setOrigin(HAIR.ox / HAIR.w, 0);
+    const jx = Math.round(hairX(HAIR.join + 1));
+    const hairLow = sc.add.image(0, 0, 'mord_hair2').setOrigin((HAIR.ox + jx) / HAIR.w, 0);
+    const hairEnd = sc.add.container(jx, HAIR.join, [hairLow]);
+    const hair = sc.add.container(-5, -20, [hairEnd, hairTop]);
+    const head = sc.add.container(2, REST.headY, [hair, headImg, glow, eyes]);
     // rig : inclinaison / écrasement autour des pieds ; root : position + orientation.
     const rig = sc.add.container(0, 0, [body, head, arm, pauldron, sword]);
     b.root.add(rig);
-    b.parts = { rig, body, sword, blade, head, headImg, eyes, glow };
-    b.flashParts = [body, headImg, blade, fist, pauldron];
-    const drive = () => driveArm(b, sword, arm);
+    b.parts = { rig, body, sword, blade, head, headImg, eyes, glow, pauldron };
+    b.flashParts = [body, headImg, hairTop, hairLow, blade, fist, pauldron];
+    const drive = () => { driveArm(b, sword, arm); driveHair(b, hair, hairEnd); };
     sc.events.on(Phaser.Scenes.Events.PRE_RENDER, drive);
     sc.events.once(Phaser.Scenes.Events.SHUTDOWN, () => sc.events.off(Phaser.Scenes.Events.PRE_RENDER, drive));
     this.rest(b, 0);
@@ -725,6 +787,7 @@ export const MORDREC: BossDef = {
     (p.sword as Cont).setData('free', true); // le bras se défait, l'épée tombe
     sc.tweens.chain({ targets: p.sword, tweens: [{ angle: 60, duration: 300, ease: 'Quad.in' }, { angle: 92, y: -4, duration: 400, ease: 'Bounce.out' }] });
     sc.tweens.add({ targets: p.body, scaleY: 0.62, duration: 900, delay: 200, ease: 'Bounce.out' });
+    sc.tweens.add({ targets: p.pauldron, y: -42, duration: 900, delay: 200, ease: 'Bounce.out' }); // suit le buste qui s'affaisse
     sc.time.delayedCall(1700, () => {
       sc.puffs(x, y, 10); sc.debris(x, y - 20, 12); sc.flashScreen(0.2);
       sc.tweens.add({ targets: b.root, alpha: 0, duration: 600 });
