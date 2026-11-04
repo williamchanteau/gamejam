@@ -78,7 +78,7 @@ class Feast {
       hit: (dmg) => {
         sc.sparks(o.x, o.y - 8, 0xe8a548, 8); sfx.splat();
         this.kill(r);
-        return dmg >= PLAYER.spell.damage ? false : undefined; // le sort le traverse sans geler le jeu
+        return dmg === PLAYER.spell.damage ? false : undefined; // le sort le traverse sans geler le jeu (le dash amélioré tape plus fort mais reste un coup de dague)
       },
     };
     this.rests.push(r);
@@ -700,7 +700,7 @@ export const MCKING: BossDef = {
       if (st) {
         if (!b.alive()) f.eating = null;
         else {
-          st.hits += dmg >= PLAYER.spell.damage ? 3 : 1; // seul le sort compte triple
+          st.hits += dmg === PLAYER.spell.damage ? 3 : 1; // seul le sort compte triple
           st.draw();
           if (st.hits >= st.need) { f.eating = null; b.force((x) => choke(x, st.big)); }
         }
