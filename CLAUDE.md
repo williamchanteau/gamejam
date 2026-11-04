@@ -19,7 +19,8 @@ src/: config.ts (TOUTES les valeurs réglables), input.ts, scenes/, entities/Pla
 
 ## Contrôles (un seul schéma, touches PHYSIQUES via e.code)
 ←/→ bouger · Saut ↑/Espace · Descendre ↓ · Attaque A · Dash Z · Sort E (AZERTY ; = Q/W/E en QWERTY, même emplacement) · Pause Échap/P · M = couper la musique (lettre imprimée, e.key, si M n'est pas attribuée). R libre. Menus : ↑↓, valider Entrée/Espace, souris. OPTIONS > CLAVIER AZERTY/QWERTY (localStorage, try/catch) ne change que les lettres affichées (input.keyLabel). HUD contrôles en haut à droite sauf dans le tuto (panneaux placés : sol, au-dessus des plateformes, suspendu). `input.reset()` à chaque ouverture/fermeture de menu. Pas de manette.
-DEV seulement : F1 boss à 1 PV, F2 invincible, URL `#Boss1`/`#Test` = démarrage direct sur la scène, `#Escalier` = montée de la tour en boucle, `#Musique` = juke-box (viewer/MusicScene.ts), `window.game` exposé (gate `import.meta.env.DEV`).
+Code caché du menu titre (build final compris) : curseur sur QUITTER, ↓ ↓ → ↓ ouvre TESTER LES BOSS (MenuScene.onCheatKey).
+DEV seulement : bouton TESTER BOSS du menu, F1 boss à 1 PV, F2 invincible, URL `#Boss1`/`#Test` = démarrage direct sur la scène, `#Escalier` = montée de la tour en boucle, `#Musique` = juke-box (viewer/MusicScene.ts), `window.game` exposé (gate `import.meta.env.DEV`).
 Test visuel : chrome-headless-shell de ~/.cache/ms-playwright + libs nspr/nss/asound extraites localement (apt-get download + dpkg -x, LD_LIBRARY_PATH), piloté via CDP (WebSocket Node) sur `bun run dev`.
 
 ## Joueur

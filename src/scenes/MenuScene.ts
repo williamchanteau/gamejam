@@ -1,7 +1,8 @@
 import Phaser from 'phaser';
 import { W, H, COL } from '../config';
 import { txt } from '../art/font';
-import { input } from '../input';
+import { input, goFullscreen } from '../input';
+import { sfx } from '../audio/sfx';
 import { Menu } from '../ui/Menu';
 import { OptionsPanel } from '../ui/Options';
 import { FLOORS, run } from '../floors';
@@ -13,6 +14,8 @@ import { TITLE_MOON } from '../art/title';
 const LX = 26; // bord gauche du logo et des boutons
 const BW = 104, DW = 192; // largeur des boutons : menu principal, difficulté (assez pour VRAIMENT FACILE)
 let AX = 0; // axe du losange sous le logo : les boutons y sont centrés
+const QUIT_I = 2; // position de QUITTER, le bouton du bas
+const CHEAT = ['ArrowDown', 'ArrowDown', 'ArrowRight', 'ArrowDown'];
 const hillY = (x: number) => 228 + Math.round(Math.sin(x / 40) * 6 + Math.sin(x / 13) * 2);
 
 /** Écran titre : logo + boutons encadrés à gauche, scène vivante à droite (cathédrale, lune, nuages, veilleur). */
@@ -23,12 +26,28 @@ export class MenuScene extends Phaser.Scene {
   private diffNotes: Phaser.GameObjects.GameObject[] = [];
   private sub: Phaser.GameObjects.Container | null = null;
   private opts: OptionsPanel | null = null;
+  private cheat = 0;
 
   constructor() { super('Menu'); }
 
+  /** Code caché : depuis QUITTER, ↓ ↓ → ↓ ouvre le menu de test des boss. */
+  private onCheatKey = (e: KeyboardEvent) => {
+    if (e.repeat) return;
+    if (!this.menu.enabled) { this.cheat = 0; return; }
+    if (!this.cheat && this.menu.i !== QUIT_I) return;
+    this.cheat = e.code === CHEAT[this.cheat] ? this.cheat + 1 : 0;
+    if (this.cheat < CHEAT.length) return;
+    this.cheat = 0;
+    sfx.select();
+    goFullscreen();
+    this.bosses();
+  };
+
   create() {
     input.reset();
-    this.sub = null; this.opts = null; this.bossMenu = null; this.diff = null; this.diffNotes = [];
+    this.sub = null; this.opts = null; this.bossMenu = null; this.diff = null; this.diffNotes = []; this.cheat = 0;
+    addEventListener('keydown', this.onCheatKey);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => removeEventListener('keydown', this.onCheatKey));
     this.add.image(0, 0, 'bg_title').setOrigin(0);
     const [mx, my] = TITLE_MOON;
     const halo = this.add.image(mx, my, 'glowC').setBlendMode(Phaser.BlendModes.ADD).setScale(3.2).setAlpha(0.3);
@@ -73,7 +92,7 @@ export class MenuScene extends Phaser.Scene {
       { label: 'JOUER', act: () => this.difficulty() },
       { label: 'OPTIONS', act: () => this.options() },
       { label: 'QUITTER', act: () => this.quit() },
-      { label: 'TESTER BOSS', x: W - 94, y: H - 32, w: 140, act: () => this.bosses() },
+      ...(import.meta.env.DEV ? [{ label: 'TESTER BOSS', x: W - 94, y: H - 32, w: 140, act: () => this.bosses() }] : []),
     ], { framed: BW, gap: 25 });
     this.cameras.main.fadeIn(250);
   }
