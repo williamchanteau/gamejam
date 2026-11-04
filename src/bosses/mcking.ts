@@ -475,13 +475,13 @@ function* inhale(b: Boss) {
   yield* recover(b, C.recover);
 }
 
-/** Phase 2 : « COMMANDE ! » une averse de burgers sur toute la salle, une colonne libre. */
+/** Phase 2 : « PAIE MA BOUFFE! » une averse de burgers sur toute la salle, une colonne libre. */
 function* rain(b: Boss) {
   const C = MK.rain, sc = b.scene, a = A(b);
   b.eyes('tele'); sfx.bell();
   arms(b, -165, 165, 0.25);
   b.tw(a.rig, { scaleY: 1.05 }, 0.25);
-  shout(sc, ['COMMANDE !!!'], b.x, b.y - 158, { scale: 2, ms: 800 });
+  shout(sc, ['PAIE MA BOUFFE!'], b.x, b.y - 158, { scale: 2, ms: 800 });
   yield b.tele(C.tele);
   jiggle(b, 0.16); sfx.thud();
   const x0 = Phaser.Math.Clamp(b.player.x - ((C.lanes - 1) / 2) * C.gap, 40, sc.worldW - 40 - (C.lanes - 1) * C.gap), free = Phaser.Math.Between(1, C.lanes - 2);
