@@ -291,7 +291,7 @@ function* fauche(b: Boss) {
 const art = (sc: Phaser.Scene) => { makeNoctisArt(sc); bakeNoctis(sc); };
 
 export const NOCTIS: BossDef = {
-  name: 'NOCTIS', title: 'LE DÉVOREUR DE LUMIÈRE', hp: NIGHT.hp, hurt: { w: 46, h: 108 },
+  name: 'NYCTHOR', title: 'LE PORTEUR DE LANTERNES', hp: NIGHT.hp, hurt: { w: 46, h: 108 },
   build(b) {
     const sc = b.scene;
     art(sc);
