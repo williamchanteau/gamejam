@@ -11,7 +11,7 @@ const M = {
   slam: { tele: 0.6, rise: 0.35, mark: 0.7, fall: 0.16, recover: 0.6, waveSpeed: 210, doubleGap: 0.8 },
   swing: { wind: 0.3, cut: 0.16, height: 80 },
   flurry: { tele: 0.7, count: 2, gap: 0.3, speed: 210, turn: 2.6, home: 0.85, life: 2.6, recover: 0.45 },
-  charge: { tele: 0.6, speed: 340, dist: 320, recover: 0.6 },
+  charge: { tele: 0.75, speed: 420, dist: 320, cut: 0.14, body: 24, reach: 64, height: 82, recover: 0.6 },
   warp: { mark: 0.5, behind: 72 },
   combo: { teles: [0.5, 0.45, 0.7], recover: 0.7 },
 };
@@ -338,8 +338,8 @@ function tipAt(b: Boss, a: number) {
   return { x: b.x + b.dir * (18 + 66 * Math.sin(r)), y: b.y - 44 - 66 * Math.cos(r) };
 }
 /** Éclat en étoile sur la lame : « ça va frapper ». */
-function glint(b: Boss, a: number) {
-  const { x, y } = tipAt(b, a);
+function glint(b: Boss, a: number, at = tipAt(b, a)) {
+  const { x, y } = at;
   const g = b.temp(b.scene.add.image(x, y, 'glint').setBlendMode(ADD).setDepth(20).setScale(0));
   b.tw(g, { scale: 1.4, angle: 90, yoyo: true }, 0.13, 'Quad.out');
   sfx.ting();
@@ -656,31 +656,61 @@ function* flurry(b: Boss, count = M.flurry.count) {
   b.eyes('on'); b.def.rest(b, 0.3);
 }
 
-/** Charge à l'épaule : épaule baissée, épée traînée, ruée qui accélère, freinage dans la poussière. */
+/** Taille chargée : garde haute, la lame se charge de lumière, ruée qui accélère et grande taille au moment d'atteindre le joueur.
+ *  La lame ne touche jamais le sol pendant la course (≤ 100° : au-delà, driveArm la pose au sol et elle racle) ; elle ne mord qu'à l'arrêt. */
 function* charge(b: Boss) {
-  const p = b.parts, s = M.charge, sc = b.scene;
-  b.face(); b.eyes('tele'); sfx.warn();
-  const tt = b.tele(s.tele);
+  const p = b.parts, s = M.charge, sc = b.scene, sword = p.sword as Cont;
+  b.face(); b.eyes('tele'); sfx.warn(); sfx.rumble();
+  const tt = b.tele(s.tele), col = b.phase === 2 ? COL.danger : 0xd8d0ff, x0 = b.x;
   const tx = b.clampX(b.x + b.dir * Math.min(s.dist, Math.abs(b.player.x - b.x) + 70));
-  b.tw(p.rig, { angle: 15, scaleX: 1.08, scaleY: 0.9 }, tt * 0.8);
-  b.tw(p.sword, { angle: -140 }, tt * 0.8, 'Back.out');
-  b.tw(b.root, { x: b.clampX(b.x - b.dir * 8) }, tt * 0.8);
-  const zone = b.temp(sc.add.rectangle(Math.min(b.x, tx), b.floorY - 80, Math.abs(tx - b.x) + 1, 80, COL.danger, 0.14).setOrigin(0).setDepth(6));
+  b.tw(p.rig, { angle: -8, scaleX: 1.06, scaleY: 0.92 }, tt * 0.6);
+  b.tw(p.sword, { angle: -30 }, tt * 0.6, 'Back.out');
+  b.tw(b.root, { x: b.clampX(b.x - b.dir * 8) }, tt * 0.6);
+  // La lame se charge : surimpression lumineuse + halo, grains de lumière qui convergent vers elle.
+  const aura = b.temp(sc.add.image(0, 0, 'ysol_sword').setOrigin(0.5, 70 / 84).setTintFill(col).setBlendMode(ADD).setAlpha(0));
+  const halo = b.temp(sc.add.image(0, -36, 'glowW').setTint(col).setBlendMode(ADD).setAlpha(0).setScale(0.5, 1));
+  sword.addAt(aura, 1); sword.addAt(halo, 0);
+  b.tw(aura, { alpha: 0.85 }, tt * 0.8, 'Sine.in');
+  b.tw(halo, { alpha: 0.6, scaleX: 1.1, scaleY: 2.6 }, tt * 0.8, 'Sine.in');
+  // Le long de la lame en garde haute (depuis la main : recul de 8 px, 42 px en arrière, 48 px plus haut que la main).
+  for (let i = 0; i < 9; i++) {
+    const a = i * 2.4, k = i / 8, qx = b.x - b.dir * (8 + 42 * k), qy = b.y - 44 - 48 * k;
+    const q = b.temp(sc.add.image(qx + Math.cos(a) * 46, qy + Math.sin(a) * 46, 'px').setTint(col).setScale(2).setDepth(20).setAlpha(0));
+    b.tw(q, { x: qx, y: qy, alpha: { from: 0.2, to: 1 }, delay: i * tt * 70, onComplete: () => q.destroy() }, 0.2, 'Quad.in');
+  }
+  const zoneL = Math.min(x0, tx) - (b.dir < 0 ? s.reach : 0), zoneW = Math.abs(tx - x0) + s.reach;
+  const zone = b.temp(sc.add.rectangle(zoneL, b.floorY - s.height, zoneW, s.height, COL.danger, 0.14).setOrigin(0).setDepth(6));
   b.tw(zone, { alpha: 0.05, yoyo: true, repeat: -1 }, 0.1, 'Linear');
-  for (let i = 0; i < 3; i++) sc.time.delayedCall(i * tt * 300, () => b.state === 'pattern' && sc.debris(b.x, b.floorY - 2, 2));
-  yield tt;
-  zone.destroy(); sfx.leap(); sfx.whoosh();
-  const d = Math.max(0.12, Math.abs(tx - b.x) / (s.speed * b.speed));
+  yield tt * 0.75;
+  const m = sword.getWorldTransformMatrix(TM), tip = { x: m.c * -BLADE + m.tx, y: m.d * -BLADE + m.ty };
+  glint(b, -30, tip); sc.sparks(tip.x, tip.y, col, 6);
+  yield tt * 0.25;
+  // Ruée qui accélère : la taille est centrée sur l'instant où elle atteint la position du joueur.
+  zone.destroy(); sfx.leap(); sc.puffs(b.x, b.floorY, 3); ring(b, b.x, b.floorY - 3, 1.4);
+  const dist = Math.abs(tx - b.x), d = Math.max(0.2, dist / (s.speed * b.speed)), cut = b.t(s.cut);
+  const at = Math.max(0, d * Math.sqrt(Math.max(0, dist - 70) / dist) - cut / 2);
+  let reach = s.body;
   b.tw(b.root, { x: tx }, d, 'Quad.in');
-  b.hitbox = () => new Phaser.Geom.Rectangle(b.x - 24, b.y - 82, 48, 82);
+  b.tw(p.rig, { angle: 9, scaleX: 1.08, scaleY: 0.94 }, d * 0.5);
+  if (at > 0.08) b.tw(p.sword, { angle: -55 }, at, 'Sine.out'); // armée encore un peu plus loin
+  b.hitbox = () => new Phaser.Geom.Rectangle(b.dir > 0 ? b.x - s.body : b.x - reach, b.y - s.height, s.body + reach, s.height);
   for (let k = 0; k < d / 0.05; k++) sc.time.delayedCall(k * 50, () => b.state === 'pattern' && ghostTrail(b));
-  yield d;
+  if (at > 0) yield at;
+  reach = s.reach;
+  b.tw(p.sword, { angle: 100 }, cut, 'Quad.out'); // la lame devance la traînée (images à 45 et 90 ms)
+  b.tw([aura, halo], { alpha: 0 }, cut + 0.1);
+  smearFx(b); sfx.whoosh();
+  yield d - at;
   b.hitbox = null;
-  impact(b, b.x + b.dir * 20, b.floorY, 1); sfx.thud(); sfx.scrape();
-  b.tw(b.root, { x: b.clampX(b.x + b.dir * 20) }, 0.22, 'Quad.out');
-  b.tw(p.rig, { angle: -6, scaleX: 1, scaleY: 0.95 }, 0.2);
+  impact(b, b.x + b.dir * 20, b.floorY, 1); sfx.thud();
+  b.tw(b.root, { x: b.clampX(b.x + b.dir * 20) }, 0.2, 'Quad.out');
+  b.tw(p.rig, { angle: 4, scaleX: 1, scaleY: 0.95 }, 0.2);
   b.eyes('off');
-  yield b.t(s.recover);
+  yield 0.2;
+  // Arrêtée : la lame mord le sol.
+  b.tw(p.sword, { angle: 128 }, 0.1, 'Back.out');
+  sc.debris(b.x + b.dir * 80, b.floorY - 2, 3); sfx.clank();
+  yield b.t(s.recover) - 0.2;
   b.eyes('on'); b.def.rest(b, 0.3);
 }
 
