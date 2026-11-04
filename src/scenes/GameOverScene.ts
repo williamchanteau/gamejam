@@ -4,6 +4,7 @@ import { txt } from '../art/font';
 import { input } from '../input';
 import { Menu } from '../ui/Menu';
 import { FLOORS, run, saveOf } from '../floors';
+import { sfx } from '../audio/sfx';
 
 const PLACES: Record<string, string> = { Test: 'ENTRAÎNEMENT', Outside: 'DEVANT LE CHÂTEAU' };
 
@@ -15,6 +16,7 @@ export class GameOverScene extends Phaser.Scene {
   init(d: { from: string }) { this.from = d.from; }
   create() {
     input.reset();
+    sfx.gameOver();
     const save = saveOf(this.from), f = FLOORS.find((x) => x.scene === save);
     const place = f ? `${f.name} · ${f.place}` : PLACES[save] ?? '';
     const dim = this.add.rectangle(0, 0, W, H, 0x06050c, 0).setOrigin(0);

@@ -79,4 +79,10 @@ export const sfx = {
   crack: () => noise(0.07, 0.22, 1300, 1.5),
   scrape: () => noise(0.22, 0.1, 3600, 4),
   death: () => { tone(300, 40, 0.7, 'sawtooth', 0.25); noise(0.5, 0.3, 300); },
+  /** GAME OVER : impact au claquement du titre, glas grave, motif mineur descendant. */
+  gameOver: () => {
+    tone(90, 30, 0.6, 'square', 0.25, 0.4); noise(0.5, 0.4, 160, 0.6, 0.4);
+    for (const [f, v] of [[110, 0.22], [303.6, 0.06], [594, 0.03]]) tone(f, f * 0.99, 2.2, 'sine', v, 0.4);
+    [440, 415.3, 349.2, 293.7].forEach((f, i) => tone(f, f, i === 3 ? 1.3 : 0.4, 'triangle', 0.12, 0.8 + i * 0.32));
+  },
 };
