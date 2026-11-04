@@ -3,7 +3,7 @@ import type { Boss, BossDef } from '../entities/Boss';
 import { COL } from '../config';
 import { sfx } from '../audio/sfx';
 import { makeNoctisArt } from '../art/noctis';
-import { bakeNoctis, FULL, NoctisRig, REST, type LampId, type Pose } from '../art/noctisRig';
+import { bakeNoctis, FULL, NoctisRig, REST, restPoints, type LampId, type Pose } from '../art/noctisRig';
 import { Lanterns, NIGHT } from './lanterns';
 
 const ADD = Phaser.BlendModes.ADD;
@@ -279,7 +279,7 @@ function* fauche(b: Boss) {
 const art = (sc: Phaser.Scene) => { makeNoctisArt(sc); bakeNoctis(sc); };
 
 export const NOCTIS: BossDef = {
-  name: 'NOCTIS', title: 'LE DÉVOREUR DE LUMIÈRE', hp: NIGHT.hp, hurt: { w: 46, h: 108 },
+  name: 'NOCTIS', title: 'LE DÉVOREUR DE LUMIÈRE', hp: NIGHT.hp, hurt: { w: 56, h: 108 },
   build(b) {
     const sc = b.scene;
     art(sc);
@@ -343,9 +343,10 @@ export const NOCTIS: BossDef = {
     // À plat : l'annonceur teinte les images directes du conteneur. Remonté pour garder le masque à l'écran (×3).
     const y = 40;
     const body = sc.add.image(0, y, 'noc_full').setOrigin(FULL.ox / FULL.w, FULL.oy / FULL.h);
-    const eyes = sc.add.image(5, y - 113, 'noc_eyes').setTint(COL.danger);
+    const q = restPoints();
+    const eyes = sc.add.image(q.eye.x, y + q.eye.y, 'noc_eyes').setTint(COL.danger);
     const glow = (gx: number, gy: number, s: number) => sc.add.image(gx, y + gy, 'glowO').setBlendMode(ADD).setScale(s).setAlpha(0.4);
-    return sc.add.container(0, 0, [glow(56, -44, 1.6), glow(-52, -30, 1.6), glow(0, -71, 1.2), body, eyes]);
+    return sc.add.container(0, 0, [glow(q.main.x, q.main.y, 1.6), glow(q.off.x, q.off.y, 1.6), glow(q.rib.x, q.rib.y, 1.2), body, eyes]);
   },
   patterns: [
     { name: 'rush', weight: 3, phase: 0, far: true, run: rush },

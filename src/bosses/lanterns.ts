@@ -7,14 +7,14 @@ import type { Boss } from '../entities/Boss';
 
 // Réglages de Noctis et de sa salle (durées en s avant ×vitesse de phase 2, distances en px).
 export const NIGHT = {
-  hp: 120,
+  hp: 240,
   darkAlpha: 0.93, viewerDark: 0.45, // le viewer garde le boss lisible, le jeu est presque noir
   lanterns: [105, 255, 405, 555, 705, 855], lanternY: 196,
   litLife: 3.2, exposeR: 92, // portée où une lanterne ou un feu rend Noctis vulnérable (> demi-écart : toujours couvert)
   fallTime: 0.35, fireDamage: 3, fireTick: 0.35, fireLife: 4.5, fireWidth: 132,
   rushTime: 0.65,
   ombre: { fade: 0.22, dark: 0.34, dist: 74, tele: 0.8, turn: 0.1, active: 0.16, reach: 100, height: 112, recover: 1.05 },
-  moulinet: { dist: 74, tele: 0.75, time: 0.95, centerY: 50, radius: 99, safe: 62, hit: 24, recover: 1.05 },
+  moulinet: { dist: 74, tele: 0.75, time: 0.95, centerY: 52, radius: 116, safe: 62, hit: 24, recover: 1.05 },
   onde: { tele: 0.9, speed: 215, ressac: 0.6, back: 260, recover: 0.95 },
   trial: { count: 3, lead: 0.1, fly: 0.12, show: 0.12, window: 5, damage: 14, stun: 2.4, sweepTele: 0.8, bandH: 40, recover: 1.1 },
 };

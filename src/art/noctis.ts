@@ -11,40 +11,63 @@ export const N = {
   iron: '#3d4052', ironL: '#6a6e88',
 };
 
-// Pointes déchirées de la pèlerine.
+// Chair meurtrie, désaturée : plus chaude que le fer et le tissu, jamais rouge.
+export const FLESH = { f0: '#1c1526', f1: '#2f2438', f2: '#4a3a52', f3: '#6b5870', f4: '#8a7488' };
+
+// Pointes déchirées du col.
 const TATTER = [3, 0, 5, 2, 7, 1, 4, 8, 2, 6, 0, 3, 7, 1, 5, 2, 8, 3, 0, 6, 2, 4, 1, 7, 3, 0, 5, 2, 6, 1, 4, 2];
 
-/** Buste creux, 32×44 : pèlerine en lambeaux, cage ouverte, taille vertébrée, bassin. */
+/** Buste massif, 58×56 (hanche à y = 48) : épaules voûtées, poitrail éventré sur la cage, ventre qui pend, plis, couture. */
 export function drawTorso(c: Ctx) {
-  const cx = 16;
-  // Bassin et vertèbres.
-  for (let y = 34; y < 44; y++) {
-    const hw = Math.round(4 + (y - 34) * 0.55);
-    for (let x = -hw; x <= hw; x++) px(c, x > hw * 0.4 ? N.l : x < -hw * 0.4 ? N.d : N.b, cx + x, y);
-  }
-  px(c, N.s0, cx - 5, 34, 11, 1); px(c, N.s1, cx + 1, 34, 4, 1);
-  for (let y = 26; y < 34; y++) {
-    px(c, N.k, cx - 4, y, 9, 1);
-    px(c, y % 2 ? N.s1 : N.s0, cx - 2, y, 5, 1);
-  }
-  // Cage : creux noir, côtes dessinées à part pour passer devant la lanterne.
-  for (let y = 8; y < 27; y++) {
-    const hw = Math.round(11 - Math.abs(y - 14) * 0.26);
-    for (let x = -hw; x <= hw; x++) px(c, Math.abs(x) >= hw ? N.m : N.k, cx + x, y);
-  }
-  // Pèlerine : col en V ouvert sur la cage.
-  for (let y = 0; y < 19; y++) {
-    const hw = Math.min(15, 6 + Math.sqrt(y) * 3.6), hole = (y - 4) * 0.95;
+  const F = FLESH, cx = 29, H = 56;
+  const prof = (y: number) => (y < 9 ? 13 + Math.sqrt(y / 9) * 14 : y < 24 ? 27 - (y - 9) * 0.12 : y < 40 ? 25 + Math.sin(((y - 24) / 16) * Math.PI) * 2.5 : 25 - (y - 40) * 0.95) + Math.sin(y * 0.7) * 0.8;
+  for (let y = 0; y < H; y++) {
+    const hw = prof(y);
     for (let x = -Math.floor(hw); x <= Math.floor(hw); x++) {
-      if (x > -hole && x < hole) continue;
-      if (y > 10 + TATTER[(x + 16) & 31]) continue;
-      const t = x / hw;
-      px(c, t > 0.6 ? N.l : t > 0.1 ? N.b : t > -0.55 ? N.m : N.d, cx + x, y);
+      const nx = x / hw;
+      const v = nx * 0.55 - ((y - 22) / 28) * 0.4 - Math.abs(nx) ** 3 * 0.35;
+      let col = v > 0.42 ? F.f3 : v > 0.12 ? F.f2 : v > -0.2 ? F.f1 : F.f0;
+      // Plis : sous le poitrail, sous le ventre, sur les flancs.
+      for (const [y0, dp, min] of [[27, 4, 0.34], [39, 5, 0], [47, 2, 0]]) {
+        const yf = y0 + Math.round((1 - nx * nx) * dp);
+        if (Math.abs(nx) < min) continue;
+        if (y === yf) col = F.f0; else if (y === yf + 1 && v > -0.3) col = F.f2;
+      }
+      px(c, col, cx + x, y);
     }
   }
+  // Ventre : reflet large et rond.
+  for (let y = 31; y < 39; y++) for (let x = 3; x < 17; x++) if (((x - 10) / 7) ** 2 + ((y - 35) / 4) ** 2 < 1) px(c, F.f3, cx + x, y);
+  px(c, F.f4, cx + 9, 33, 5, 2);
+  // Masses des épaules.
+  for (const sx of [-1, 1]) for (let y = 3; y < 12; y++) for (let x = 13; x < 25; x++) {
+    if (((x - 19) / 6) ** 2 + ((y - 7) / 4.5) ** 2 < 1) px(c, sx > 0 ? F.f3 : F.f1, cx + sx * x, y);
+  }
+  // Cage ouverte dans le poitrail : bord de chair déchirée, creux noir pour la lanterne.
+  const ic = 18;
+  for (let y = 6; y < 31; y++) for (let x = -14; x <= 14; x++) {
+    const d = (x / 12) ** 2 + ((y - ic) / 10.5) ** 2 + (((x * 3 + y * 5) % 7) * 0.012);
+    if (d < 1) px(c, N.k, cx + x, y);
+    else if (d < 1.28) px(c, x > 0 ? F.f4 : F.f2, cx + x, y);
+  }
+  // Couture sur le ventre.
+  for (let y = 31; y < 46; y++) px(c, F.f0, cx - 6, y);
+  for (let y = 32; y < 46; y += 3) px(c, N.s0, cx - 8, y, 5, 1);
+  // Col en lambeaux, repris par le voile de la tête.
+  for (let x = -14; x <= 14; x++) {
+    const bottom = 3 + TATTER[(x + 16) & 31] * 0.7;
+    for (let y = 0; y < bottom; y++) px(c, x > 3 ? N.b : x > -5 ? N.m : N.d, cx + x, y);
+  }
   // Pointes d'os aux épaules.
-  px(c, N.s1, cx - 13, 4, 2, 2); px(c, N.s1, cx - 14, 2, 1, 2);
-  px(c, N.s2, cx + 12, 4, 2, 2); px(c, N.s2, cx + 14, 2, 1, 2);
+  for (const [sx, col] of [[-1, N.s1], [1, N.s2]] as const) {
+    px(c, col, cx + sx * 21, 1, 2, 3); px(c, col, cx + sx * 22, 0, 1, 1);
+    px(c, col, cx + sx * 25, 4, 2, 3); px(c, col, cx + sx * 26, 2, 1, 2);
+  }
+  // Pagne déchiré sous le bassin.
+  for (let x = -15; x <= 15; x++) {
+    const bottom = H - 1 - TATTER[(x + 16) & 31] * 0.8;
+    for (let y = 48; y < bottom; y++) px(c, x > 4 ? N.b : x > -6 ? N.m : N.d, cx + x, y);
+  }
 }
 
 /** Côtes, 23×17 : passent devant la lanterne logée dans la poitrine. */
@@ -160,7 +183,7 @@ export const HOLES = [20, 62, 96, 130];
 
 export function makeNoctisArt(s: Phaser.Scene) {
   if (s.textures.exists('noc_torso')) return;
-  canvasTex(s, 'noc_torso', 32, 44, drawTorso, OUTLINE);
+  canvasTex(s, 'noc_torso', 58, 56, drawTorso, OUTLINE);
   canvasTex(s, 'noc_ribs', 23, 17, drawRibs);
   canvasTex(s, 'noc_head', 24, 32, drawHead, OUTLINE);
   canvasTex(s, 'noc_lamp0', 15, 24, (c) => drawLamp(c, 0), OUTLINE);
