@@ -47,8 +47,8 @@ export class OutsideScene extends ArenaScene {
       for (const f of this.flick) f.o.setAlpha(f.a * (0.8 + Math.random() * 0.4)).setScale(f.s * (0.95 + Math.random() * 0.1));
     } });
     this.doors = [
-      this.add.image(DOOR.x - 22, this.floorY, 'door').setOrigin(0, 1).setDepth(3),
-      this.add.image(DOOR.x + 22, this.floorY, 'door').setOrigin(1, 1).setDepth(3).setFlipX(true),
+      this.add.image(DOOR.x - DOOR.hw, this.floorY, 'door').setOrigin(0, 1).setDepth(3),
+      this.add.image(DOOR.x + DOOR.hw + 1, this.floorY, 'door').setOrigin(1, 1).setDepth(3).setFlipX(true),
     ];
     const hint = txt(this, DOOR.x, 112, 'ENTRER →', COL.moonLight).setOrigin(0.5, 0).setDepth(20);
     this.tweens.add({ targets: hint, x: DOOR.x + 4, duration: 450, yoyo: true, repeat: -1, ease: 'Sine.inOut' });

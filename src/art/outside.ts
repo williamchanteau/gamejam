@@ -45,10 +45,20 @@ export function makeOutsideArt(scene: Phaser.Scene) {
     for (let x = 0; x < 48; x += 3) if (hash(x, 1) > 0.4) px(c, hash(x, 2) > 0.5 ? '#3e6a34' : '#24402a', x, -0, 1, 1 + Math.floor(hash(x, 3) * 2));
     for (let y = 12; y < H - FY; y++) { c.fillStyle = `rgba(6,5,12,${(y - 12) / (H - FY - 12) * 0.6})`; c.fillRect(0, y, 48, 1); }
   });
-  canvasTex(scene, 'door', 22, 42, (c) => {
-    for (let x = 0; x < 22; x++) px(c, x % 5 === 0 ? '#2a180e' : x % 5 === 1 ? '#6a4428' : '#4a2e1a', x, 0, 1, 42);
-    for (const y of [6, 20, 34]) { px(c, '#1a1820', 0, y, 22, 3); px(c, '#4a4868', 0, y, 22, 1); for (let x = 2; x < 22; x += 5) px(c, '#8a8aa0', x, y + 1, 1, 1); }
-    px(c, '#c8a050', 17, 22, 2, 3);
+  // Battant gauche taillé à la forme de l'ogive (le droit = le même retourné) : plus de vide au-dessus.
+  const dTop = Math.ceil(DOOR.base - Math.sqrt(3) * DOOR.hw), dH = FY - dTop, dW = DOOR.hw + 1;
+  const inDoor = (x: number, y: number) => x >= 0 && x < dW && y >= 0 && y < dH && inArch(DOOR.x - DOOR.hw + x, dTop + y, DOOR.x, DOOR.base, DOOR.hw);
+  canvasTex(scene, 'door', dW, dH, (c) => {
+    for (let y = 0; y < dH; y++) for (let x = 0; x < dW; x++) {
+      if (!inDoor(x, y)) continue;
+      const edge = !inDoor(x, y - 1) || !inDoor(x - 1, y) || x === dW - 1;
+      px(c, edge ? '#1a1014' : x % 5 === 0 ? '#2a180e' : x % 5 === 1 ? '#6a4428' : '#4a2e1a', x, y);
+    }
+    for (const y of [dH - 80, dH - 56, dH - 34, dH - 10]) for (let x = 0; x < dW; x++) if (inDoor(x, y) && inDoor(x, y + 2)) {
+      px(c, '#1a1820', x, y, 1, 3); px(c, '#4a4868', x, y, 1, 1);
+      if (x % 5 === 2) px(c, '#8a8aa0', x, y + 1, 1, 1);
+    }
+    px(c, '#c8a050', dW - 5, dH - 22, 2, 3);
   });
   canvasTex(scene, 'gate', 40, 62, (c) => {
     for (let x = 2; x < 40; x += 6) { px(c, '#1a1828', x, 0, 3, 56); px(c, '#4a4868', x, 0, 1, 56); for (let y = 56; y < 62; y++) px(c, '#2a2838', x + 1, y, 1, 1); }
