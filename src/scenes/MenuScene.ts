@@ -35,7 +35,8 @@ export class MenuScene extends Phaser.Scene {
   private fig!: Phaser.GameObjects.Image;
   private jobs: (() => void)[] = [];
   private figReady = true;
-  private ach: { sel: number; g: Phaser.GameObjects.Graphics; cells: Phaser.GameObjects.Image[]; info: Phaser.GameObjects.BitmapText; objs: Phaser.GameObjects.GameObject[] } | null = null;
+  private ach: { sel: number; g: Phaser.GameObjects.Graphics; cells: Phaser.GameObjects.Image[]; info: Phaser.GameObjects.BitmapText; objs: Phaser.GameObjects.GameObject[];
+    sword: Phaser.GameObjects.Image; halo: Phaser.GameObjects.Image; badge: Phaser.GameObjects.Container; shown: number } | null = null;
 
   constructor() { super('Menu'); }
 
@@ -234,10 +235,9 @@ export class MenuScene extends Phaser.Scene {
       const y = 48 + i * 15, on = hasAch(x.id);
       g0.fillStyle(on ? 0x1c1830 : 0x13111f, 1).fillRect(22, y, W - 44, 13);
       if (on) g0.fillStyle(GOLD, 0.8).fillRect(22, y, 1, 13);
-      g0.fillStyle(on ? 0x3a2a14 : 0x1b1f33).fillCircle(32, y + 6.5, 6.5);
-      g0.lineStyle(1, on ? GOLD : 0x3d4463).strokeCircle(32, y + 6.5, 6.5);
-      if (on) { const gl = this.add.image(32, y + 6, 'glowO').setBlendMode(Phaser.BlendModes.ADD).setScale(0.35).setAlpha(0.5).setDepth(101); objs.push(gl); }
-      const ic = this.add.image(32, y + 6.5, 'ach_' + x.id).setDepth(102);
+      objs.push(this.add.image(32.5, y + 6.5, on ? 'ach_med_on' : 'ach_med_off').setDepth(101.5));
+      if (on) { const gl = this.add.image(32.5, y + 6.5, 'glowO').setBlendMode(Phaser.BlendModes.ADD).setScale(0.35).setAlpha(0.5).setDepth(101.2); objs.push(gl); }
+      const ic = this.add.image(32.5, y + 6.5, 'ach_' + x.id).setDepth(102); // icône 11 px : centre sur un demi-pixel → bord sur un pixel entier
       if (!on) ic.setTintFill(0x4a5070);
       objs.push(ic);
       T(44, y + 1, x.name, on ? GOLD : COL.ui);
@@ -250,11 +250,10 @@ export class MenuScene extends Phaser.Scene {
       }
     });
     // Skins du héros : aperçu (silhouette si verrouillé), survol = choisir, clic = équiper.
-    T(W / 2, 156, 'SKINS DU HÉROS', COL.ember).setOrigin(0.5, 0);
     const cells = SKINS.map((k, i) => {
       const cx = 90 + i * 100, open = skinUnlocked(k.id);
-      const im = this.add.image(cx, 194, 'skin_' + k.id).setScale(1.5).setDepth(102);
-      if (!open) im.setTintFill(0x000000);
+      const im = this.add.image(cx, 196, 'skin_' + k.id).setScale(1.5).setDepth(102);
+      if (!open) { im.setTintFill(0x000000); objs.push(this.add.image(cx, 214, 'ach_lock').setDepth(103)); }
       T(cx, 226, open ? k.name : '???', open ? COL.ui : COL.uiDim).setOrigin(0.5, 0);
       const z = this.add.zone(cx, 194, 76, 58).setInteractive({ useHandCursor: true }).setDepth(103);
       z.on('pointerover', () => { if (this.ach && this.ach.sel !== i) { this.ach.sel = i; sfx.tick(); this.drawAch(); } });
@@ -263,6 +262,13 @@ export class MenuScene extends Phaser.Scene {
       return im;
     });
     const g = this.add.graphics().setDepth(101);
+    const halo = this.add.image(0, 194, 'glowC').setBlendMode(Phaser.BlendModes.ADD).setScale(0.9).setAlpha(0.32).setDepth(101.5);
+    const sword = this.add.image(0, 196, 'cursor').setDepth(104);
+    const badge = this.add.container(0, 166).setDepth(104);
+    const bt = txt(this, 0, -5, 'ÉQUIPÉ', GOLD).setOrigin(0.5, 0), bw = bt.width + 8, bg = this.add.graphics();
+    bg.fillStyle(0x1c1408, 1).fillRect(-bw / 2, -6, bw, 11).lineStyle(1, GOLD).strokeRect(-bw / 2 + 0.5, -5.5, bw - 1, 10);
+    badge.add([bg, bt]);
+    objs.push(halo, sword, badge);
     const info = T(W / 2, 239, '', COL.moonLight).setOrigin(0.5, 0);
     T(28, 251, '←→ : CHOISIR · ENTRÉE / CLIC : ÉQUIPER', COL.uiDim);
     const back = T(W - 28, 251, 'RETOUR', COL.ui).setOrigin(1, 0);
@@ -270,21 +276,34 @@ export class MenuScene extends Phaser.Scene {
     bz.on('pointerover', () => back.setTint(COL.moonLight)); bz.on('pointerout', () => back.setTint(COL.ui));
     bz.on('pointerdown', () => this.closeAch());
     objs.push(g, bz);
-    this.ach = { sel: Math.max(0, SKINS.findIndex((k) => k.id === currentSkin())), g, cells, info, objs };
+    this.ach = { sel: Math.max(0, SKINS.findIndex((k) => k.id === currentSkin())), g, cells, info, objs, sword, halo, badge, shown: -1 };
     this.drawAch();
   }
 
   private drawAch() {
-    const a = this.ach!, g = a.g;
+    const a = this.ach!, g = a.g, tw = this.tweens;
     g.clear();
     SKINS.forEach((k, i) => {
-      const cx = 90 + i * 100, sel = i === a.sel, eq = k.id === currentSkin();
-      g.fillStyle(sel ? 0x1c1830 : 0x161428, 1).fillRect(cx - 38, 166, 76, 58);
-      g.lineStyle(1, sel ? COL.moonLight : eq ? GOLD : 0x3d4463).strokeRect(cx - 37.5, 166.5, 75, 57);
-      if (eq) g.fillStyle(COL.ember, 0.9).fillRect(cx - 14, 236, 28, 1);
+      const cx = 90 + i * 100, sel = i === a.sel, eq = k.id === currentSkin(), im = a.cells[i];
+      g.fillStyle(sel ? 0x1e1a36 : 0x131120, 1).fillRect(cx - 38, 166, 76, 58);
+      g.lineStyle(1, sel ? COL.moonLight : eq ? GOLD : 0x2a2d45).strokeRect(cx - 37.5, 166.5, 75, 57);
+      if (sel) g.lineStyle(1, 0x3d4463).strokeRect(cx - 35.5, 168.5, 71, 53);
+      tw.killTweensOf(im);
+      im.setAlpha(sel ? 1 : skinUnlocked(k.id) ? 0.55 : 0.8).setY(196);
+      tw.add({ targets: im, scale: sel ? 1.8 : 1.5, duration: 140, ease: 'Back.out' });
+      if (sel) tw.add({ targets: im, y: 194, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.inOut', delay: 140 });
+      if (eq) a.badge.setX(cx);
     });
+    // Épée des menus : glisse jusqu'au skin choisi et pointe dessus en oscillant.
+    const sx = 90 + a.sel * 100 - 50;
+    a.halo.setX(sx + 50).setVisible(skinUnlocked(SKINS[a.sel].id));
+    tw.killTweensOf(a.sword);
+    if (a.shown < 0) a.sword.setX(sx);
+    tw.add({ targets: a.sword, x: sx, duration: a.shown < 0 ? 1 : 120, ease: 'Back.out',
+      onComplete: () => { tw.add({ targets: a.sword, x: sx + 3, duration: 380, yoyo: true, repeat: -1, ease: 'Sine.inOut' }); } });
+    a.shown = a.sel;
     const k = SKINS[a.sel], ach = skinAch(k.id), open = skinUnlocked(k.id);
-    a.info.setText(!open ? `À DÉBLOQUER : ${ach?.name ?? ''}` : k.id === currentSkin() ? 'ÉQUIPÉ' : 'ENTRÉE OU CLIC : ÉQUIPER').setTint(open ? COL.moonLight : COL.uiDim);
+    a.info.setText(!open ? `À DÉBLOQUER : ${ach?.name ?? ''}` : k.id === currentSkin() ? 'SKIN ACTUEL' : 'ENTRÉE OU CLIC : ÉQUIPER').setTint(open ? COL.moonLight : COL.uiDim);
   }
 
   /** Équipe le skin choisi : l'écran se met à jour tout de suite, les textures du héros se refont par lots (update). */
