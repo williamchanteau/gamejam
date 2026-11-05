@@ -13,8 +13,9 @@ import { GameOverScene } from './scenes/GameOverScene';
 import { DawnScene } from './scenes/DawnScene';
 import { ThroneScene } from './scenes/ThroneScene';
 import { music } from './audio/music';
+import { ChronoScene } from './scenes/ChronoScene';
 
-const scenes = [BootScene, MenuScene, TestScene, OutsideScene, BossScene, DarkBossScene, BurgerScene, TransitScene, DawnScene, ThroneScene, PauseScene, GameOverScene];
+const scenes = [BootScene, MenuScene, TestScene, OutsideScene, BossScene, DarkBossScene, BurgerScene, TransitScene, DawnScene, ThroneScene, PauseScene, GameOverScene, ChronoScene]; // Chrono en dernier : dessiné par-dessus tout
 function start(extra: Phaser.Types.Scenes.SceneType[] = []) {
 const game = new Phaser.Game({
   type: Phaser.AUTO,

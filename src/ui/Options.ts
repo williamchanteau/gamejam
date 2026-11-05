@@ -7,12 +7,14 @@ import {
 } from '../input';
 import { sfx } from '../audio/sfx';
 import { vol, setVol, VolKey } from '../audio/core';
+import { chronoShown, setChrono } from '../speedrun';
 
 const NAME: Record<Bind, string> = { left: 'GAUCHE', right: 'DROITE', jump: 'SAUTER', down: 'DESCENDRE', attack: 'ATTAQUE', dash: 'DASH', spell: 'SORT' };
 const VOLS: [VolKey, string][] = [['master', 'GÉNÉRAL'], ['music', 'MUSIQUE'], ['sfx', 'EFFETS']];
 const LAYOUTS: Layout[] = ['AZERTY', 'QWERTY'];
 const TABS = ['SON · ÉCRAN', 'TOUCHES'];
 const SCREENS = ['FENÊTRE', 'PLEIN ÉCRAN'];
+const CHRONOS = ['MASQUÉ', 'AFFICHÉ'];
 const PW = 360, PH = 252, PX = (W - PW) / 2, PY = Math.floor((H - PH) / 2);
 const LX = PX + 34;               // libellés
 const SX = [PX + 214, PX + 304];  // centres des 2 colonnes
@@ -21,7 +23,7 @@ const SW = 84, SH = 13, D = 55;
 const SL = PX + 172, SEG = 11, GAP = 2; // volume : 10 crans montants
 const BACK_Y = PY + 220;
 
-type Kind = 'tab' | 'screen' | 'layout' | 'bind' | 'vol' | 'reset' | 'back';
+type Kind = 'tab' | 'screen' | 'chrono' | 'layout' | 'bind' | 'vol' | 'reset' | 'back';
 type Row = { y: number; kind: Kind; label: string; b?: Bind; v?: VolKey };
 let lastTab = 0;
 
@@ -77,7 +79,7 @@ export class OptionsPanel {
     const rows: Row[] = [{ y: PY + 33, kind: 'tab', label: '' }];
     if (this.tab === 0) {
       VOLS.forEach(([v, label], i) => rows.push({ y: PY + 72 + i * 24, kind: 'vol', v, label }));
-      rows.push({ y: PY + 160, kind: 'screen', label: 'AFFICHAGE' });
+      rows.push({ y: PY + 160, kind: 'screen', label: 'AFFICHAGE' }, { y: PY + 184, kind: 'chrono', label: 'CHRONO' });
     }
     else {
       this.T(SX[0], PY + 52, 'TOUCHE 1', COL.uiDim).setOrigin(0.5, 0);
@@ -94,10 +96,10 @@ export class OptionsPanel {
         return;
       }
       this.labels.push(this.T(LX, r.y - 6, r.label));
-      const two = r.kind === 'bind' || r.kind === 'layout' || r.kind === 'screen';
+      const two = r.kind === 'bind' || r.kind === 'layout' || r.kind === 'screen' || r.kind === 'chrono';
       const w = two || r.kind === 'vol' ? SX[0] - SW / 2 - LX : PW - 60;
       this.zone(LX - 4 + w / 2, r.y, w, SH, i, -1);
-      if (two) this.cells.push(SX.map((x, c) => { this.zone(x, r.y, SW, SH, i, c); return this.T(x, r.y - 6, r.kind === 'layout' ? LAYOUTS[c] : r.kind === 'screen' ? SCREENS[c] : '').setOrigin(0.5, 0); }));
+      if (two) this.cells.push(SX.map((x, c) => { this.zone(x, r.y, SW, SH, i, c); return this.T(x, r.y - 6, r.kind === 'layout' ? LAYOUTS[c] : r.kind === 'screen' ? SCREENS[c] : r.kind === 'chrono' ? CHRONOS[c] : '').setOrigin(0.5, 0); }));
       else if (r.kind === 'vol') { this.slideZone(r, i); this.cells.push([this.T(PX + 324, r.y - 6, '').setOrigin(0.5, 0)]); }
       else this.cells.push([]);
     });
@@ -212,12 +214,12 @@ export class OptionsPanel {
         if (on) this.g.fillStyle(COL.ember, 0.7).fillRect(TX[c] - 12, r.y + 5, 24, 1);
       });
       else if (r.kind === 'vol') this.slider(r, i, rs);
-      else if (r.kind === 'bind' || r.kind === 'layout' || r.kind === 'screen') for (let c = 0; c < 2; c++) {
+      else if (r.kind === 'bind' || r.kind === 'layout' || r.kind === 'screen' || r.kind === 'chrono') for (let c = 0; c < 2; c++) {
         const sel = rs && c === this.col, cap = sel && this.capturing;
         this.frame(SX[c], r.y, sel, cap && this.blink);
         const t = this.cells[i][c], k = r.b ? getBind(r.b, c) : null;
         if (r.b) t.setText(cap ? (this.blink ? '. . .' : '') : keyText(k) || '-');
-        const cur = r.kind === 'screen' ? +this.fs : lay, on = r.b ? !!k : c === cur;
+        const cur = r.kind === 'screen' ? +this.fs : r.kind === 'chrono' ? +chronoShown() : lay, on = r.b ? !!k : c === cur;
         t.setTint(sel ? COL.moonLight : on ? COL.ui : COL.uiDim);
         if (!r.b && c === cur) this.g.fillStyle(COL.ember, 0.7).fillRect(SX[c] - 14, r.y + 5, 28, 1); // clavier / affichage choisi
       }
@@ -233,6 +235,7 @@ export class OptionsPanel {
       : k === 'vol' ? ['←→ : RÉGLER · ENTRÉE : COUPER / REMETTRE', COL.uiDim]
       : k === 'layout' ? ['LETTRES AFFICHÉES POUR LES TOUCHES PAR DÉFAUT', COL.uiDim]
       : k === 'screen' ? ['JOUER EN FENÊTRE OU EN PLEIN ÉCRAN', COL.uiDim]
+      : k === 'chrono' ? ['TEMPS DE LA PARTIE À L\'ÉCRAN (SPEEDRUN)', COL.uiDim]
       : k === 'bind' ? ['ENTRÉE : CHANGER · SUPPR : EFFACER · ÉCHAP : RETOUR', COL.uiDim]
       : k === 'reset' ? ['REMET TOUTES LES TOUCHES PAR DÉFAUT', COL.uiDim]
       : ['ÉCHAP : RETOUR', COL.uiDim];
@@ -248,6 +251,7 @@ export class OptionsPanel {
     this.msg = '';
     if (r.kind === 'screen') setFullscreen(this.col === 1);
     else if (r.kind === 'layout') setLayout(LAYOUTS[this.col]);
+    else if (r.kind === 'chrono') setChrono(this.col === 1);
     else if (r.kind === 'reset') { resetBinds(); this.say('TOUCHES PAR DÉFAUT RÉTABLIES'); }
     else this.listen(r.b!, this.col);
     this.draw();
@@ -304,7 +308,7 @@ export class OptionsPanel {
     if (dl || dr) {
       if (r.kind === 'tab') this.setTab(dl ? 0 : 1);
       else if (r.kind === 'vol') { const v = Phaser.Math.Clamp(vol[r.v!] + (dl ? -1 : 1), 0, 10); if (v !== vol[r.v!]) this.setVolume(r.v!, v); }
-      else if (r.kind === 'bind' || r.kind === 'layout' || r.kind === 'screen') this.pick(this.row, dl ? 0 : 1);
+      else if (r.kind === 'bind' || r.kind === 'layout' || r.kind === 'screen' || r.kind === 'chrono') this.pick(this.row, dl ? 0 : 1);
     }
     if (input.take('clear') && r.kind === 'bind') {
       this.say(clearBind(r.b!, this.col) ? 'TOUCHE EFFACÉE' : 'IL FAUT AU MOINS UNE TOUCHE');

@@ -10,11 +10,13 @@ import { YSOLDE } from '../bosses/ysolde';
 import { NYCTHOR } from '../bosses/nycthor';
 import { MCKING } from '../bosses/mcking';
 import { TITLE_MOON } from '../art/title';
+import { sr, srStart, srAbort, records, DIFFS, fmt } from '../speedrun';
 
 const LX = 26; // bord gauche du logo et des boutons
 const BW = 104, DW = 192; // largeur des boutons : menu principal, difficulté (assez pour VRAIMENT FACILE)
 let AX = 0; // axe du losange sous le logo : les boutons y sont centrés
-const QUIT_I = 2; // position de QUITTER, le bouton du bas
+const QUIT_I = 3; // position de QUITTER, le bouton du bas
+const GOLD = 0xffd36a;
 const CHEAT = ['ArrowDown', 'ArrowDown', 'ArrowRight', 'ArrowDown'];
 const hillY = (x: number) => 228 + Math.round(Math.sin(x / 40) * 6 + Math.sin(x / 13) * 2);
 
@@ -44,6 +46,7 @@ export class MenuScene extends Phaser.Scene {
 
   create() {
     input.reset();
+    srAbort(); // revenir au menu met fin à la partie chronométrée
     this.sub = null; this.opts = null; this.bossMenu = null; this.diff = null; this.diffNotes = []; this.cheat = 0;
     if (import.meta.env.DEV) {
       addEventListener('keydown', this.onCheatKey);
@@ -91,6 +94,7 @@ export class MenuScene extends Phaser.Scene {
     }).setDepth(41);
     this.menu = new Menu(this, AX, 82, [
       { label: 'JOUER', act: () => this.difficulty() },
+      { label: 'RECORDS', act: () => this.records() },
       { label: 'OPTIONS', act: () => this.options() },
       { label: 'QUITTER', act: () => this.quit() },
       ...(import.meta.env.DEV ? [{ label: 'TESTER BOSS', x: W - 94, y: H - 32, w: 140, act: () => this.bosses() }] : []),
@@ -116,6 +120,7 @@ export class MenuScene extends Phaser.Scene {
 
   private play(easy: boolean, hard: boolean) {
     run.easy = easy; run.hard = hard;
+    srStart();
     this.go('Outside');
   }
 
@@ -160,6 +165,38 @@ export class MenuScene extends Phaser.Scene {
       ...FLOORS.map((f, i) => ({ label: defs[i]?.name ?? f.place, act: () => { run.easy = false; run.hard = false; run.upgrade = ''; this.go(f.scene); } })),
       { label: 'RETOUR', act: () => this.closeSub() },
     ], { framed: 220, gap: 38, depth: 110 });
+  }
+
+  /** RECORDS : 5 meilleurs temps par difficulté ; la dernière partie finie en cyan, le meilleur en or. */
+  private records() {
+    if (this.sub || this.opts) return;
+    input.reset();
+    this.menu.enabled = false; this.menu.setVisible(false);
+    const g = this.add.graphics(), o: Phaser.GameObjects.GameObject[] = [g];
+    const T = (x: number, y: number, s: string, c: number) => { const t = txt(this, x, y, s, c); o.push(t); return t; };
+    g.fillStyle(0x06050c, 0.94).fillRect(0, 0, W, H);
+    T(W / 2, 18, 'RECORDS', COL.moonLight).setOrigin(0.5, 0).setScale(2);
+    g.fillStyle(COL.ember, 0.7).fillRect(W / 2 - 30, 44, 60, 1);
+    T(W / 2, 50, 'DU CHÂTEAU À LA COURONNE · PAUSES ET TUTO NON COMPTÉS', COL.uiDim).setOrigin(0.5, 0);
+    const all = records(), cw = 146, gap = 7, x0 = (W - 3 * cw - 2 * gap) / 2, y0 = 72, ch = 134, last = sr.last;
+    DIFFS.forEach(([d, name], k) => {
+      const x = x0 + k * (cw + gap);
+      g.fillStyle(0x161428).fillRect(x, y0, cw, ch);
+      g.lineStyle(1, 0x3d4463).strokeRect(x + 0.5, y0 + 0.5, cw - 1, ch - 1);
+      T(x + cw / 2, y0 + 8, name, COL.ui).setOrigin(0.5, 0);
+      g.fillStyle(COL.ember, 0.7).fillRect(x + cw / 2 - 14, y0 + 21, 28, 1);
+      for (let i = 0; i < 5; i++) {
+        const r = all[d][i], y = y0 + 32 + i * 20, me = last?.diff === d && last.rank === i;
+        const c = !r ? COL.uiDim : me ? COL.moon : i === 0 ? GOLD : COL.ui;
+        T(x + 10, y, `${i + 1}.`, c);
+        T(x + 26, y, r ? fmt(r.t) : '-:--.--', c);
+        if (r) T(x + cw - 10, y, `${r.d} MORT${r.d > 1 ? 'S' : ''}`, me ? COL.moon : COL.uiDim).setOrigin(1, 0);
+      }
+    });
+    T(W / 2, H - 16, 'ÉCHAP / ENTRÉE : RETOUR', COL.uiDim).setOrigin(0.5, 0);
+    const hit = this.add.zone(0, 0, W, H).setOrigin(0).setInteractive();
+    hit.on('pointerdown', () => this.closeSub());
+    this.sub = this.add.container(0, 0, [...o, hit]).setDepth(100);
   }
 
   private options() {

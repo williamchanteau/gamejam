@@ -10,6 +10,7 @@ import { music } from '../audio/music';
 import { YSOLDE } from '../bosses/ysolde';
 import { buildNave, type Room } from './rooms';
 import { announce } from '../ui/Announcer';
+import { srSplit } from '../speedrun';
 import { FLOORS } from '../floors';
 import { STAIRS } from '../art/outside';
 
@@ -104,6 +105,7 @@ export class BossScene extends ArenaScene {
 
   private victory() {
     this.won = true;
+    srSplit(this.floor);
     this.player.safe = true;
     this.time.delayedCall(1300, () => { music.stinger('victory', this.afterWin); this.banner(`${this.def.name} EST TOMBÉ`, this.victoryHint()); });
     if (this.autoGate) this.time.delayedCall(2200, () => this.openGate());

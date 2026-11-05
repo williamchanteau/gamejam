@@ -10,6 +10,12 @@ import { CITIZENS, type Citizen, type Kind } from '../art/citizens';
 import { hash } from '../art/room';
 import { shout } from '../ui/Shout';
 import { CREDITS, ROLL_SECONDS } from './credits';
+import { sr, fmt, DIFFS } from '../speedrun';
+import { YSOLDE } from '../bosses/ysolde';
+import { NYCTHOR } from '../bosses/nycthor';
+import { MCKING } from '../bosses/mcking';
+
+const GOLD = 0xffd36a;
 
 type Img = Phaser.GameObjects.Image;
 type Mood = 'cheer' | 'hush' | 'wild';
@@ -238,13 +244,39 @@ export class ThroneScene extends Phaser.Scene {
     this.rollY = H;
   }
 
+  /** Carte de fin : FIN, puis le résultat de la partie chronométrée (temps, difficulté, morts, chute de chaque boss, rang). */
   private endCard() {
     this.finished = true;
-    const x = 136;
-    const fin = txt(this, x, 70, 'FIN', 0xffd36a).setOrigin(0.5, 0).setScale(5).setDepth(82).setScrollFactor(0);
-    const th = txt(this, x, 136, "MERCI D'AVOIR JOUÉ", COL.ui).setOrigin(0.5, 0).setDepth(82).setScrollFactor(0);
-    const go = txt(this, x, 156, 'ENTRÉE / ESPACE : MENU', COL.moonLight).setOrigin(0.5, 0).setDepth(82).setScrollFactor(0);
-    for (const o of [fin, th, go]) { o.setAlpha(0); this.tweens.add({ targets: o, alpha: 1, duration: 450 }); }
+    const x = 136, res = sr.last, o: Phaser.GameObjects.BitmapText[] = [];
+    const T = (tx: number, y: number, s: string, c: number, sc = 1, ox = 0.5) => {
+      const t = txt(this, tx, y, s, c).setOrigin(ox, 0).setScale(sc).setDepth(82).setScrollFactor(0);
+      o.push(t);
+      return t;
+    };
+    let go: Phaser.GameObjects.BitmapText;
+    if (!res) {
+      T(x, 70, 'FIN', GOLD, 5);
+      T(x, 136, "MERCI D'AVOIR JOUÉ", COL.ui);
+      go = T(x, 156, 'ENTRÉE / ESPACE : MENU', COL.moonLight);
+    } else {
+      const { rec, diff, rank } = res;
+      T(x, 18, 'FIN', GOLD, 4);
+      T(x, 66, 'TEMPS FINAL', COL.uiDim);
+      T(x, 77, fmt(rec.t), rank === 0 ? GOLD : COL.ui, 2);
+      T(x, 104, `${DIFFS.find((d) => d[0] === diff)![1]} · ${rec.d} MORT${rec.d > 1 ? 'S' : ''}`, COL.moonLight);
+      [YSOLDE, NYCTHOR, MCKING].forEach((b, i) => {
+        T(x - 62, 122 + i * 11, b.name, COL.uiDim, 1, 0);
+        T(x + 62, 122 + i * 11, rec.s[i] ? fmt(rec.s[i]) : '-:--.--', COL.ui, 1, 1);
+      });
+      if (rank === 0) {
+        const r = T(x, 162, 'NOUVEAU RECORD !', GOLD);
+        this.time.delayedCall(500, () => sfx.powerUp());
+        this.tweens.add({ targets: r, alpha: 0.4, delay: 900, duration: 380, yoyo: true, repeat: -1 });
+      } else if (rank > 0) T(x, 162, `${rank + 1}E MEILLEUR TEMPS`, COL.moonLight);
+      T(x, 188, "MERCI D'AVOIR JOUÉ", COL.ui);
+      go = T(x, 206, 'ENTRÉE / ESPACE : MENU', COL.moonLight);
+    }
+    for (const t of o) { const a = t.alpha; t.setAlpha(0); this.tweens.add({ targets: t, alpha: a, duration: 450 }); }
     this.tweens.add({ targets: go, alpha: 0.35, delay: 900, duration: 500, yoyo: true, repeat: -1 });
     input.reset();
   }
