@@ -12,7 +12,8 @@ import { buildNave, type Room } from './rooms';
 import { announce } from '../ui/Announcer';
 import { srSplit } from '../speedrun';
 import { FLOORS } from '../floors';
-import { STAIRS } from '../art/outside';
+import { STAIRS, GATE_TOP } from '../art/outside';
+import { inArch } from '../art/room';
 
 /** Salle de boss : annonceur (sauté au retry), barre nommée, victoire → grille levée → escalier. */
 export class BossScene extends ArenaScene {
@@ -46,7 +47,14 @@ export class BossScene extends ArenaScene {
   create(data?: { retry?: boolean }) {
     super.create(data);
     this.won = false; this.gateOpen = false; this.climbing = false; this.bannerObjs = [];
-    this.gate = this.add.image(STAIRS.x, this.floorY - 62, 'gate').setOrigin(0.5, 0).setDepth(4.5);
+    // Herse masquée à la forme de l'ogive (une bande par ligne) : levée, elle disparaît dans la maçonnerie.
+    const { x: sx, hw, base } = STAIRS, arch = this.make.graphics({}, false).fillStyle(0xffffff);
+    for (let y = GATE_TOP; y < this.floorY; y++) {
+      let a = sx - hw;
+      while (a <= sx && !inArch(a, y, sx, base, hw)) a++;
+      if (a <= sx) arch.fillRect(a, y, 2 * (sx - a) + 1, 1);
+    }
+    this.gate = this.add.image(sx - hw, GATE_TOP, 'gate').setOrigin(0).setDepth(4.5).setMask(arch.createGeometryMask());
     this.bar = undefined;
     this.boss = new Boss(this, this.def, this.bossX, this.floorY);
     this.targets.push(this.boss);
@@ -130,7 +138,7 @@ export class BossScene extends ArenaScene {
     sfx.rumble();
     this.cameras.main.shake(700, 0.003);
     this.puffs(STAIRS.x, this.floorY, 6);
-    this.tweens.add({ targets: this.gate, scaleY: 0.05, duration: 1100, ease: 'Quad.inOut', onComplete: () => { this.gateOpen = true; } });
+    this.tweens.add({ targets: this.gate, y: GATE_TOP - this.gate.height, duration: 1400, ease: 'Quad.inOut', onComplete: () => { this.gateOpen = true; } });
     const hint = txt(this, STAIRS.x - 14, STAIRS.base - 62, 'MONTER →', COL.moonLight).setOrigin(0.5, 0).setDepth(20);
     this.tweens.add({ targets: hint, x: STAIRS.x + 4, duration: 450, yoyo: true, repeat: -1, ease: 'Sine.inOut' });
   }

@@ -11,6 +11,8 @@ export const DOOR = { x: 400, hw: 22, base: 180 };
 export const OUT = { torches: [362, 438], windows: [[352, 124], [452, 124], [311, 80]], moon: [86, 52] };
 /** Escalier de la nef : arche à l'extrémité droite de l'arène. */
 export const STAIRS = { x: 928, hw: 22, base: 182 };
+/** Sommet de l'ogive de l'escalier : la herse couvre l'ouverture de là jusqu'au sol. */
+export const GATE_TOP = Math.ceil(STAIRS.base - Math.sqrt(3) * STAIRS.hw);
 /** Portail violet du tuto (bord gauche du château) et sa pancarte. */
 export const PORTAL = { x: 24, sign: 68 };
 
@@ -60,9 +62,14 @@ export function makeOutsideArt(scene: Phaser.Scene) {
     }
     px(c, '#c8a050', dW - 5, dH - 22, 2, 3);
   });
-  canvasTex(scene, 'gate', 40, 62, (c) => {
-    for (let x = 2; x < 40; x += 6) { px(c, '#1a1828', x, 0, 3, 56); px(c, '#4a4868', x, 0, 1, 56); for (let y = 56; y < 62; y++) px(c, '#2a2838', x + 1, y, 1, 1); }
-    for (const y of [4, 18, 32, 46]) { px(c, '#1a1828', 0, y, 40, 3); px(c, '#4a4868', 0, y, 40, 1); }
+  // Herse : grille de toute la hauteur de l'ogive ; BossScene la découpe à la forme de l'arche (masque) et la remonte dans le mur.
+  const gw = STAIRS.hw * 2 + 1, gh = FY - GATE_TOP;
+  canvasTex(scene, 'gate', gw, gh, (c) => {
+    for (let x = 1; x < gw; x += 6) { px(c, '#1a1828', x, 0, 3, gh - 6); px(c, '#4a4868', x, 0, 1, gh - 6); px(c, '#2a2838', x + 1, gh - 6, 1, 6); }
+    for (let y = 6; y < gh - 10; y += 14) {
+      px(c, '#1a1828', 0, y, gw, 3); px(c, '#4a4868', 0, y, gw, 1);
+      for (let x = 1; x < gw; x += 6) px(c, '#8a8aa0', x + 1, y + 1, 1, 1); // rivets aux croisements
+    }
   });
 
   canvasTex(scene, 'out_bg', W, H, (c) => {
