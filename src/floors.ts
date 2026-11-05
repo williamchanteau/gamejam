@@ -12,7 +12,9 @@ export const floorName = (i: number) => FLOORS[i]?.name ?? `ÉTAGE ${i}`;
 /** Amélioration choisie à la table du banquet : sort en 2 vagues ou dash qui plante les dagues. */
 export type Upgrade = '' | 'wave' | 'dash';
 /** Partie en cours : DIFFICILE = aucune sauvegarde (une mort en boss renvoie devant le château) ; VRAIMENT FACILE = sauvegardes de NORMAL, plus de cœurs et de dégâts. */
-export const run = { easy: false, hard: false, upgrade: '' as Upgrade };
+export const run = { easy: false, hard: false, upgrade: '' as Upgrade, floor: 0 };
+/** Rang de difficulté de la salle en cours (= étage, réglé par BossScene) ; VRAIMENT FACILE reste au rang 0. */
+export const tier = () => (run.easy ? 0 : run.floor);
 /** Cœurs au maximum selon la difficulté. */
 export const maxHp = () => (run.easy ? PLAYER.easyHp : PLAYER.hp);
 /** Scène de reprise après une mort : boss 1 (ou tout boss en DIFFICILE) → dehors ; sinon la salle elle-même. */

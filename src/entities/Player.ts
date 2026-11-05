@@ -3,7 +3,7 @@ import { PLAYER as C, PHYS, COL, DEV } from '../config';
 import { input } from '../input';
 import { CAPE, capeTex } from '../art/player';
 import { sfx } from '../audio/sfx';
-import { run, maxHp } from '../floors';
+import { run, maxHp, tier } from '../floors';
 import type { Target } from './types';
 import type { ArenaScene } from '../scenes/ArenaScene';
 
@@ -224,7 +224,7 @@ export class Player {
 
   hurt(fromX: number, hearts = 1) {
     if (this.invulnerable) return;
-    this.hp = Math.max(0, this.hp - hearts); this.invuln = C.invuln;
+    this.hp = Math.max(0, this.hp - hearts); this.invuln = C.invuln[tier()] ?? C.invuln[0];
     if (this.state === 'dash') this.endDash();
     this.body.setAllowGravity(true);
     const k = Math.sign(this.x - fromX) || -this.facing;

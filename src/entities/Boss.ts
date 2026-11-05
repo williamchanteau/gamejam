@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { BOSS, COL, PLAYER } from '../config';
-import { run } from '../floors';
+import { run, tier } from '../floors';
 import { sfx } from '../audio/sfx';
 import { music } from '../audio/music';
 import type { Target } from './types';
@@ -35,7 +35,7 @@ export class Boss implements Target {
   root: Phaser.GameObjects.Container;
   parts: Record<string, Obj> = {};
   flashParts: Phaser.GameObjects.Image[] = [];
-  hp: number; maxHp: number; phase = 1; speed = 1; dir = -1;
+  hp: number; maxHp: number; phase = 1; speed = BOSS.floorSpeed[tier()]; dir = -1;
   /** Plancher de PV : un coup ne peut pas sauter un passage scripté encore dû (épreuve, festin). */
   minHp = 0;
   state: State = 'intro';
@@ -71,7 +71,7 @@ export class Boss implements Target {
 
   // --- Durées : ×vitesse de phase, télégraphes et pauses bornés après mise à l'échelle.
   t(s: number) { return s / this.speed; }
-  tele(s: number) { return Math.max(s / this.speed, this.phase === 1 ? BOSS.teleMinP1 : BOSS.teleMinP2); }
+  tele(s: number) { return Math.max((s * BOSS.floorTele[tier()]) / this.speed, this.phase === 1 ? BOSS.teleMinP1 : BOSS.teleMinP2); }
 
   // --- Outils pour les patterns.
   face() {
@@ -182,7 +182,7 @@ export class Boss implements Target {
 
   private toPhase2() {
     this.abort();
-    this.state = 'phase'; this.phase = 2; this.speed = BOSS.p2Speed;
+    this.state = 'phase'; this.phase = 2; this.speed = BOSS.floorSpeed[tier()] * BOSS.p2Speed[tier()];
     this.eyes('tele');
     sfx.roar(); music.setPhase(2);
     this.scene.cameras.main.shake(BOSS.p2Invuln * 800, 0.01);

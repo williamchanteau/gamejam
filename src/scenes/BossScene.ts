@@ -11,7 +11,7 @@ import { YSOLDE } from '../bosses/ysolde';
 import { buildNave, type Room } from './rooms';
 import { announce } from '../ui/Announcer';
 import { srSplit } from '../speedrun';
-import { FLOORS } from '../floors';
+import { FLOORS, run } from '../floors';
 import { STAIRS, GATE_TOP } from '../art/outside';
 import { inArch } from '../art/room';
 
@@ -45,6 +45,7 @@ export class BossScene extends ArenaScene {
   buildBackground() { this.room = buildNave(this); }
 
   create(data?: { retry?: boolean }) {
+    run.floor = this.floor; // rang de difficulté (vitesse, télégraphes, invulnérabilité)
     super.create(data);
     this.won = false; this.gateOpen = false; this.climbing = false; this.bannerObjs = [];
     // Herse masquée à la forme de l'ogive (une bande par ligne) : levée, elle disparaît dans la maçonnerie.

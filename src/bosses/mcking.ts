@@ -3,7 +3,7 @@ import type { Boss, BossDef } from '../entities/Boss';
 import type { BossScene } from '../scenes/BossScene';
 import type { Target } from '../entities/types';
 import { COL, PLAYER } from '../config';
-import { maxHp } from '../floors';
+import { maxHp, run } from '../floors';
 import { sfx } from '../audio/sfx';
 import { txt } from '../art/font';
 import { ARM_LEN, ARM_PIVOT, gustKey, SHOCK } from '../art/mcking';
@@ -105,7 +105,7 @@ class Feast {
   private steal(gift: number) {
     const b = this.b, sc = b.scene, p = b.player;
     const was = p.hp;
-    p.hp = Math.min(maxHp(), p.hp + gift);
+    p.hp = Math.min(maxHp(), p.hp + (run.hard ? 0 : Math.min(1, gift))); // 1 cœur au plus, aucun en DIFFICILE (alors : mana pleine)
     if (p.hp === was) p.gainMana(PLAYER.manaMax);
     sfx.chomp(); sc.time.delayedCall(120, () => sfx.chomp()); sc.time.delayedCall(260, () => sfx.gulp()); sc.time.delayedCall(360, () => sfx.manaFull());
     sc.sparks(p.x, p.y - 10, 0xffd36a, 16); sc.sparks(p.x, p.y - 10, COL.moon, 8);

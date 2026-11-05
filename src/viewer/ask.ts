@@ -129,7 +129,7 @@ function makePrompt() {
     // Comme b.tele() : en phase 2 la durée est divisée par p2Speed avant d'être comparée au minimum.
     const w: string[] = [];
     if (ph !== '2' && dur < BOSS.teleMinP1) w.push(`phase 1 : ${sec(dur)} < ${sec(BOSS.teleMinP1)} s`);
-    if (ph !== '1' && dur / BOSS.p2Speed < BOSS.teleMinP2) w.push(`phase 2 : ${sec(dur)} ÷ ${sec(BOSS.p2Speed)} = ${sec(dur / BOSS.p2Speed)} < ${sec(BOSS.teleMinP2)} s`);
+    if (ph !== '1' && dur / BOSS.p2Speed[0] < BOSS.teleMinP2) w.push(`phase 2 : ${sec(dur)} ÷ ${sec(BOSS.p2Speed[0])} = ${sec(dur / BOSS.p2Speed[0])} < ${sec(BOSS.teleMinP2)} s`);
     L.push('', `## Nouveau pattern de boss — ${b.label}`, `- Nom : ${val('pname')} · Phase : ${ph === '1 et 2' ? '1 et 2 (phase: 0)' : ph}`,
       `- Télégraphe : ${val('ptele')} · durée ${sec(dur)} s${w.length ? ` ⚠ sous le minimum (${w.join(' ; ')}) : à rallonger` : ''}`,
       `- Phase active : ${val('pact')}`, `- Récupération (fenêtre de punition) : ${sec(+$('prec').value)} s`, `- Dégâts : ${val('pdmg')}`, '', 'Exigences :',

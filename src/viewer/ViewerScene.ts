@@ -72,7 +72,7 @@ export class ViewerScene extends ArenaScene {
       b.eyes = (m) => { this.eye = m; eyes(m); };
       const tele = b.tele.bind(b);
       b.tele = (x) => { const got = tele(x); this.teles.push({ f: V.frame, req: x / b.speed, got }); return got; };
-      if (V.phase === 2 && !this.anim.p1) { b.phase = 2; b.speed = BOSS.p2Speed; }
+      if (V.phase === 2 && !this.anim.p1) { b.phase = 2; b.speed = BOSS.p2Speed[0]; }
     }
     for (let i = 0; i < 3; i++) this.step(false); // posé au sol avant l'animation
     this.anim.setup(this);

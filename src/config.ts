@@ -63,7 +63,7 @@ export const PLAYER = {
   spell: { damage: 20, speed: 345, life: 1.4, castTime: 0.22, recoil: 90, waveDelay: 0.17 },
   dashStab: { damage: 24, reach: 32, at: 0.2 }, // amélioration : coup de dagues pendant le dash (at = fraction du dash)
 
-  invuln: 1.2,
+  invuln: [1.2, 1, 0.9], // invulnérabilité après un coup, par étage (RDC, ÉTAGE 1, ÉTAGE 2)
   hurtStun: 0.22,
   knockbackX: 165,
   knockbackY: 225,
@@ -85,7 +85,10 @@ export const BOSS = {
   teleMinP2: 0.45, // ... phase 2
   pauseMin: 0.4, // pause minimum entre deux patterns
   idlePause: [0.6, 0.9], // pause entre patterns (avant ×vitesse)
-  p2Speed: 1.15,
+  // Montée en difficulté par étage (RDC, ÉTAGE 1, ÉTAGE 2) ; VRAIMENT FACILE reste au RDC partout (floors.ts tier).
+  floorSpeed: [1, 1.05, 1.1], // vitesse de base : actions, pauses, marche, projectiles
+  floorTele: [1, 0.92, 0.85], // télégraphes (toujours bornés par teleMinP1/P2)
+  p2Speed: [1.15, 1.2, 1.25], // vitesse ajoutée au rugissement de 50 % PV
   p2Invuln: 1, // durée du rugissement à 50 % PV
   introTime: 2,
   retryDelay: 0.5, // délai avant la 1re attaque après un retry (intro sautée)
