@@ -100,18 +100,17 @@ export class OutsideScene extends ArenaScene {
           const xa = Math.round(Math.min(x0, x1)), xb = Math.max(xa + 1, Math.round(Math.max(x0, x1)));
           const top = Math.round(yv - yv * sc), bot = Math.round(yv + (dH - yv) * sc);
           ctx.drawImage(src, i, 0, 1, dH, xa, top, xb - xa, bot - top);
-          if (sn > 0.02) { ctx.fillStyle = `rgba(6,5,12,${(0.6 * sn * i) / dW})`; ctx.fillRect(xa, top, xb - xa, bot - top); } // plus loin = plus sombre
         }
         if (sn > 0.05) { // tranche du battant (épaisseur du bois) le long du bord libre
           const se = F / (F + dW * sn), xe = Math.round(hinge + dir * dW * c * se), t = Math.max(1, Math.round(sn * 2));
-          ctx.fillStyle = '#9a5424'; // tranche prise dans la lumière chaude de l'intérieur
+          ctx.fillStyle = '#1a1014';
           ctx.fillRect(side ? xe - t : xe, Math.round(yv - yv * se) + 6, t, Math.round(dH * se) - 6);
         }
       }
       tex.refresh();
     };
-    const swing = (open: boolean, ms: number, delay = 0, from = open ? 0 : 1, to = open ? 1 : 0, ease = open ? 'Sine.inOut' : 'Quad.in') => this.tweens.addCounter({
-      from, to, duration: ms, delay, ease,
+    const swing = (open: boolean, ms: number, delay = 0) => this.tweens.addCounter({
+      from: open ? 0 : 1, to: open ? 1 : 0, duration: ms, delay, ease: open ? 'Sine.inOut' : 'Quad.in',
       onUpdate: (tw) => {
         const k = tw.getValue() ?? 0, sh = Math.round(255 - k * 120);
         drawLeaves(k);
@@ -119,19 +118,15 @@ export class OutsideScene extends ArenaScene {
       },
     });
     drawLeaves(0);
-    // Grincement : la porte s'entrouvre, hésite, puis s'ouvre en grand ; poussière qui tombe de l'arche.
-    swing(true, 240, 0, 0, 0.12, 'Quad.out');
-    swing(true, 600, 380, 0.12, 1);
-    this.time.delayedCall(60, () => this.puffs(DOOR.x, fy - dH + 14, 3));
-    this.time.delayedCall(420, () => { this.puffs(DOOR.x, fy - dH + 10, 4); this.cameras.main.shake(120, 0.003); });
+    swing(true, 640);
     // Lumière chaude : halo dans l'embrasure + éventail au sol vers le joueur.
     const light = this.add.image(DOOR.x, fy - 20, 'glowO').setBlendMode(Phaser.BlendModes.ADD).setScale(0.5).setAlpha(0).setDepth(4);
     const fan = this.add.graphics().setBlendMode(Phaser.BlendModes.ADD).setDepth(6).setAlpha(0);
     fan.fillStyle(0xff9a40, 0.35).fillPoints([{ x: DOOR.x - 20, y: fy }, { x: DOOR.x + 20, y: fy }, { x: DOOR.x + 34, y: fy + 14 }, { x: DOOR.x - 52, y: fy + 14 }] as Phaser.Math.Vector2[], true);
-    this.tweens.add({ targets: light, scale: 2.4, alpha: 0.8, duration: 600, delay: 380 });
-    this.tweens.add({ targets: fan, alpha: 1, duration: 600, delay: 380 });
+    this.tweens.add({ targets: light, scale: 2.4, alpha: 0.8, duration: 520 });
+    this.tweens.add({ targets: fan, alpha: 1, duration: 520 });
     // Il marche jusqu'au seuil, puis s'enfonce dans la profondeur (rapetisse, s'assombrit, disparaît).
-    this.time.delayedCall(700, () => p.walkTo(DOOR.x, spr.y, Math.abs(DOOR.x - spr.x) * 11, {}, () =>
+    this.time.delayedCall(380, () => p.walkTo(DOOR.x, spr.y, Math.abs(DOOR.x - spr.x) * 11, {}, () =>
       p.walkTo(DOOR.x, spr.y - 4, 520, {
         to: { scale: 0.78, alpha: 0 },
         each: (k) => { const c = Math.round(255 - k * 190); spr.setTint(Phaser.Display.Color.GetColor(c, c * 0.85, c * 0.75)); },
