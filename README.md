@@ -17,6 +17,10 @@
 
 ---
 
+<p align="center">
+  <img src="docs/gameplay.gif" alt="Combat : dash, écrasement et ondes de pics, éclat lunaire" width="720">
+</p>
+
 La nuit d'Halloween, un château maudit se dresse dans la tempête. À chaque étage, un boss garde l'escalier. Monte, affronte-les un par un, et va chercher la couronne au sommet.
 
 Jeu créé pour l'**Oddward Jam #1**, dont la consigne imposait des **combats de boss** (barre de vie nommée, salles de boss). Une partie dure environ 5 minutes.
