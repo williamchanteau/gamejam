@@ -157,7 +157,8 @@ export class UpgradeCards {
     // La carte choisie gonfle, flashe, puis s'envole vers le haut.
     const flash = s.add.rectangle(CX[this.i], CY, CW, CH, 0xffffff, 0.9).setDepth(D + 2).setScrollFactor(0);
     s.tweens.add({ targets: flash, alpha: 0, scale: 1.3, duration: 260, onComplete: () => flash.destroy() });
-    s.tweens.add({ targets: pick.c, scaleX: 1.16, scaleY: 1.16, x: W / 2, duration: 240, ease: 'Back.out' });
+    s.tweens.add({ targets: this.extras.filter((o) => (o as Phaser.GameObjects.BitmapText).y > H - 30), alpha: 0, duration: 110 }); // la légende des touches s'efface tout de suite : la carte grossie passerait dessus
+    s.tweens.add({ targets: pick.c, scaleX: 1.16, scaleY: 1.16, x: W / 2, y: CY - 12, duration: 240, ease: 'Back.out' });
     s.tweens.add({ targets: pick.c, y: -130, scaleX: 0.5, scaleY: 0.5, alpha: 0, delay: 560, duration: 260, ease: 'Cubic.in' });
     s.tweens.add({ targets: [this.title, ...this.extras], alpha: 0, delay: 500, duration: 280 });
     s.tweens.add({ targets: this.dim, fillAlpha: 0, delay: 640, duration: 220 });

@@ -80,14 +80,45 @@ export class OutsideScene extends ArenaScene {
     p.safe = true;
     spr.setTexture('p_idle0').setFlipX(false);
     sfx.rumble(); sfx.scrape();
+    // Battants en perspective : chaque colonne est redessinée à sa profondeur (le bord libre recule, rapetisse, se rapproche du gond)
+    // → un battant ouvert est un coin qui fuit vers l'intérieur, jamais un trait plat.
+    const src = this.textures.get('door').getSourceImage() as HTMLCanvasElement;
+    const dW = src.width, dH = src.height, PAD = 2, CW = 2 * DOOR.hw + 1 + PAD * 2, yv = dH - 40; // yv : hauteur des yeux
+    if (this.textures.exists('door_anim')) this.textures.remove('door_anim');
+    const tex = this.textures.createCanvas('door_anim', CW, dH)!, ctx = tex.getContext();
+    ctx.imageSmoothingEnabled = false;
+    const leaves = this.add.image(DOOR.x - DOOR.hw - PAD, fy, 'door_anim').setOrigin(0, 1).setDepth(3);
+    for (const d of this.doors) d.setVisible(false);
+    const drawLeaves = (k: number) => {
+      const th = k * 1.2, c = Math.cos(th), sn = Math.sin(th), F = 105;
+      ctx.clearRect(0, 0, CW, dH);
+      for (const side of [0, 1]) {
+        const hinge = side ? PAD + 2 * DOOR.hw + 1 : PAD, dir = side ? -1 : 1;
+        for (let i = dW - 1; i >= 0; i--) { // du bord libre (loin) vers le gond (près)
+          const s0 = F / (F + i * sn), s1 = F / (F + (i + 1) * sn), sc = (s0 + s1) / 2;
+          const x0 = hinge + dir * i * c * s0, x1 = hinge + dir * (i + 1) * c * s1;
+          const xa = Math.round(Math.min(x0, x1)), xb = Math.max(xa + 1, Math.round(Math.max(x0, x1)));
+          const top = Math.round(yv - yv * sc), bot = Math.round(yv + (dH - yv) * sc);
+          ctx.drawImage(src, i, 0, 1, dH, xa, top, xb - xa, bot - top);
+        }
+        if (sn > 0.05) { // tranche du battant (épaisseur du bois) le long du bord libre
+          const se = F / (F + dW * sn), xe = Math.round(hinge + dir * dW * c * se), t = Math.max(1, Math.round(sn * 2));
+          ctx.fillStyle = '#1a1014';
+          ctx.fillRect(side ? xe - t : xe, Math.round(yv - yv * se) + 6, t, Math.round(dH * se) - 6);
+        }
+      }
+      tex.refresh();
+    };
     const swing = (open: boolean, ms: number, delay = 0) => this.tweens.addCounter({
       from: open ? 0 : 1, to: open ? 1 : 0, duration: ms, delay, ease: open ? 'Sine.inOut' : 'Quad.in',
       onUpdate: (tw) => {
-        const k = tw.getValue() ?? 0, sh = Math.round(255 - k * 150);
-        for (const d of this.doors) d.setScale(1 - k * 0.86, 1).setTint(Phaser.Display.Color.GetColor(sh, sh * 0.92, sh * 0.85));
+        const k = tw.getValue() ?? 0, sh = Math.round(255 - k * 120);
+        drawLeaves(k);
+        leaves.setTint(Phaser.Display.Color.GetColor(sh, sh * 0.92, sh * 0.85));
       },
     });
-    swing(true, 520);
+    drawLeaves(0);
+    swing(true, 640);
     // Lumière chaude : halo dans l'embrasure + éventail au sol vers le joueur.
     const light = this.add.image(DOOR.x, fy - 20, 'glowO').setBlendMode(Phaser.BlendModes.ADD).setScale(0.5).setAlpha(0).setDepth(4);
     const fan = this.add.graphics().setBlendMode(Phaser.BlendModes.ADD).setDepth(6).setAlpha(0);
