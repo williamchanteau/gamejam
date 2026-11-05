@@ -253,13 +253,22 @@ export function makeSkinPreviews(scene: Phaser.Scene) {
     canvasTex(scene, 'skin_' + id, TW, 36, skinDraw(id, (c) => drawPlayer(c, POSES.idle0, capeOf(0, 0, 0))), OUTLINE);
 }
 
-/** Toutes les textures du héros, dans le skin donné (rappelée au changement de skin). */
-export function makePlayerArt(scene: Phaser.Scene, skin: SkinId = currentSkin()) {
-  const D = (f: (c: CanvasRenderingContext2D) => void) => skinDraw(skin, f);
-  for (const k in RAISE) canvasTex(scene, 'p_' + k, TW, 36 + TALL, D((c) => { c.translate(0, TALL); drawPlayer(c, raised(RAISE[k])); }), OUTLINE);
-  mapTex(scene, 'crown_s', CROWN_S, CROWN_PAL);
-  canvasTex(scene, 'p_king', 32, 48, D(drawKing), OUTLINE);
-  for (const k in POSES) canvasTex(scene, 'p_' + k, TW, 36, D((c) => drawPlayer(c, POSES[k])), OUTLINE);
+/** Textures du héros dans le skin donné, une tâche par texture (poses d'abord : le veilleur du menu) — exécutables par lots. */
+export function playerArtJobs(scene: Phaser.Scene, skin: SkinId = currentSkin()) {
+  const D = (f: (c: CanvasRenderingContext2D) => void) => skinDraw(skin, f), jobs: (() => void)[] = [];
+  for (const k in POSES) jobs.push(() => canvasTex(scene, 'p_' + k, TW, 36, D((c) => drawPlayer(c, POSES[k])), OUTLINE));
+  for (const k in RAISE) jobs.push(() => canvasTex(scene, 'p_' + k, TW, 36 + TALL, D((c) => { c.translate(0, TALL); drawPlayer(c, raised(RAISE[k])); }), OUTLINE));
+  jobs.push(() => mapTex(scene, 'crown_s', CROWN_S, CROWN_PAL));
+  jobs.push(() => canvasTex(scene, 'p_king', 32, 48, D(drawKing), OUTLINE));
   for (const k of CAPE_POSES) for (const h of CAPE_H) for (const v of AIR.includes(k) ? CAPE_V : [0])
-    for (let ph = 0; ph < CAPE_PH; ph++) canvasTex(scene, `p_${k}_${h}_${v}_${ph}`, TW, 36, D((c) => drawPlayer(c, POSES[k], capeOf(h, v, ph))), OUTLINE);
+    for (let ph = 0; ph < CAPE_PH; ph++) jobs.push(() => canvasTex(scene, `p_${k}_${h}_${v}_${ph}`, TW, 36, D((c) => drawPlayer(c, POSES[k], capeOf(h, v, ph))), OUTLINE));
+  return jobs;
 }
+
+/** Toutes les textures du héros d'un coup (démarrage). */
+export function makePlayerArt(scene: Phaser.Scene, skin: SkinId = currentSkin()) {
+  for (const j of playerArtJobs(scene, skin)) j();
+}
+
+/** Couleur de cape d'un skin (pastille de récompense). */
+export const skinSwatch = (id: SkinId) => (SKIN_PAL[id] ?? ORDER)[1];

@@ -12,7 +12,8 @@ import { MCKING } from '../bosses/mcking';
 import { TITLE_MOON } from '../art/title';
 import { sr, srStart, srAbort, records, DIFFS, fmt } from '../speedrun';
 import { ACHS, SKINS, hasAch, skinUnlocked, skinAch, currentSkin, setSkin } from '../achievements';
-import { makePlayerArt } from '../art/player';
+import { playerArtJobs, skinSwatch } from '../art/player';
+import { makeAchIcons } from '../art/achIcons';
 
 const LX = 26; // bord gauche du logo et des boutons
 const BW = 104, DW = 192; // largeur des boutons : menu principal, difficulté (assez pour VRAIMENT FACILE)
@@ -32,6 +33,8 @@ export class MenuScene extends Phaser.Scene {
   private opts: OptionsPanel | null = null;
   private cheat = 0;
   private fig!: Phaser.GameObjects.Image;
+  private jobs: (() => void)[] = [];
+  private figReady = true;
   private ach: { sel: number; g: Phaser.GameObjects.Graphics; cells: Phaser.GameObjects.Image[]; info: Phaser.GameObjects.BitmapText; objs: Phaser.GameObjects.GameObject[] } | null = null;
 
   constructor() { super('Menu'); }
@@ -51,7 +54,7 @@ export class MenuScene extends Phaser.Scene {
   create() {
     input.reset();
     srAbort(); // revenir au menu met fin à la partie chronométrée
-    this.sub = null; this.opts = null; this.bossMenu = null; this.diff = null; this.diffNotes = []; this.cheat = 0; this.ach = null;
+    this.sub = null; this.opts = null; this.bossMenu = null; this.diff = null; this.diffNotes = []; this.cheat = 0; this.ach = null; this.jobs = []; this.figReady = true;
     if (import.meta.env.DEV) {
       addEventListener('keydown', this.onCheatKey);
       this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => removeEventListener('keydown', this.onCheatKey));
@@ -120,7 +123,7 @@ export class MenuScene extends Phaser.Scene {
     if (this.bossMenu) this.bossMenu.enabled = false;
     if (this.diff) this.diff.enabled = false;
     this.cameras.main.fadeOut(200, 6, 5, 12);
-    this.cameras.main.once('camerafadeoutcomplete', () => this.scene.start(key));
+    this.cameras.main.once('camerafadeoutcomplete', () => { this.runJobs(true); this.scene.start(key); }); // skin pas fini : terminé pendant le noir
   }
 
   private play(easy: boolean, hard: boolean) {
@@ -204,36 +207,69 @@ export class MenuScene extends Phaser.Scene {
     this.sub = this.add.container(0, 0, [...o, hit]).setDepth(100);
   }
 
-  /** SUCCÈS : liste (médaille d'or si obtenu) + skins du héros (aperçu, silhouette si verrouillé), ←→ choisir, Entrée équiper. */
+  /** SUCCÈS : panneau gothique (pierre, ornements de braise), progression dorée, médailles à icônes, skins (souris ou clavier). */
   private achievements() {
     if (this.sub || this.opts || this.ach) return;
     input.reset();
+    makeAchIcons(this);
     this.menu.enabled = false; this.menu.setVisible(false);
     const g0 = this.add.graphics().setDepth(100), objs: Phaser.GameObjects.GameObject[] = [g0];
-    const T = (x: number, y: number, s: string, c: number) => { const t = txt(this, x, y, s, c).setDepth(101); objs.push(t); return t; };
-    g0.fillStyle(0x06050c, 0.95).fillRect(0, 0, W, H);
-    T(W / 2, 8, 'SUCCÈS', COL.moonLight).setOrigin(0.5, 0).setScale(2);
-    g0.fillStyle(COL.ember, 0.7).fillRect(W / 2 - 26, 33, 52, 1);
-    T(W / 2, 37, `${ACHS.filter((a) => hasAch(a.id)).length} / ${ACHS.length}`, COL.uiDim).setOrigin(0.5, 0);
-    ACHS.forEach((a, i) => {
-      const y = 52 + i * 15, on = hasAch(a.id);
-      g0.fillStyle(on ? GOLD : 0x1b1f33).fillRect(24, y + 2, 7, 7);
-      g0.lineStyle(1, on ? 0xfff0b0 : 0x3d4463).strokeRect(24.5, y + 2.5, 6, 6);
-      T(38, y, a.name, on ? GOLD : COL.ui);
-      T(146, y, a.desc + (a.skin ? ' → SKIN' : ''), on ? COL.moonLight : COL.uiDim);
+    const T = (x: number, y: number, s: string, c: number) => { const t = txt(this, x, y, s, c).setDepth(102); objs.push(t); return t; };
+    // Voile + panneau de pierre à double filet, losanges de braise aux coins.
+    g0.fillStyle(0x06050c, 0.82).fillRect(0, 0, W, H);
+    g0.fillStyle(0x0e0c1a, 0.96).fillRect(12, 6, W - 24, H - 12);
+    g0.lineStyle(1, 0x3d4463).strokeRect(12.5, 6.5, W - 25, H - 13);
+    g0.lineStyle(1, 0x22203a).strokeRect(15.5, 9.5, W - 31, H - 19);
+    for (const [x, y] of [[12, 6], [W - 12, 6], [12, H - 6], [W - 12, H - 6]]) {
+      g0.fillStyle(COL.ember, 1).fillTriangle(x, y - 4, x + 4, y, x, y + 4).fillTriangle(x, y - 4, x - 4, y, x, y + 4);
+    }
+    T(W / 2, 12, 'SUCCÈS', COL.moonLight).setOrigin(0.5, 0).setScale(2);
+    const n = ACHS.filter((x) => hasAch(x.id)).length;
+    g0.fillStyle(0x1b1f33).fillRect(W / 2 - 80, 38, 160, 4);
+    g0.fillStyle(GOLD).fillRect(W / 2 - 80, 38, Math.round((160 * n) / ACHS.length), 4);
+    g0.fillStyle(0xfff0b0).fillRect(W / 2 - 80, 38, Math.round((160 * n) / ACHS.length), 1);
+    T(W / 2 + 88, 35, `${n} / ${ACHS.length}`, n === ACHS.length ? GOLD : COL.uiDim);
+    // Une plaque par succès : médaille (icône d'or, ou pierre si verrouillé), nom, condition, pastille du skin gagné.
+    ACHS.forEach((x, i) => {
+      const y = 48 + i * 15, on = hasAch(x.id);
+      g0.fillStyle(on ? 0x1c1830 : 0x13111f, 1).fillRect(22, y, W - 44, 13);
+      if (on) g0.fillStyle(GOLD, 0.8).fillRect(22, y, 1, 13);
+      g0.fillStyle(on ? 0x3a2a14 : 0x1b1f33).fillCircle(32, y + 6.5, 6.5);
+      g0.lineStyle(1, on ? GOLD : 0x3d4463).strokeCircle(32, y + 6.5, 6.5);
+      if (on) { const gl = this.add.image(32, y + 6, 'glowO').setBlendMode(Phaser.BlendModes.ADD).setScale(0.35).setAlpha(0.5).setDepth(101); objs.push(gl); }
+      const ic = this.add.image(32, y + 6.5, 'ach_' + x.id).setDepth(102);
+      if (!on) ic.setTintFill(0x4a5070);
+      objs.push(ic);
+      T(44, y + 1, x.name, on ? GOLD : COL.ui);
+      T(152, y + 1, x.desc, on ? COL.moonLight : COL.uiDim);
+      if (x.skin) {
+        const sw = Phaser.Display.Color.HexStringToColor(skinSwatch(x.skin)).color, sx = W - 66;
+        g0.fillStyle(sw).fillRect(sx, y + 3, 7, 7);
+        g0.lineStyle(1, on ? GOLD : 0x3d4463).strokeRect(sx + 0.5, y + 3.5, 6, 6);
+        T(sx + 10, y + 1, 'SKIN', on ? GOLD : COL.uiDim);
+      }
     });
+    // Skins du héros : aperçu (silhouette si verrouillé), survol = choisir, clic = équiper.
+    T(W / 2, 156, 'SKINS DU HÉROS', COL.ember).setOrigin(0.5, 0);
     const cells = SKINS.map((k, i) => {
       const cx = 90 + i * 100, open = skinUnlocked(k.id);
-      const im = this.add.image(cx, 196, 'skin_' + k.id).setScale(1.5).setDepth(102);
+      const im = this.add.image(cx, 194, 'skin_' + k.id).setScale(1.5).setDepth(102);
       if (!open) im.setTintFill(0x000000);
-      T(cx, 228, open ? k.name : '???', open ? COL.ui : COL.uiDim).setOrigin(0.5, 0);
-      objs.push(im);
+      T(cx, 226, open ? k.name : '???', open ? COL.ui : COL.uiDim).setOrigin(0.5, 0);
+      const z = this.add.zone(cx, 194, 76, 58).setInteractive({ useHandCursor: true }).setDepth(103);
+      z.on('pointerover', () => { if (this.ach && this.ach.sel !== i) { this.ach.sel = i; sfx.tick(); this.drawAch(); } });
+      z.on('pointerdown', () => { if (this.ach) { this.ach.sel = i; this.equipAch(); } });
+      objs.push(im, z);
       return im;
     });
     const g = this.add.graphics().setDepth(101);
-    const info = T(W / 2, 242, '', COL.moonLight).setOrigin(0.5, 0);
-    T(W / 2, 256, '←→ : CHOISIR · ENTRÉE : ÉQUIPER · ÉCHAP : RETOUR', COL.uiDim).setOrigin(0.5, 0);
-    objs.push(g);
+    const info = T(W / 2, 239, '', COL.moonLight).setOrigin(0.5, 0);
+    T(28, 251, '←→ : CHOISIR · ENTRÉE / CLIC : ÉQUIPER', COL.uiDim);
+    const back = T(W - 28, 251, 'RETOUR', COL.ui).setOrigin(1, 0);
+    const bz = this.add.zone(back.x - back.width / 2, back.y + 5, back.width + 12, 14).setInteractive({ useHandCursor: true }).setDepth(103);
+    bz.on('pointerover', () => back.setTint(COL.moonLight)); bz.on('pointerout', () => back.setTint(COL.ui));
+    bz.on('pointerdown', () => this.closeAch());
+    objs.push(g, bz);
     this.ach = { sel: Math.max(0, SKINS.findIndex((k) => k.id === currentSkin())), g, cells, info, objs };
     this.drawAch();
   }
@@ -243,33 +279,43 @@ export class MenuScene extends Phaser.Scene {
     g.clear();
     SKINS.forEach((k, i) => {
       const cx = 90 + i * 100, sel = i === a.sel, eq = k.id === currentSkin();
-      g.fillStyle(0x161428, 1).fillRect(cx - 38, 166, 76, 60);
-      g.lineStyle(1, sel ? COL.moonLight : 0x3d4463).strokeRect(cx - 37.5, 166.5, 75, 59);
-      if (eq) g.fillStyle(COL.ember, 0.9).fillRect(cx - 14, 222, 28, 1);
+      g.fillStyle(sel ? 0x1c1830 : 0x161428, 1).fillRect(cx - 38, 166, 76, 58);
+      g.lineStyle(1, sel ? COL.moonLight : eq ? GOLD : 0x3d4463).strokeRect(cx - 37.5, 166.5, 75, 57);
+      if (eq) g.fillStyle(COL.ember, 0.9).fillRect(cx - 14, 236, 28, 1);
     });
-    const k = SKINS[a.sel], ach = skinAch(k.id);
-    a.info.setText(!skinUnlocked(k.id) ? `À DÉBLOQUER : ${ach?.name ?? ''}` : k.id === currentSkin() ? 'ÉQUIPÉ' : 'ENTRÉE : ÉQUIPER')
-      .setTint(skinUnlocked(k.id) ? COL.moonLight : COL.uiDim);
+    const k = SKINS[a.sel], ach = skinAch(k.id), open = skinUnlocked(k.id);
+    a.info.setText(!open ? `À DÉBLOQUER : ${ach?.name ?? ''}` : k.id === currentSkin() ? 'ÉQUIPÉ' : 'ENTRÉE OU CLIC : ÉQUIPER').setTint(open ? COL.moonLight : COL.uiDim);
+  }
+
+  /** Équipe le skin choisi : l'écran se met à jour tout de suite, les textures du héros se refont par lots (update). */
+  private equipAch() {
+    const k = SKINS[this.ach!.sel];
+    if (!skinUnlocked(k.id) || k.id === currentSkin()) return;
+    setSkin(k.id);
+    this.jobs = playerArtJobs(this, k.id);
+    this.figReady = false;
+    sfx.select();
+    this.drawAch();
+  }
+
+  private closeAch() {
+    if (!this.ach) return;
+    this.ach.objs.forEach((o) => o.destroy()); this.ach = null;
+    this.menu.setVisible(true); this.menu.enabled = true; input.reset();
   }
 
   private updateAch() {
     const a = this.ach!;
-    if (input.take('pause')) {
-      a.objs.forEach((o) => o.destroy()); this.ach = null;
-      this.menu.setVisible(true); this.menu.enabled = true; input.reset();
-      return;
-    }
+    if (input.take('pause')) return this.closeAch();
     const d = input.take('mleft') ? -1 : input.take('mright') ? 1 : 0;
     if (d) { a.sel = (a.sel + d + SKINS.length) % SKINS.length; sfx.tick(); this.drawAch(); }
-    if (input.take('ok')) {
-      const k = SKINS[a.sel];
-      if (!skinUnlocked(k.id) || k.id === currentSkin()) return;
-      setSkin(k.id);
-      makePlayerArt(this, k.id); // textures du héros refaites dans ce skin
-      this.fig.setTexture(this.fig.texture.key);
-      sfx.select();
-      this.drawAch();
-    }
+    if (input.take('ok')) this.equipAch();
+  }
+
+  /** Textures du héros refaites par lots de 24 : le veilleur (poses d'abord) change dès la 1re image. */
+  private runJobs(all = false) {
+    for (let k = 0; this.jobs.length && (all || k < 24); k++) this.jobs.shift()!();
+    if (!this.figReady) { this.figReady = true; this.fig.setTexture(this.fig.texture.key); }
   }
 
   private options() {
@@ -307,6 +353,7 @@ export class MenuScene extends Phaser.Scene {
   }
 
   update() {
+    if (this.jobs.length) this.runJobs();
     if (this.ach) return this.updateAch();
     if (this.opts) return this.opts.update();
     if (this.diff) return input.take('pause') ? this.closeDiff() : this.diff.update();
