@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { makeFont } from '../art/font';
 import { makePlayerArt, makeSkinPreviews } from '../art/player';
+import { devUnlockAll } from '../achievements';
 import { makeFxArt } from '../art/fx';
 import { makeRoomArt } from '../art/room';
 import { makeTitleArt } from '../art/title';
@@ -38,7 +39,8 @@ export class BootScene extends Phaser.Scene {
     // DEV : #Boss1, #Test... pour démarrer directement sur une scène ; #Escalier = montée de la tour en boucle ; /?viewer = visualiseur.
     const dev = import.meta.env.DEV ? (location.search.includes('viewer') ? 'Viewer' : location.hash.slice(1)) : '';
     this.scene.launch('Chrono');
-    if (dev === 'Escalier') this.scene.start('Transit', { floor: 1, loop: true });
+    if (dev === 'Succes') { devUnlockAll(); this.scene.start('Menu'); }
+    else if (dev === 'Escalier') this.scene.start('Transit', { floor: 1, loop: true });
     else this.scene.start(dev || 'Menu');
   }
 }

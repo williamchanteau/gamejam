@@ -33,6 +33,12 @@ export function unlock(id: string) {
   listeners.forEach((f) => f(a));
 }
 
+/** DEV (#Succes) : tout débloquer sans bandeau. */
+export function devUnlockAll() {
+  ACHS.forEach((a) => got.add(a.id));
+  try { localStorage.setItem(KEY, JSON.stringify([...got])); } catch { /* stockage indisponible */ }
+}
+
 export const skinUnlocked = (s: SkinId) => s === 'base' || ACHS.some((a) => a.skin === s && got.has(a.id));
 export const skinAch = (s: SkinId) => ACHS.find((a) => a.skin === s);
 let skin: SkinId = (() => { try { return (localStorage.getItem(SKIN_KEY) as SkinId) || 'base'; } catch { return 'base'; } })();
