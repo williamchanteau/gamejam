@@ -232,7 +232,7 @@ export class MenuScene extends Phaser.Scene {
     T(W / 2 + 88, 35, `${n} / ${ACHS.length}`, n === ACHS.length ? GOLD : COL.uiDim);
     // Une plaque par succès : médaille (icône d'or, ou pierre si verrouillé), nom, condition, pastille du skin gagné.
     ACHS.forEach((x, i) => {
-      const y = 48 + i * 15, on = hasAch(x.id);
+      const y = 46 + i * 15, on = hasAch(x.id);
       g0.fillStyle(on ? 0x1c1830 : 0x13111f, 1).fillRect(22, y, W - 44, 13);
       if (on) g0.fillStyle(GOLD, 0.8).fillRect(22, y, 1, 13);
       objs.push(this.add.image(32.5, y + 6.5, on ? 'ach_med_on' : 'ach_med_off').setDepth(101.5));
@@ -252,26 +252,32 @@ export class MenuScene extends Phaser.Scene {
     // Skins du héros : aperçu (silhouette si verrouillé), survol = choisir, clic = équiper.
     const cells = SKINS.map((k, i) => {
       const cx = 90 + i * 100, open = skinUnlocked(k.id);
-      const im = this.add.image(cx, 196, 'skin_' + k.id).setScale(1.5).setDepth(102);
+      const im = this.add.image(cx, 193, 'skin_' + k.id).setScale(1.4).setDepth(102);
       if (!open) { im.setTintFill(0x000000); objs.push(this.add.image(cx, 214, 'ach_lock').setDepth(103)); }
-      T(cx, 226, open ? k.name : '???', open ? COL.ui : COL.uiDim).setOrigin(0.5, 0);
-      const z = this.add.zone(cx, 194, 76, 58).setInteractive({ useHandCursor: true }).setDepth(103);
+      T(cx, 228, open ? k.name : '???', open ? COL.ui : COL.uiDim).setOrigin(0.5, 0);
+      const z = this.add.zone(cx, 192, 76, 64).setInteractive({ useHandCursor: true }).setDepth(103);
       z.on('pointerover', () => { if (this.ach && this.ach.sel !== i) { this.ach.sel = i; sfx.tick(); this.drawAch(); } });
       z.on('pointerdown', () => { if (this.ach) { this.ach.sel = i; this.equipAch(); } });
       objs.push(im, z);
       return im;
     });
     const g = this.add.graphics().setDepth(101);
-    const halo = this.add.image(0, 194, 'glowC').setBlendMode(Phaser.BlendModes.ADD).setScale(0.9).setAlpha(0.32).setDepth(101.5);
-    const sword = this.add.image(0, 196, 'cursor').setDepth(104);
-    const badge = this.add.container(0, 166).setDepth(104);
-    const bt = txt(this, 0, -5, 'ÉQUIPÉ', GOLD).setOrigin(0.5, 0), bw = bt.width + 8, bg = this.add.graphics();
-    bg.fillStyle(0x1c1408, 1).fillRect(-bw / 2, -6, bw, 11).lineStyle(1, GOLD).strokeRect(-bw / 2 + 0.5, -5.5, bw - 1, 10);
+    const halo = this.add.image(0, 192, 'glowC').setBlendMode(Phaser.BlendModes.ADD).setScale(0.9).setAlpha(0.32).setDepth(101.5);
+    const sword = this.add.image(0, 193, 'cursor').setDepth(104);
+    const badge = this.add.container(0, 157).setDepth(104);
+    // Étiquette d'or pleine, taillée sur les vrais bords du texte (accents compris) : reflet en haut, ombre en bas.
+    const bt = txt(this, 0, 0, 'ÉQUIPÉ', 0x2a1806).setOrigin(0.5, 0), tb = bt.getTextBounds(true).local, bg = this.add.graphics();
+    const bw = Math.round(tb.width) + 10, bh = Math.round(tb.height) + 4, by = -Math.round(bh / 2);
+    bt.setY(by + 2 - Math.round(tb.y));
+    bg.fillStyle(0x2a1806, 1).fillRect(-bw / 2 - 1, by - 1, bw + 2, bh + 2);
+    bg.fillStyle(GOLD, 1).fillRect(-bw / 2, by, bw, bh);
+    bg.fillStyle(0xfff0b0, 1).fillRect(-bw / 2, by, bw, 1);
+    bg.fillStyle(0xc8902a, 1).fillRect(-bw / 2, by + bh - 1, bw, 1);
     badge.add([bg, bt]);
     objs.push(halo, sword, badge);
-    const info = T(W / 2, 239, '', COL.moonLight).setOrigin(0.5, 0);
-    T(28, 251, '←→ : CHOISIR · ENTRÉE / CLIC : ÉQUIPER', COL.uiDim);
-    const back = T(W - 28, 251, 'RETOUR', COL.ui).setOrigin(1, 0);
+    const info = T(W / 2, 240, '', COL.moonLight).setOrigin(0.5, 0);
+    T(28, 250, '←→ : CHOISIR', COL.uiDim);
+    const back = T(W - 28, 250, 'RETOUR', COL.ui).setOrigin(1, 0);
     const bz = this.add.zone(back.x - back.width / 2, back.y + 5, back.width + 12, 14).setInteractive({ useHandCursor: true }).setDepth(103);
     bz.on('pointerover', () => back.setTint(COL.moonLight)); bz.on('pointerout', () => back.setTint(COL.ui));
     bz.on('pointerdown', () => this.closeAch());
@@ -285,13 +291,13 @@ export class MenuScene extends Phaser.Scene {
     g.clear();
     SKINS.forEach((k, i) => {
       const cx = 90 + i * 100, sel = i === a.sel, eq = k.id === currentSkin(), im = a.cells[i];
-      g.fillStyle(sel ? 0x1e1a36 : 0x131120, 1).fillRect(cx - 38, 166, 76, 58);
-      g.lineStyle(1, sel ? COL.moonLight : eq ? GOLD : 0x2a2d45).strokeRect(cx - 37.5, 166.5, 75, 57);
-      if (sel) g.lineStyle(1, 0x3d4463).strokeRect(cx - 35.5, 168.5, 71, 53);
+      g.fillStyle(sel ? 0x1e1a36 : 0x131120, 1).fillRect(cx - 38, 160, 76, 64);
+      g.lineStyle(1, sel ? COL.moonLight : eq ? GOLD : 0x2a2d45).strokeRect(cx - 37.5, 160.5, 75, 63);
+      if (sel) g.lineStyle(1, 0x3d4463).strokeRect(cx - 35.5, 162.5, 71, 59);
       tw.killTweensOf(im);
-      im.setAlpha(sel ? 1 : skinUnlocked(k.id) ? 0.55 : 0.8).setY(196);
-      tw.add({ targets: im, scale: sel ? 1.8 : 1.5, duration: 140, ease: 'Back.out' });
-      if (sel) tw.add({ targets: im, y: 194, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.inOut', delay: 140 });
+      im.setAlpha(sel ? 1 : skinUnlocked(k.id) ? 0.55 : 0.8).setY(193);
+      tw.add({ targets: im, scale: sel ? 1.6 : 1.4, duration: 140, ease: 'Back.out' });
+      if (sel) tw.add({ targets: im, y: 192, duration: 700, yoyo: true, repeat: -1, ease: 'Sine.inOut', delay: 140 });
       if (eq) a.badge.setX(cx);
     });
     // Épée des menus : glisse jusqu'au skin choisi et pointe dessus en oscillant.
