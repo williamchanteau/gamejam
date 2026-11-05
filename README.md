@@ -1,217 +1,116 @@
-# ASHENBORN
+<p align="center">
+  <img src="docs/cover.png" alt="Ashenborn" width="720">
+</p>
 
-Boss rush 2D en pixel art, dark fantasy / Halloween, fait pour une game jam.
-On entre dans un château et on monte étage par étage. Chaque étage est une salle de boss.
+<p align="center">
+  <b>Boss rush dark fantasy pour Halloween : gravis un château maudit, étage après étage, et abats ses gardiens.</b><br>
+  <i>A dark fantasy Halloween boss rush: climb a cursed castle floor by floor and bring down its guardians.</i>
+</p>
 
-> **Dépôt : jeudi 5 novembre, 7 h.** La consigne impose des **boss** : barre de vie nommée et salles de boss. Sinon, c'est la disqualification.
+<p align="center">
+  <img alt="Phaser 3.90" src="https://img.shields.io/badge/Phaser-3.90-8a2be2">
+  <img alt="TypeScript" src="https://img.shields.io/badge/TypeScript-5.9-3178c6">
+  <img alt="Vite" src="https://img.shields.io/badge/Vite-6-646cff">
+  <img alt="Bun" src="https://img.shields.io/badge/Bun-runtime-f9f1e1">
+  <img alt="Web · Windows · macOS · Linux" src="https://img.shields.io/badge/plateformes-Web%20·%20Windows%20·%20macOS%20·%20Linux-ff8a2a">
+</p>
 
 ---
 
-## Lancer le jeu
+La nuit d'Halloween, un château maudit se dresse dans la tempête. À chaque étage, un boss garde l'escalier. Monte, affronte-les un par un, et va chercher la couronne au sommet.
 
-Prérequis : [Bun](https://bun.sh). Il sert de gestionnaire de paquets et lance les scripts ; Vite est appelé à travers lui.
+Jeu créé pour l'**Oddward Jam #1**, dont la consigne imposait des **combats de boss** (barre de vie nommée, salles de boss). Une partie dure environ 5 minutes.
+
+| | |
+|:---:|:---:|
+| ![Menu titre](docs/screen-menu.png) | ![Le château sous la tempête](docs/screen-chateau.png) |
+| ![Combat dans la nef](docs/screen-ysolde.png) | ![Combat dans la crypte des lanternes](docs/screen-nycthor.png) |
+| ![La tour entre deux étages](docs/screen-tour.png) | ![Succès et skins](docs/screen-succes.png) |
+
+## Fonctionnalités
+
+- **Combats de boss nerveux et lisibles** : chaque attaque est télégraphiée, le boss passe en deuxième phase à mi-vie (rugissement, nouveaux patterns, plus de vitesse), barre de vie nommée.
+- **Un château en étages** : la nef, la crypte des lanternes plongée dans l'obscurité… et un dernier étage qu'on garde secret. Chaque victoire ouvre l'escalier de la tour.
+- **Un héros vif** : saut variable, coyote time, dash invincible, combo de trois coups aux dagues, sort « Éclat lunaire » qui se charge en frappant, amélioration à choisir en cours de route.
+- **Trois difficultés** : VRAIMENT FACILE (mode histoire : plus de cœurs, dégâts doublés), NORMAL (sauvegarde au début de chaque boss), DIFFICILE (aucune sauvegarde). La difficulté monte d'un étage à l'autre.
+- **Tutoriel facultatif** par le portail devant le château.
+- **Speedrun** : chrono affichable (figé en pause et au tuto), temps à la chute de chaque boss, top 5 par difficulté dans le menu RECORDS.
+- **7 succès et 3 skins du héros** à débloquer (CENDRE, CITROUILLE, ARGENT), avec un écran SUCCÈS dédié.
+- **Options** : volume général, musique et effets, plein écran, touches réassignables, lettres AZERTY ou QWERTY.
+
+## Commandes
+
+| Action | AZERTY | QWERTY |
+|---|---|---|
+| Se déplacer | ← → | ← → |
+| Sauter (maintenir pour sauter plus haut) | ↑ ou Espace | ↑ ou Espace |
+| Descendre d'une plateforme | ↓ | ↓ |
+| Attaque (combo de 3 coups) | A | Q |
+| Dash (esquive, invincible) | Z | W |
+| Sort « Éclat lunaire » (mana pleine) | E | E |
+| Pause | Échap ou P | Esc ou P |
+| Couper la musique | M | M |
+| Menus | flèches + Entrée, ou souris | idem |
+
+Les touches sont lues par **position physique** : les deux colonnes désignent les mêmes touches du clavier. Tout se réassigne dans **OPTIONS > TOUCHES**.
+
+## Jouer
+
+Le jeu tourne entièrement hors ligne, sans aucun appel réseau.
 
 ```bash
-curl -fsSL https://bun.sh/install | bash   # une seule fois
-bun install                                # dépendances (Phaser, Vite, TypeScript)
+bun install
+bun run build      # dist/index.html : s'ouvre directement dans le navigateur (file://)
+bun run zip        # exports/ashenborn-web.zip
+bun run desktop    # exports/ashenborn-linux.tar.gz, ashenborn-windows.zip, ashenborn-mac.zip
 ```
+
+Les versions bureau embarquent Electron (téléchargé dans `.electron/` au premier lancement), s'ouvrent en fenêtre 1280×720 au ratio 16:9 et bloquent tout accès réseau. Lanceurs : `./ashenborn` (Linux), `Ashenborn.exe` (Windows), `Ashenborn.app` (macOS Apple Silicon).
+
+## Développement
+
+Prérequis : [Bun](https://bun.sh), qui sert de gestionnaire de paquets et lance Vite.
 
 | Commande | Effet |
 |---|---|
-| `bun run dev` | Serveur de dev avec rechargement à chaud → http://localhost:5173 |
-| `bun run check` | Vérification des types TypeScript (`tsc --noEmit`) |
-| `bun run build` | Build de rendu → `dist/index.html` (s'ouvre en double-clic, `file://`, sans serveur) |
-| `bun run zip` | Build + archive `jeu-web.zip` (contient **uniquement** `dist/`) : c'est le fichier à déposer |
+| `bun run dev` | Serveur de dev avec rechargement à chaud sur http://localhost:5173 |
+| `bun run check` | Vérification des types (`tsc --noEmit`) |
+| `bun run build` | Build de production dans `dist/` |
 
-Avant chaque commit, lancer `bun run build` puis `bun run check`.
-
-### Raccourcis de développement (uniquement en `bun run dev`)
+Outils réservés au mode dev (absents des exports) :
 
 | Raccourci | Effet |
 |---|---|
-| `F1` | Le boss passe à 1 PV |
-| `F2` | Joueur invincible |
-| `http://localhost:5173/#Boss1` | Démarre directement sur la scène indiquée (`#Boss1`, `#Test`, `#Outside`, `#Menu`) |
-| `window.game` | Instance Phaser exposée dans la console, par exemple `game.scene.getScene('Boss1').boss.hp = 10` |
+| `#Boss1`, `#Boss2`, `#Boss3`, `#Test`, `#Outside`… dans l'URL | Démarre directement sur cette scène |
+| `#Escalier` | Montée de la tour en boucle |
+| `#Musique` | Juke-box : chaque piste jouée seule |
+| `#Succes` | Débloque tous les succès |
+| `?viewer` | Visualiseur d'animations des boss et du joueur |
+| `F1` / `F2` | Boss à 1 PV / joueur invincible |
+| Bouton TESTER BOSS du menu | Lance n'importe quel combat |
+| `window.game` | Instance Phaser dans la console |
 
----
+## Sous le capot
 
-## Contrôles
-
-| Action | Touche (AZERTY) | Touche (QWERTY) |
-|---|---|---|
-| Bouger | ← → | ← → |
-| Sauter | ↑ ou Espace | ↑ ou Espace |
-| Descendre d'une plateforme | ↓ | ↓ |
-| Attaque (combo 3 coups) | A | Q |
-| Dash (esquive invincible) | Z | W |
-| Sort « Éclat lunaire » (mana pleine) | E | E |
-| Pause | Échap ou P | Échap ou P |
-| Menus | ↑↓ + Entrée/Espace, ou souris | idem |
-
-Les touches sont lues par **position physique** (`e.code`). L'option **CLAVIER** (menu titre ou pause) ne change que les lettres affichées à l'écran. Il n'y a pas de manette.
-
----
-
-## Contraintes de rendu (non négociables)
-
-- **Hors ligne :** aucun appel réseau. Le build est un script classique, avec des chemins relatifs, et doit marcher en `file://`.
-- **Anonymat total dans le jeu et dans le zip :** aucun nom, crédit, lien ou auteur. Pas de sourcemaps, pas de chemin utilisateur. Ne jamais mettre ce README (ni rien d'autre que `dist/`) dans le zip.
-- **Aucune ressource externe :** pas de fichier image ni de son. Toutes les textures sont générées par code (canvas) et les bruitages sont faits en WebAudio.
-- **Textes :** en français, en MAJUSCULES, avec la police bitmap maison. Ne citer aucun autre jeu.
-- **Côté jurés :**
-  - on doit passer du titre au combat en moins de 15 s ;
-  - les contrôles sont affichés à l'écran ;
-  - une partie dure environ 5 min ;
-  - la difficulté reste clémente ;
-  - le jeu tient 60 fps sur un PC modeste.
-- **Rendu :** 480×270 agrandi en plein écran (×4 en 1080p), en pixel art.
-
----
-
-## Stack et structure
-
-Bun + **Phaser 3.90** (physique Arcade) + TypeScript + Vite 6.
+- **Phaser 3.90 + TypeScript**, physique Arcade, rendu en 480×270 agrandi sans flou (×4 en 1920×1080).
+- **Aucun fichier image ni son** : tout le pixel art est dessiné par le code (canvas), et toute la musique et les bruitages sont synthétisés en WebAudio (harpe et luth Karplus-Strong, cloches, chœur, orgue, chiptune, réverbération de nef). Le détail des pistes est dans [MUSIQUES.md](MUSIQUES.md).
+- **Boss pilotés par les données** : un boss générique (télégraphe → actif → récupération, sélection pondérée des patterns, phase 2 à 50 %) et un fichier de données par boss.
+- **Sauvegardes locales** (records, succès, skin, options) dans le `localStorage`, toujours protégées : le jeu marche aussi là où le stockage est bloqué.
 
 ```
 src/
-  config.ts        toutes les valeurs réglables (joueur, boss, arène, couleurs)
-  input.ts         clavier (touches physiques), option AZERTY/QWERTY, plein écran
-  floors.ts        liste des étages (scène + nom affiché)
-  main.ts          configuration Phaser + liste des scènes
-  scenes/
-    BootScene      génère toutes les textures puis lance le menu
-    MenuScene      écran titre (JOUER / TUTO / OPTIONS / QUITTER)
-    OutsideScene   devant le château, on marche jusqu'à la porte
-    ArenaScene     base commune : sol, plateformes, joueur, HUD, hit-stop, sorts
-    BossScene      salle de boss : annonceur, barre nommée, victoire → escalier
-    TestScene      tuto (salle d'entraînement + épouvantail + panneaux)
-    TransitScene   écran « ÉTAGE N » entre deux boss / fin provisoire
-    PauseScene     pause (reprendre / recommencer / options / menu)
-    GameOverScene  GAME OVER (dernière sauvegarde / accueil)
-    rooms.ts       décor animé de la nef (parallaxe, torches, chauves-souris)
-  entities/
-    Player.ts      déplacement, saut, dash, combo, mana, sort
-    Boss.ts        boss générique piloté par données (patterns en coroutines)
-  bosses/
-    ysolde.ts      boss 1 : graphismes, poses, patterns
-    nycthor.ts     boss 2 : poses, patterns (lanterns.ts : lanternes, obscurité)
-  art/             textures générées par code (joueur, nef, extérieur, titre, police)
-  ui/              HUD, barre du boss, annonceur, menus, options
-  audio/sfx.ts     bruitages synthétisés
+├── main.ts            configuration Phaser, liste des scènes
+├── config.ts          toutes les valeurs réglables (joueur, boss, difficulté, audio)
+├── floors.ts          étages du château, état de la partie, points de reprise
+├── speedrun.ts        chrono et records
+├── achievements.ts    succès et skins
+├── input.ts           clavier par position physique, réassignation
+├── entities/          joueur, boss générique, portail
+├── bosses/            un fichier de données et de patterns par boss
+├── scenes/            menu, château, tuto, salles de boss, tour, fin, pause, game over
+├── ui/                HUD, barre de boss, annonceur, menus, options, cartes d'amélioration
+├── art/               génération des textures (héros, boss, décors, logo, police bitmap)
+├── audio/             moteur WebAudio, instruments, bruitages, séquenceur et pistes
+└── viewer/            outils de dev (exclus du build)
+scripts/               export web (zip) et exports bureau (Electron)
 ```
-
-### Ajouter un boss
-
-1. Créer `src/bosses/<nom>.ts`, qui exporte un `BossDef` : nom, titre, PV, `build`, `rest`, liste de `patterns`. Chaque pattern est un générateur qui fait `yield` d'une durée en secondes.
-2. Créer la scène de salle : une sous-classe de `BossScene` avec la bonne `def` et le bon décor. L'enregistrer dans `main.ts`.
-3. Ajouter l'étage dans `src/floors.ts`.
-
-### Règles de conception du boss
-
-- Chaque attaque suit le cycle **télégraphe → actif → récupération**. Pendant la récupération, le boss est ouvert et ses yeux sont éteints.
-- Durée minimale du télégraphe : 0,6 s en phase 1, 0,45 s en phase 2.
-- **Rouge/magenta = danger uniquement.** La seule exception, voulue, est le titre GAME OVER.
-- À 50 % PV :
-  - le boss rugit, avec 1 s d'invulnérabilité ;
-  - il débloque de nouveaux patterns et va 15 % plus vite ;
-  - la barre brille en or puis se recharge : la moitié de PV restante remplit toute la barre.
-
----
-
-## Fonctionnalités actuelles
-
-**Parcours**
-- Menu titre → extérieur du château → porte → **Boss 1** dans la nef.
-- Victoire → la grille se lève → escalier → écran « ÉTAGE 1 » → fin provisoire.
-
-**Joueur**
-- Contrôle vif : saut variable, coyote time et buffer de 0,1 s.
-- Dash = esquive invincible (~0,22 s), avec un dash aérien.
-- Combo 3 coups. Chaque coup touché donne +1 mana. Mana pleine → sort « Éclat lunaire » (croissant perforant).
-- 3 PV, recul et hit-stop quand on est touché.
-
-**Boss 1 – Ysolde, la Dame d'Argent (200 PV)**
-
-| Phase | Attaques |
-|---|---|
-| Phase 1 | Taille en ruée ; saut écrasant (repère au sol + onde de pics à sauter) ; 2 lames spectrales rasantes |
-| Phase 2 | Enchaînement 3 coups ; double onde |
-
-Animations : corps articulé, traînées d'épée, débris, poussière, flash, secousses.
-
-**Mise en scène**
-- Annonceur de boss (~2,3 s, rejoué après une mort).
-- Barre de vie nommée en bas de l'écran.
-- Caméra cadrée sur le joueur et le boss, dans une arène de 2 écrans.
-
-**Décor de la nef**
-- Voûte, mur à travées avec vitraux et rosace, piliers au premier plan.
-- Parallaxe, torches, bougies, citrouilles, chauves-souris, poussière.
-- Mur de fond avec la porte de l'escalier.
-
-**Menus**
-- Menu titre : boutons encadrés à gauche, scène animée à droite.
-- Pause (dont OPTIONS) et options clavier AZERTY/QWERTY (mémorisées).
-- Écran GAME OVER : dernière sauvegarde (la salle, intro rejouée) ou retour à l'accueil.
-
-**Tuto**
-- Salle d'entraînement avec un épouvantail qui tire des orbes.
-- Panneaux placés en contexte : au sol, au-dessus des plateformes, suspendu au plafond.
-
-**Divers**
-- Plein écran au premier appui ou clic ; si on sort du plein écran en jeu, le jeu se met en pause.
-
----
-
-## À changer / connu
-
-| Sujet | État | Piste |
-|---|---|---|
-| **Château vu de dehors** | Ressemble à une grosse tour, pas assez « château dark fantasy » | Silhouette large : courtines, plusieurs tours, donjon, porte fortifiée |
-| **Lames spectrales du boss** | Animation jugée pas assez propre | Nouvelle forme et apparition, qui doit rester **basse** (on la saute) |
-| **Rappel des contrôles en combat** | Affiché en haut à droite (masqué dans le tuto) | À garder ou non partout, le règlement demande les contrôles à l'écran |
-| **Touche R** | Libre | Lui donner une action ? |
-| **Attaque à « 1 coup de moins »** | Appliquée aux lames spectrales (3 → 2) | À confirmer : ou bien l'enchaînement 3 coups de la phase 2 ? |
-| **Barre du boss à 50 %** | Implémentée (or 3 s puis recharge, moitié restante = barre pleine) | À valider en playtest |
-| **Son** | Uniquement des bruitages | Ambiance musicale à faire |
-
----
-
-## Feuille de route
-
-On avance une étape à la fois. À chaque étape : `bun run build` + `bun run check`, un commit, puis un playtest avant de continuer.
-
-- [x] **0** Setup (Bun, Phaser, Vite, build `file://`)
-- [x] **1** Salle de test, joueur, HUD
-- [x] **1b** Rendu 480×270, art détaillé, menu titre, pause, tuto
-- [x] **2** Boss générique + Ysolde + nef en parallaxe + barre nommée + intro/victoire
-- [x] **2c** Plein écran, arène ×2, animations lourdes, annonceur, château/escalier
-- [x] **2d** Contrôles flèches + A/Z/E, option clavier, écran de mort, panneaux du tuto
-- [x] **2e** GAME OVER, options en pause, barre à 50 %, pics propres, nef cohérente, nouveau menu titre
-- [ ] **2f** Château extérieur refait + lames spectrales plus propres
-- [x] **3** Boss 2 « Nycthor, le Porteur de Lanternes » (260 PV), à l'étage 1 :
-  - la Crypte des Lanternes, salle plongée dans l'obscurité ;
-  - patterns : rush, ombre, lancer ;
-  - phase 2 : moulinet, épreuve des 3 lanternes.
-- [ ] **Victoire finale**
-- [ ] **Plus tard**
-  - options supplémentaires (à discuter) ;
-  - musique / son d'ambiance ;
-  - polish, équilibrage ;
-  - **build final + `jeu-web.zip`** avant jeudi 7 h.
-
----
-
-## Conventions
-
-- Toutes les valeurs de gameplay sont dans `src/config.ts`, et les valeurs propres à un boss dans son fichier `bosses/`.
-- `scene.restart()` ne relance pas les initialiseurs de champs : tout réinitialiser dans `create()`.
-- Les objets à l'écran (HUD, menus) utilisent `setScrollFactor(0)`.
-- Appeler `input.reset()` à chaque ouverture ou fermeture de menu.
-- Palette :
-  - cyan lune = joueur et sorts ;
-  - rouge/magenta = danger ;
-  - orange braise = ambiance ;
-  - fond `#0b0a14` / `#1a1630`.
-- `CLAUDE.md` contient les règles détaillées du projet.
