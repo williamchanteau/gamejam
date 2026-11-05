@@ -10,7 +10,8 @@ import { UpgradeCards } from '../ui/UpgradeCards';
 import { MCKING, entrance, seat, stand } from '../bosses/mcking';
 import { DINING } from '../art/dining';
 import { buildDining } from './rooms';
-import { srFinish } from '../speedrun';
+import { srFinish, sr } from '../speedrun';
+import { unlock } from '../achievements';
 
 const ADD = Phaser.BlendModes.ADD;
 /** Le héros mange au bout de la longue table ; le roi est attablé à l'autre bout, avant la grille de l'escalier. */
@@ -132,6 +133,11 @@ export class BurgerScene extends BossScene {
   private takeCrown(c: Phaser.GameObjects.Image) {
     this.crownTaken = true; this.frozen = true;
     srFinish(); // fin du chrono : la couronne est prise
+    unlock('crown');
+    if (run.hard) unlock('hard');
+    const res = sr.last;
+    if (res && !run.easy && res.rec.t < 7 * 60000) unlock('fast');
+    if (res && res.rec.d === 0) unlock('deathless');
     for (const o of this.crownHint ?? []) o.destroy();
     const p = this.player, spr = p.spr, y = this.floorY;
     p.body.reset(c.x, y - 27 / 2);

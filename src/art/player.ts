@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { canvasTex, drawMap, mapTex, OUTLINE } from './pixel';
+import { currentSkin, type SkinId } from '../achievements';
 
 // Palette du joueur : bleu nuit, rim light lunaire, yeux cyan.
 const P: Record<string, string> = {
@@ -216,11 +217,49 @@ function drawKing(c: CanvasRenderingContext2D) {
   drawMap(c, CROWN_S, CROWN_PAL, 9, 0);
 }
 
-export function makePlayerArt(scene: Phaser.Scene) {
-  for (const k in RAISE) canvasTex(scene, 'p_' + k, TW, 36 + TALL, (c) => { c.translate(0, TALL); drawPlayer(c, raised(RAISE[k])); }, OUTLINE);
+// Skins : remplacement exact des couleurs du héros (pixel art sans anticrénelage), après le dessin, avant le contour.
+// Ordre : cape (sombre, base, mi-teinte, lumière, reflet), highlight, doublure ×2, tunique ×3, ceinture, jambes, bottes ×2, yeux ×2.
+const ORDER = ['#1c2240', '#3d4a6e', '#2e3858', '#6a7fb0', '#4a5a85', '#cfe0ff', '#2f6a7a', '#1f4a5a', '#221e38', '#2e2848', '#241c30', '#9aa6c8', '#1a1830', '#2c2848', '#4a4570', '#d8fbff', '#5fd8f0'];
+const SKIN_PAL: Record<SkinId, string[] | null> = {
+  base: null,
+  // Cendre : cape de suie, doublure de braise, yeux ardents.
+  cendre: ['#1e1c22', '#4a4650', '#36333c', '#8a8494', '#5e5a66', '#e8ddd2', '#c0441a', '#7a2a10', '#2a2024', '#3a2a2e', '#2c1e20', '#ffb050', '#1c181c', '#30282c', '#5a4a48', '#ffe0a0', '#ff8a2a'],
+  // Citrouille : violet d'Halloween, doublure orange, tunique de lierre, yeux feux follets.
+  citrouille: ['#2a1438', '#5a2e78', '#45225e', '#9a62c0', '#6e3c90', '#ecd2ff', '#ff8a2a', '#c0561a', '#1e2a16', '#2a3a1c', '#1a2412', '#ffd36a', '#1a1424', '#2e2040', '#4e3a66', '#eaffc0', '#8ae05a'],
+  // Argent : manteau clair de chevalier lunaire, doublure bleu roi, boucle d'or.
+  argent: ['#5a6480', '#c8d0e6', '#a0aac8', '#f4f8ff', '#dfe6f6', '#ffffff', '#3a4a9a', '#2a3470', '#3a3f58', '#4c5272', '#30344a', '#ffd36a', '#2a2e44', '#4a5070', '#8a90b0', '#ffffff', '#7ff6ff'],
+};
+const hex = (h: string) => parseInt(h.slice(1), 16);
+function skinDraw(id: SkinId, f: (c: CanvasRenderingContext2D) => void) {
+  const pal = SKIN_PAL[id];
+  if (!pal) return f;
+  const m = new Map<number, number>();
+  ORDER.forEach((c, i) => m.set(hex(c), hex(pal[i])));
+  return (c: CanvasRenderingContext2D) => {
+    f(c);
+    const { width: w, height: h } = c.canvas, d = c.getImageData(0, 0, w, h), a = d.data;
+    for (let i = 0; i < a.length; i += 4) {
+      if (!a[i + 3]) continue;
+      const v = m.get((a[i] << 16) | (a[i + 1] << 8) | a[i + 2]);
+      if (v !== undefined) { a[i] = v >> 16; a[i + 1] = (v >> 8) & 255; a[i + 2] = v & 255; }
+    }
+    c.putImageData(d, 0, 0);
+  };
+}
+
+/** Aperçus des skins (pose de repos) pour l'écran SUCCÈS. */
+export function makeSkinPreviews(scene: Phaser.Scene) {
+  for (const id of Object.keys(SKIN_PAL) as SkinId[])
+    canvasTex(scene, 'skin_' + id, TW, 36, skinDraw(id, (c) => drawPlayer(c, POSES.idle0, capeOf(0, 0, 0))), OUTLINE);
+}
+
+/** Toutes les textures du héros, dans le skin donné (rappelée au changement de skin). */
+export function makePlayerArt(scene: Phaser.Scene, skin: SkinId = currentSkin()) {
+  const D = (f: (c: CanvasRenderingContext2D) => void) => skinDraw(skin, f);
+  for (const k in RAISE) canvasTex(scene, 'p_' + k, TW, 36 + TALL, D((c) => { c.translate(0, TALL); drawPlayer(c, raised(RAISE[k])); }), OUTLINE);
   mapTex(scene, 'crown_s', CROWN_S, CROWN_PAL);
-  canvasTex(scene, 'p_king', 32, 48, drawKing, OUTLINE);
-  for (const k in POSES) canvasTex(scene, 'p_' + k, TW, 36, (c) => drawPlayer(c, POSES[k]), OUTLINE);
+  canvasTex(scene, 'p_king', 32, 48, D(drawKing), OUTLINE);
+  for (const k in POSES) canvasTex(scene, 'p_' + k, TW, 36, D((c) => drawPlayer(c, POSES[k])), OUTLINE);
   for (const k of CAPE_POSES) for (const h of CAPE_H) for (const v of AIR.includes(k) ? CAPE_V : [0])
-    for (let ph = 0; ph < CAPE_PH; ph++) canvasTex(scene, `p_${k}_${h}_${v}_${ph}`, TW, 36, (c) => drawPlayer(c, POSES[k], capeOf(h, v, ph)), OUTLINE);
+    for (let ph = 0; ph < CAPE_PH; ph++) canvasTex(scene, `p_${k}_${h}_${v}_${ph}`, TW, 36, D((c) => drawPlayer(c, POSES[k], capeOf(h, v, ph))), OUTLINE);
 }

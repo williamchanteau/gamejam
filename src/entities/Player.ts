@@ -16,7 +16,7 @@ export class Player {
   spr: Phaser.GameObjects.Image;
   /** Vide (la cape du sprite suffit) ; gardé pour les fondus des scènes. */
   scarf: Phaser.GameObjects.Graphics;
-  hp = maxHp(); mana = 0; facing = 1; state: State = 'normal'; god = false; safe = false;
+  hp = maxHp(); mana = 0; facing = 1; state: State = 'normal'; god = false; safe = false; hits = 0; // hits : coups reçus (succès INTOUCHABLE)
   private stateT = 0; private coyote = 0; private airDashes = 0; private airJumps = 0;
   private dashCd = 0; private dashDir = 1; private afterT = 0; private invuln = 0;
   private jumpHeld = false; private wasGrounded = true; private lastVy = 0;
@@ -224,6 +224,7 @@ export class Player {
 
   hurt(fromX: number, hearts = 1) {
     if (this.invulnerable) return;
+    this.hits++;
     this.hp = Math.max(0, this.hp - hearts); this.invuln = C.invuln[tier()] ?? C.invuln[0];
     if (this.state === 'dash') this.endDash();
     this.body.setAllowGravity(true);

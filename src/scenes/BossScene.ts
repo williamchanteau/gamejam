@@ -11,6 +11,7 @@ import { YSOLDE } from '../bosses/ysolde';
 import { buildNave, type Room } from './rooms';
 import { announce } from '../ui/Announcer';
 import { srSplit } from '../speedrun';
+import { unlock } from '../achievements';
 import { FLOORS, run } from '../floors';
 import { STAIRS, GATE_TOP } from '../art/outside';
 import { inArch } from '../art/room';
@@ -115,6 +116,8 @@ export class BossScene extends ArenaScene {
   private victory() {
     this.won = true;
     srSplit(this.floor);
+    if (this.floor < 2) unlock(this.floor === 0 ? 'boss1' : 'boss2');
+    if (this.player.hits === 0) unlock('nohit');
     this.player.safe = true;
     this.time.delayedCall(1300, () => { music.stinger('victory', this.afterWin); this.banner(`${this.def.name} EST TOMBÉ`, this.victoryHint()); });
     if (this.autoGate) this.time.delayedCall(2200, () => this.openGate());

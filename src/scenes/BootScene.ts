@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { makeFont } from '../art/font';
-import { makePlayerArt } from '../art/player';
+import { makePlayerArt, makeSkinPreviews } from '../art/player';
 import { makeFxArt } from '../art/fx';
 import { makeRoomArt } from '../art/room';
 import { makeTitleArt } from '../art/title';
@@ -21,6 +21,7 @@ export class BootScene extends Phaser.Scene {
   create() {
     makeFont(this);
     makePlayerArt(this);
+    makeSkinPreviews(this);
     makeFxArt(this);
     makeRoomArt(this);
     makeTitleArt(this);
